@@ -136,16 +136,17 @@ async def get_time_patterns(
     # Hourly pattern (0-23)
     hourly_pattern = []
     hourly_result = await db.execute(
-        select(
-            func.extract('hour', func.cast(Crime.time_of_occurrence, type_=None)).label("hour"),
-            func.count(Crime.crime_id).label("count")
-        )
+        select(Crime.time_of_occurrence)
         .where(and_(*base_conditions, Crime.time_of_occurrence.isnot(None)))
-        .group_by("hour")
-        .order_by("hour")
     )
     
-    hour_counts = {int(row[0]): row[1] for row in hourly_result if row[0] is not None}
+    hour_counts: Dict[int, int] = {}
+    for (time_str,) in hourly_result.all():
+        try:
+            hour = int(time_str.split(":")[0])
+            hour_counts[hour] = hour_counts.get(hour, 0) + 1
+        except (ValueError, AttributeError, IndexError):
+            continue
     max_hourly = max(hour_counts.values()) if hour_counts else 1
     
     for hour in range(24):

@@ -48,3 +48,13 @@ async def risk(
 ):
     data = await get_recidivism_risk(db, offender_id)
     return {"success": True, "data": data}
+
+@router.get("/{offender_id}/modus-operandi")
+async def modus_operandi(
+    offender_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    from app.services.offender_service import get_modus_operandi
+    data = await get_modus_operandi(db, offender_id)
+    return {"success": True, "data": data}

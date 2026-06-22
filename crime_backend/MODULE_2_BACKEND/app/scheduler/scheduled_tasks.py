@@ -1,6 +1,8 @@
 import logging
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
+
 from sqlalchemy import select, func
 from datetime import datetime, timedelta
 
@@ -10,6 +12,7 @@ from app.ml_models.crime_forecasting import forecast_crimes
 from app.models.database_models.anomaly_model import Anomaly
 from app.models.database_models.prediction_model import Prediction
 from app.models.database_models.crime_model import Crime
+from app.ml_models.model_trainer import retrain_all_models
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +75,16 @@ async def run_crime_forecasting():
     except Exception as e:
         logger.error(f"Error in crime forecasting task: {e}")
 
+async def run_model_retraining():
+    logger.info("Running scheduled ML model retraining...")
+    try:
+        async with AsyncSessionLocal() as db:
+            results = await retrain_all_models(db)
+            logger.info(f"Model retraining results: {results}")
+    except Exception as e:
+        logger.error(f"Error in model retraining task: {e}")
+
+
 def init_scheduler():
     """Initialize and start the background scheduler."""
     try:
@@ -88,6 +101,14 @@ def init_scheduler():
             id="crime_forecasting_job",
             replace_existing=True,
         )
+        
+        scheduler.add_job(
+            run_model_retraining,
+            trigger=CronTrigger(day_of_week="sun", hour=2, minute=0),
+            id="model_retraining_job",
+            replace_existing=True,
+        )
+
         
         scheduler.start()
         logger.info("Background ML scheduler started successfully.")

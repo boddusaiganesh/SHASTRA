@@ -62,6 +62,7 @@ async def init_db():
     from app.models.database_models.alert_model import Alert
     from app.models.database_models.anomaly_model import Anomaly
     from app.models.database_models.report_model import Report
+    from app.models.database_models.system_settings_model import SystemSettings
 
     try:
         async with engine.begin() as conn:

@@ -6,7 +6,7 @@ from neo4j import GraphDatabase, Driver
 from typing import Optional, List, Dict, Any
 import logging
 
-from app.core.config import settings
+from app.core.config import settings, RELATIONSHIP_TYPES
 
 logger = logging.getLogger(__name__)
 
@@ -148,6 +148,8 @@ def create_criminal_relationship(
     last_seen_date: str = None,
 ):
     """Create a relationship between two criminals in Neo4j"""
+    if relationship_type not in RELATIONSHIP_TYPES:
+        raise ValueError(f"Invalid relationship_type: {relationship_type}")
     query = f"""
     MATCH (c1:Criminal {{offender_id: $id1}})
     MATCH (c2:Criminal {{offender_id: $id2}})

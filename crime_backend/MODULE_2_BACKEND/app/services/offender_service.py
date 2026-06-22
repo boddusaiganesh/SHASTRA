@@ -302,3 +302,32 @@ async def _get_district_map(db: AsyncSession) -> Dict[str, str]:
     result = await db.execute(select(District))
     districts = result.scalars().all()
     return {d.district_id: d.district_name for d in districts}
+
+
+async def get_offender_network(db: AsyncSession, offender_id: str) -> Optional[Dict[str, Any]]:
+    """Get this offender's network (delegates to the network service)."""
+    from app.services.network_service import get_node_detail
+    return await get_node_detail(db, offender_id)
+
+
+async def get_recidivism_risk(db: AsyncSession, offender_id: str) -> Optional[Dict[str, Any]]:
+    """Get ML-based reoffend-risk scoring for an offender."""
+    from app.ml_models.risk_scoring import calculate_offender_recidivism_risk
+    try:
+        offender_uuid = uuid.UUID(offender_id)
+    except ValueError:
+        return None
+
+    result = await db.execute(select(Offender).where(Offender.offender_id == offender_uuid))
+    offender = result.scalar_one_or_none()
+    if not offender:
+        return None
+
+    risk = calculate_offender_recidivism_risk(offender.to_dict())
+    return {
+        "offender_id": offender_id,
+        "reoffend_probability": risk.get("probability", offender.reoffend_probability or 0),
+        "risk_level": risk.get("risk_level", offender.risk_level),
+        "risk_factors": risk.get("factors", []),
+        "model_used": "Risk Scoring Engine",
+    }

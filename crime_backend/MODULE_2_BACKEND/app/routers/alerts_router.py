@@ -27,7 +27,7 @@ async def mark_read(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user)
 ):
-    data = await mark_alert_read(db, alert_id)
+    data = await mark_alert_read(db, alert_id, current_user["user_id"])
     return {"success": True, "data": data}
 
 @router.delete("/{alert_id}")

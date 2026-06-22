@@ -239,3 +239,41 @@ async def detect_and_generate_alerts(db: AsyncSession):
                 )
     
     logger.info("Crime spike detection complete")
+
+
+async def get_active_alerts(
+    db: AsyncSession,
+    district_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Get all currently active (non-expired) alerts — used by the Alerts page."""
+    now = datetime.now(timezone.utc)
+    conditions = [or_(Alert.expires_at.is_(None), Alert.expires_at >= now)]
+    if district_id:
+        conditions.append(or_(Alert.district_id == district_id, Alert.target_district == "ALL"))
+
+    query = select(Alert).where(and_(*conditions)).order_by(desc(Alert.created_at))
+    result = await db.execute(query)
+    alerts = result.scalars().all()
+
+    unread_result = await db.execute(
+        select(func.count(Alert.alert_id)).where(and_(*conditions, Alert.is_read == False))
+    )
+    return {
+        "alerts": [a.to_dict() for a in alerts],
+        "total_count": len(alerts),
+        "unread_count": unread_result.scalar() or 0,
+    }
+
+
+async def dismiss_alert(db: AsyncSession, alert_id: str) -> Dict[str, Any]:
+    """Permanently dismiss/delete an alert."""
+    from sqlalchemy import delete
+    try:
+        alert_uuid = uuid.UUID(alert_id)
+    except ValueError:
+        raise ValueError("Invalid alert_id")
+
+    await db.execute(delete(Alert).where(Alert.alert_id == alert_uuid))
+    await db.commit()
+    return {"success": True, "alert_id": alert_id, "dismissed": True}
+

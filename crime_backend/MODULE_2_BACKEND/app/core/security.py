@@ -146,3 +146,10 @@ async def require_scrb_officer(
             detail="Access denied. SCRB Officer role required.",
         )
     return current_user
+
+def scope_district_filter(query, user, model_district_col):
+    """Filter database query based on user's district role."""
+    if user["role"] == "DISTRICT_OFFICER" and user.get("district_id"):
+        return query.where(model_district_col == user["district_id"])
+    return query
+

@@ -3,7 +3,7 @@ Dashboard Service - Summary statistics and trend data
 """
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_, extract, desc
+from sqlalchemy import select, func, and_, or_, extract, desc
 from typing import Optional, Dict, Any, List
 from datetime import datetime, timezone, timedelta, date
 import calendar

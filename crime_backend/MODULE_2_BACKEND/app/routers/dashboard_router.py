@@ -19,6 +19,8 @@ async def dashboard_summary(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
+    if current_user["role"] == "DISTRICT_OFFICER":
+        district_id = current_user.get("district_id")
     data = await get_dashboard_summary(db, district_id)
     return {"success": True, "data": data}
 
@@ -28,6 +30,8 @@ async def crime_trends(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
+    if current_user["role"] == "DISTRICT_OFFICER":
+        district_id = current_user.get("district_id")
     data = await get_crime_trends(db, district_id)
     return {"success": True, "data": data}
 
@@ -37,7 +41,8 @@ async def recent_crimes(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    data = await get_recent_crimes(db, limit)
+    district_id = current_user.get("district_id") if current_user["role"] == "DISTRICT_OFFICER" else None
+    data = await get_recent_crimes(db, limit, district_id)
     return {"success": True, "data": data}
 
 @router.get("/recent-alerts")
@@ -46,5 +51,6 @@ async def recent_alerts(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    data = await get_recent_alerts(db, limit)
+    district_id = current_user.get("district_id") if current_user["role"] == "DISTRICT_OFFICER" else None
+    data = await get_recent_alerts(db, limit, district_id)
     return {"success": True, "data": data}

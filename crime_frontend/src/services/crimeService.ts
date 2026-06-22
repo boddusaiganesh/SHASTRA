@@ -1,4 +1,5 @@
 import api from './api';
+import { ENDPOINTS } from '../constants/apiEndpoints';
 import {
   mockMapCrimes,
   mockDashboardSummary,
@@ -14,57 +15,85 @@ import {
   mockDeploymentSuggestions,
 } from "./mockData";
 
-const delay = (ms = 600) => new Promise((r) => setTimeout(r, ms));
-
 export const crimeService = {
   getDashboardSummary: async () => {
     try {
-      const res = await api.get('/dashboard/summary');
-      return res.data;
+      const res = await api.get(ENDPOINTS.DASHBOARD.SUMMARY);
+      return res.data.data || res.data;
     } catch (error) {
-      console.warn("Using mock dashboard summary");
       return mockDashboardSummary;
     }
   },
   getRecentCrimes: async (limit = 10) => {
     try {
-      const res = await api.get('/dashboard/recent-crimes', { params: { limit } });
-      return res.data;
+      const res = await api.get(ENDPOINTS.DASHBOARD.RECENT_CRIMES, { params: { limit } });
+      return res.data.data || res.data;
     } catch {
-      console.warn("Using mock recent crimes");
       return mockRecentCrimes;
     }
   },
   getRecentAlerts: async (limit = 8) => {
     try {
-      const res = await api.get('/dashboard/recent-alerts', { params: { limit } });
-      return res.data;
+      const res = await api.get(ENDPOINTS.DASHBOARD.RECENT_ALERTS, { params: { limit } });
+      return res.data.data || res.data;
     } catch {
-      console.warn("Using mock recent alerts");
       return mockRecentAlerts;
     }
   },
   getCrimeTrends: async () => {
     try {
-      const res = await api.get('/dashboard/crime-trends');
-      return res.data;
+      const res = await api.get(ENDPOINTS.DASHBOARD.CRIME_TRENDS);
+      return res.data.data || res.data;
     } catch (error) {
-      console.warn("Using mock crime trends");
       return { trends: mockCrimeTrends, byType: mockCrimeTypeBreakdown, byDistrict: mockDistrictCrimeCounts };
     }
   },
   getMapData: async (filters?: Record<string, string>) => { 
     try {
-      const response = await api.get('/crimes/map-data', { params: filters });
-      return response.data;
+      const response = await api.get(ENDPOINTS.CRIMES.MAP_DATA, { params: filters });
+      return response.data.data || response.data;
     } catch (error) {
-      console.error('Error fetching map data from backend, falling back to mock data:', error);
       return mockMapCrimes;
     }
   },
-  getCrimeDetail: async (id: string) => { await delay(); return mockMapCrimes.find((c) => c.crime_id === id) || null; },
-  getHotspotClusters: async (_filters?: any) => { await delay(); return mockHotspotClusters; },
-  getTimePatterns: async (_filters?: any) => { await delay(); return { byHour: mockTimePatternData, byDay: mockDayPatternData, byMonth: mockMonthPatternData }; },
-  getTopHotspots: async (_filters?: any) => { await delay(); return mockHotspotClusters; },
-  getDeploymentSuggestions: async (_filters?: any) => { await delay(); return mockDeploymentSuggestions; },
+  getCrimeDetail: async (id: string) => {
+    try {
+      const response = await api.get(ENDPOINTS.CRIMES.DETAIL(id));
+      return response.data.data || response.data;
+    } catch (error) {
+      return mockMapCrimes.find((c) => c.crime_id === id) || null;
+    }
+  },
+  getHotspotClusters: async (filters?: any) => {
+    try {
+      const response = await api.get(ENDPOINTS.HOTSPOTS.CLUSTERS, { params: filters });
+      return response.data.data || response.data;
+    } catch {
+      return mockHotspotClusters;
+    }
+  },
+  getTimePatterns: async (filters?: any) => {
+    try {
+      const response = await api.get(ENDPOINTS.HOTSPOTS.TIME_PATTERNS, { params: filters });
+      return response.data.data || response.data;
+    } catch {
+      return { byHour: mockTimePatternData, byDay: mockDayPatternData, byMonth: mockMonthPatternData };
+    }
+  },
+  getTopHotspots: async (filters?: any) => {
+    try {
+      const response = await api.get(ENDPOINTS.HOTSPOTS.TOP_LIST, { params: filters });
+      return response.data.data || response.data;
+    } catch {
+      return mockHotspotClusters;
+    }
+  },
+  getDeploymentSuggestions: async (filters?: any) => {
+    try {
+      const response = await api.get(ENDPOINTS.HOTSPOTS.DEPLOYMENT_SUGGESTIONS, { params: filters });
+      return response.data.data || response.data;
+    } catch {
+      return mockDeploymentSuggestions;
+    }
+  },
 };

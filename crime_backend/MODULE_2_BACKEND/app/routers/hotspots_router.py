@@ -33,6 +33,11 @@ async def top_hotspots(db: AsyncSession = Depends(get_db), current_user=Depends(
     return {"success": True, "data": data}
 
 @router.get("/deployment-suggestions")
-async def deployment_suggestions(db: AsyncSession = Depends(get_db), current_user=Depends(get_current_user)):
-    data = await get_deployment_suggestions(db)
+async def deployment_suggestions(
+    district_id: str = Query(..., description="Required — district to generate deployment suggestions for"),
+    target_date: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    data = await get_deployment_suggestions(db, district_id, target_date)
     return {"success": True, "data": data}

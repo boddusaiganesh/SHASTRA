@@ -1,52 +1,60 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-import logging
-from datetime import datetime, timedelta
+from typing import Optional
 
 from app.core.database import get_db
-from app.models.database_models.prediction_model import Prediction
+from app.core.security import get_current_user
+from app.services.prediction_service import (
+    get_risk_map,
+    get_high_risk_areas,
+    get_crime_forecast,
+    get_emerging_typologies,
+    get_socioeconomic_correlation,
+)
 
 router = APIRouter()
-logger = logging.getLogger(__name__)
 
-def generate_mock_forecast():
-    import math
-    import random
-    forecasts = []
-    base = 2847
-    today = datetime.now()
-    for i in range(30):
-        val = base + math.sin(i * 0.3) * 150
-        date_str = (today + timedelta(days=i)).strftime("%Y-%m-%d")
-        forecasts.append({
-            "day": i + 1,
-            "date": date_str,
-            "predicted_count": int(val + random.uniform(-50, 50)),
-            "lower_bound": int(val - 200),
-            "upper_bound": int(val + 200),
-            "historical": int(val + random.uniform(-40, 40)) if i < 10 else None,
-        })
-    return forecasts
+@router.get("/risk-map")
+async def risk_map(db: AsyncSession = Depends(get_db), current_user=Depends(get_current_user)):
+    data = await get_risk_map(db)
+    return {"success": True, "data": data}
 
-MOCK_FORECAST = generate_mock_forecast()
+@router.get("/high-risk-areas")
+async def high_risk_areas(
+    district_id: Optional[str] = Query(None),
+    days_ahead: int = Query(7, le=30),
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    data = await get_high_risk_areas(db, days_ahead, district_id)
+    return {"success": True, "data": data}
 
 @router.get("/forecast")
-async def get_crime_forecast(db: AsyncSession = Depends(get_db)):
-    """
-    Fetch 30-day time-series crime forecasts from the DB.
-    """
-    try:
-        result = await db.execute(
-            select(Prediction)
-            .where(Prediction.prediction_type == "STATE_WIDE_FORECAST")
-            .order_by(Prediction.created_at.desc())
-            .limit(1)
-        )
-        prediction = result.scalar_one_or_none()
-        if prediction and prediction.forecast_data:
-            return prediction.forecast_data.get("forecast", MOCK_FORECAST)
-    except Exception as e:
-        logger.error(f"Error fetching forecast from DB: {e}")
-        
-    return MOCK_FORECAST
+async def forecast(
+    district_id: Optional[str] = Query(None),
+    crime_type: Optional[str] = Query(None),
+    days_ahead: int = Query(30, le=90),
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    data = await get_crime_forecast(db, district_id, crime_type, days_ahead)
+    return {"success": True, "data": data}
+
+@router.get("/emerging-typologies")
+async def emerging_typologies(
+    district_id: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    data = await get_emerging_typologies(db, district_id)
+    return {"success": True, "data": data}
+
+@router.get("/socioeconomic-correlation")
+async def socioeconomic_correlation(
+    district_id: Optional[str] = Query(None),
+    factor: str = Query("all"),
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    data = await get_socioeconomic_correlation(db, district_id, factor)
+    return {"success": True, "data": data}

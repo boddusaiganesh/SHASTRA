@@ -53,15 +53,16 @@ export const ENDPOINTS = {
     UPDATE_STATUS: (id: string) => `/anomalies/update-status/${id}`,
   },
   // Alerts
+  // Alerts
   ALERTS: {
-    LIST: "/alerts/list",
-    MARK_READ: (id: string) => `/alerts/mark-read/${id}`,
+    LIST: "/alerts/active",
+    MARK_READ: (id: string) => `/alerts/${id}/read`,
   },
   // Reports
   REPORTS: {
     GENERATE: "/reports/generate",
-    SAVED_LIST: "/reports/saved-list",
-    DOWNLOAD: (id: string) => `/reports/download/${id}`,
+    SAVED_LIST: "/reports/history",
+    DOWNLOAD: (id: string) => `/reports/${id}/download`,
   },
   // Settings
   SETTINGS: {
