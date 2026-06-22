@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  # FastAPI Backend
+  backend:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://admin:securepassword@postgres:5432/crime_intelligence_db
+      - DATABASE_URL_SYNC=postgresql://admin:securepassword@postgres:5432/crime_intelligence_db
+      - NEO4J_URL=bolt://neo4j:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=neo4jsecurepassword
+      - REDIS_URL=redis://redis:6379
+      - REDIS_PASSWORD=redissecurepassword
+    depends_on:
+      - postgres
+      - neo4j
+      - redis
+    volumes:
+      - .:/app
+    networks:
+      - crime_intelligence_network
+
+  # PostgreSQL Database
+  postgres:
+    image: postgis/postgis:15-3.4
+    environment:
+      POSTGRES_DB: crime_intelligence_db
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: securepassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - crime_intelligence_network
+
+  # Neo4j Graph Database
+  neo4j:
+    image: neo4j:5.18-community
+    environment:
+      NEO4J_AUTH: neo4j/neo4jsecurepassword
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_dbms_security_procedures_unrestricted: apoc.*
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      - neo4j_data:/data
+    networks:
+      - crime_intelligence_network
+
+  # Redis Cache
+  redis:
+    image: redis:7.2-alpine
+    command: redis-server --requirepass redissecurepassword
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - crime_intelligence_network
+
+volumes:
+  postgres_data:
+  neo4j_data:
+  redis_data:
+
+networks:
+  crime_intelligence_network:
+    driver: bridge

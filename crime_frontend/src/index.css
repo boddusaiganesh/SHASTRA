@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+@layer utilities {
+  .red-zone-pulse {
+    animation: red-zone 2s infinite;
+  }
+}
+
+@keyframes red-zone {
+  0% {
+    filter: drop-shadow(0 0 0 rgba(239, 68, 68, 0.7));
+    transform: scale(1);
+  }
+  50% {
+    filter: drop-shadow(0 0 15px rgba(239, 68, 68, 0.9));
+    transform: scale(1.1);
+  }
+  100% {
+    filter: drop-shadow(0 0 0 rgba(239, 68, 68, 0));
+    transform: scale(1);
+  }
+}
