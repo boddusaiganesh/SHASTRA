@@ -45,6 +45,7 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle, alertCount = 0 }) => {
           <NavLink
             key={path}
             to={path}
+            end={path === "/"}
             className={({ isActive }) =>
               `flex items-center gap-3 px-4 py-3 mx-2 rounded-lg mb-1 transition-all duration-200 group relative
               ${isActive

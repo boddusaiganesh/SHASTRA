@@ -38,4 +38,14 @@ async def logout(current_user=Depends(get_current_user)):
 @router.get("/verify-token")
 async def verify_token(current_user=Depends(get_current_user)):
     """Verify the current JWT token is valid"""
-    return {"success": True, "data": current_user}
+    return {
+        "success": True, 
+        "data": {
+            "auth_token": current_user["token"],
+            "user_id": current_user["user_id"],
+            "user_name": current_user["username"],
+            "user_role": current_user["role"],
+            "user_district": current_user["district_id"],
+            "permissions_list": current_user["permissions"]
+        }
+    }

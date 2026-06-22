@@ -58,11 +58,17 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"⚠️  Database not available: {e} — continuing in degraded mode")
     
-    await init_redis()
-    print("✅ Redis Cache connected")
+    try:
+        await init_redis()
+        print("✅ Redis Cache connected")
+    except Exception as e:
+        print(f"⚠️  Redis unavailable: {e} — continuing without cache")
     
-    init_neo4j()
-    print("✅ Neo4j Graph Database connected")
+    try:
+        init_neo4j()
+        print("✅ Neo4j Graph Database connected")
+    except Exception as e:
+        print(f"⚠️  Neo4j unavailable: {e} — continuing in degraded mode")
     
     if _db_ready:
         init_scheduler()
@@ -115,16 +121,23 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SecurityHeadersMiddleware)
 
 # CORS Middleware
-allowed_origins = [settings.FRONTEND_URL]
-if settings.ENVIRONMENT == "development":
-    allowed_origins += ["http://localhost:3000", "http://localhost:5173"]
+allowed_origins = []
+if settings.ENVIRONMENT == "production":
+    allowed_origins = [settings.FRONTEND_URL]
+else:
+    allowed_origins = [
+        settings.FRONTEND_URL,
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)

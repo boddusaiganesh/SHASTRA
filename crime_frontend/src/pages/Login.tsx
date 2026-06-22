@@ -9,7 +9,7 @@ import { loginStart, loginSuccess, loginFailure } from '../store/authSlice';
 import { authService } from '../services/authService';
 import { RootState } from '../store/store';
 
-const USER_ROLES = ["SCRB Officer", "District Officer", "Investigator", "Analyst"];
+
 
 const inputClass =
   "w-full pl-10 pr-4 py-3 bg-slate-900/70 border border-slate-600/50 text-slate-200 " +
@@ -17,10 +17,10 @@ const inputClass =
   "focus:ring-1 focus:ring-blue-500/30 transition-all text-sm";
 
 export default function Login() {
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('Admin@1234');
-  const [role, setRole] = useState(USER_ROLES[0]);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showForgotMsg, setShowForgotMsg] = useState(false);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { isLoading: loading, error } = useSelector((state: RootState) => state.auth);
@@ -95,17 +95,9 @@ export default function Login() {
               </button>
             </div>
 
-            {/* Role Selector */}
-            <div className="relative">
-              <Shield className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-              <select
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                className={`${inputClass} appearance-none cursor-pointer`}
-              >
-                {USER_ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
-              </select>
-              <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none" />
+            <div className="flex items-center gap-2 text-xs text-slate-500">
+              <Shield className="h-4 w-4" />
+              <span>Your role and permissions are assigned by the SCRB Administrator</span>
             </div>
 
             {/* Error */}
@@ -133,14 +125,30 @@ export default function Login() {
           </form>
 
           <div className="text-center mt-4">
-            <button className="text-xs text-slate-500 hover:text-blue-400 transition-colors">
+            <button
+              type="button"
+              onClick={() => setShowForgotMsg(!showForgotMsg)}
+              className="text-xs text-slate-500 hover:text-blue-400 transition-colors"
+            >
               Forgot password? Contact SCRB Administrator
             </button>
+            {showForgotMsg && (
+              <motion.div
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-3 p-3 bg-slate-900/60 border border-slate-700 rounded-lg text-xs text-slate-400 text-center"
+              >
+                Contact SCRB IT Helpdesk: <br />
+                <a href="mailto:scrb-helpdesk@ksp.gov.in" className="text-blue-400 font-medium hover:underline">scrb-helpdesk@ksp.gov.in</a> or call{" "}
+                <span className="text-blue-400 font-medium">080-2294-3000</span>
+              </motion.div>
+            )}
           </div>
 
-          <div className="mt-6 p-3 bg-blue-950/40 border border-blue-500/20 rounded-lg">
-            <p className="text-xs text-blue-400 text-center">
-              <span className="font-semibold">Demo Access:</span> Any username &amp; password will work
+          <div className="mt-6 p-3 bg-slate-900/60 border border-slate-700/50 rounded-lg">
+            <p className="text-xs text-slate-500 text-center">
+              This system is for authorized Karnataka State Police personnel only.
+              Unauthorized access is a criminal offense.
             </p>
           </div>
         </div>

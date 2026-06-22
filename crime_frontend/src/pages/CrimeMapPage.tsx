@@ -23,6 +23,7 @@ const CrimeMapPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedCrime, setSelectedCrime] = useState<Crime | null>(null);
   const [showCaseModal, setShowCaseModal] = useState(false);
+  const [caseDetail, setCaseDetail] = useState<Record<string, unknown> | null>(null);
   const [rightPanelData, setRightPanelData] = useState<{ total: number; byType: Record<string, number> }>({ total: 0, byType: {} });
 
   useEffect(() => {
@@ -51,8 +52,8 @@ const CrimeMapPage: React.FC = () => {
        const hour = new Date(c.date_time).getHours();
        if (filters.timeOfDay === "Morning (6AM-12PM)" && (hour < 6 || hour >= 12)) return false;
        if (filters.timeOfDay === "Afternoon (12PM-6PM)" && (hour < 12 || hour >= 18)) return false;
-       if (filters.timeOfDay === "Evening (6PM-12AM)" && (hour < 18 || hour >= 24)) return false;
-       if (filters.timeOfDay === "Night (12AM-6AM)" && (hour >= 6)) return false;
+       if (filters.timeOfDay === "Evening (6PM-10PM)" && (hour < 18 || hour >= 22)) return false;
+       if (filters.timeOfDay === "Night (10PM-6AM)" && (hour < 22 && hour >= 6)) return false;
     }
     return true;
   });
@@ -63,6 +64,29 @@ const CrimeMapPage: React.FC = () => {
     "Arrested": "bg-green-900/40 text-green-400",
     "Solved": "bg-green-900/60 text-green-300",
     "Active Search": "bg-red-900/40 text-red-400",
+  };
+
+  const handleExport = () => {
+    const csv = [
+      ["crime_id","crime_type","date_time","location","district","status","latitude","longitude"].join(","),
+      ...filteredCrimes.map((c) =>
+        [c.crime_id, c.crime_type, c.date_time, `"${c.location?.replace(/"/g, '""') || ''}"`, c.district, c.status, c.latitude, c.longitude].join(",")
+      ),
+    ].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `crimes_export_${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleViewCase = async (crime: Crime) => {
+    setShowCaseModal(true);
+    setCaseDetail(null);
+    const detail = await crimeService.getCrimeDetail(crime.crime_id);
+    setCaseDetail(detail as Record<string, unknown>);
   };
 
   return (
@@ -81,6 +105,7 @@ const CrimeMapPage: React.FC = () => {
         onDateFromChange={(v) => dispatch(setFilters({ dateFrom: v }))}
         dateTo={filters.dateTo}
         onDateToChange={(v) => dispatch(setFilters({ dateTo: v }))}
+        onExport={handleExport}
       />
 
       <div className="flex flex-1 overflow-hidden relative">
@@ -172,7 +197,7 @@ const CrimeMapPage: React.FC = () => {
                 {selectedCrime.suspect_id && <p className="text-xs text-slate-500">Suspect: {selectedCrime.suspect_id}</p>}
               </div>
               <div className="mt-3 flex gap-2">
-                <button onClick={() => setShowCaseModal(true)} className="flex-1 py-1.5 bg-blue-600/20 border border-blue-500/30 text-blue-400 text-xs rounded-lg hover:bg-blue-600/30 transition-colors">View Full Case</button>
+                <button onClick={() => handleViewCase(selectedCrime)} className="flex-1 py-1.5 bg-blue-600/20 border border-blue-500/30 text-blue-400 text-xs rounded-lg hover:bg-blue-600/30 transition-colors">View Full Case</button>
                 <button className="flex items-center gap-1 py-1.5 px-2 bg-slate-800 text-slate-400 text-xs rounded-lg hover:bg-slate-700 transition-colors">
                   <Info className="h-3 w-3" />
                 </button>
@@ -190,32 +215,25 @@ const CrimeMapPage: React.FC = () => {
               <button onClick={() => setShowCaseModal(false)} className="text-slate-400 hover:text-white"><X className="h-5 w-5" /></button>
             </div>
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                 <div>
-                   <p className="text-xs text-slate-400">Crime Type</p>
-                   <p className="text-sm text-white font-medium">{selectedCrime.crime_type}</p>
-                 </div>
-                 <div>
-                   <p className="text-xs text-slate-400">Date & Time</p>
-                   <p className="text-sm text-white font-medium">{formatDateTime(selectedCrime.date_time)}</p>
-                 </div>
-                 <div>
-                   <p className="text-xs text-slate-400">Location</p>
-                   <p className="text-sm text-white font-medium">{selectedCrime.location}, {selectedCrime.district}</p>
-                 </div>
-                 <div>
-                   <p className="text-xs text-slate-400">Status</p>
-                   <p className="text-sm text-white font-medium">{selectedCrime.status}</p>
-                 </div>
-              </div>
-              <div className="bg-slate-900/50 rounded-lg p-4 mt-4">
-                <h3 className="text-sm font-semibold text-white mb-2">Investigation Details</h3>
-                <p className="text-sm text-slate-300">Detailed investigation reports and evidence logs are currently restricted based on your access level. Please request higher clearance from the SCRB Administrator.</p>
-              </div>
+              {caseDetail ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm max-h-[70vh] overflow-y-auto pr-2">
+                  {Object.entries(caseDetail)
+                    .filter(([k]) => !["latitude","longitude"].includes(k))
+                    .map(([k, v]) => (
+                      <div key={k} className="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50">
+                        <span className="block text-xs text-slate-400 capitalize mb-1">{k.replace(/_/g," ")}</span>
+                        <span className="block text-slate-200 font-medium break-words">{String(v ?? "—")}</span>
+                      </div>
+                    ))}
+                </div>
+              ) : (
+                <div className="flex justify-center py-8">
+                  <div className="h-8 w-8 rounded-full border-2 border-blue-400/30 border-t-blue-400 animate-spin" />
+                </div>
+              )}
             </div>
             <div className="mt-6 flex justify-end gap-3">
               <button onClick={() => setShowCaseModal(false)} className="px-4 py-2 bg-slate-700 text-white text-sm rounded-lg hover:bg-slate-600">Close</button>
-              <button className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-500">Request Access</button>
             </div>
           </motion.div>
         </div>

@@ -92,7 +92,7 @@ const NetworkGraph: React.FC<Props> = ({ nodes, edges, onNodeSelect, selectedNod
       wheelSensitivity: 0.3,
     });
 
-    cy.on("tap", "node", (evt) => {
+    cy.on("tap", "node", (evt: cytoscape.EventObject) => {
       const nodeId = evt.target.id();
       const node = nodes.find((n) => n.node_id === nodeId);
       if (node) onNodeSelect?.(node);
@@ -104,7 +104,7 @@ const NetworkGraph: React.FC<Props> = ({ nodes, edges, onNodeSelect, selectedNod
 
   useEffect(() => {
     if (!cyRef.current || !selectedNodeId) return;
-    cyRef.current.$(`#${selectedNodeId}`).select();
+    cyRef.current.getElementById(selectedNodeId).select();
   }, [selectedNodeId]);
 
   return <div ref={containerRef} className="h-full w-full" style={{ background: "#0f172a" }} />;

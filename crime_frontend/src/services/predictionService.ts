@@ -58,10 +58,10 @@ export const predictionService = {
       return mockEmergingTypologies;
     }
   },
-  getSocioeconomicData: async () => {
+  getSocioeconomicData: async (filters?: any) => {
     try {
-      // Missing route in backend currently, fallback to mock
-      return mockSocioeconomicData;
+      const res = await api.get(ENDPOINTS.PREDICTIONS.SOCIOECONOMIC, { params: filters });
+      return res.data.data || res.data;
     } catch {
       return mockSocioeconomicData;
     }

@@ -26,9 +26,12 @@ const alertsSlice = createSlice({
       );
       state.unreadCount = Math.max(0, state.unreadCount - 1);
     },
+    clearUnreadCount: (state) => {
+      state.unreadCount = 0;
+    },
     setLoading: (state, action: PayloadAction<boolean>) => { state.loading = action.payload; },
   },
 });
 
-export const { setAlerts, markAlertRead, setLoading } = alertsSlice.actions;
+export const { setAlerts, markAlertRead, clearUnreadCount, setLoading } = alertsSlice.actions;
 export default alertsSlice.reducer;

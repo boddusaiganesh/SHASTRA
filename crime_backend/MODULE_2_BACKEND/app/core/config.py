@@ -5,7 +5,9 @@ Core Configuration - Loads all environment variables using Pydantic Settings
 from pydantic_settings import BaseSettings
 from typing import Optional
 import os
+import logging
 from dotenv import load_dotenv
+from pydantic import validator
 
 load_dotenv()
 
@@ -18,14 +20,14 @@ class Settings(BaseSettings):
     DATABASE_URL_SYNC: str = "postgresql://admin:securepassword@localhost:5432/crime_intelligence_db"
     DATABASE_NAME: str = "crime_intelligence_db"
     DATABASE_USER: str = "admin"
-    DATABASE_PASSWORD: str
+    DATABASE_PASSWORD: str = "securepassword"
     DATABASE_HOST: str = "localhost"
     DATABASE_PORT: int = 5432
 
     # Neo4j
     NEO4J_URL: str = "bolt://localhost:7687"
     NEO4J_USER: str = "neo4j"
-    NEO4J_PASSWORD: str
+    NEO4J_PASSWORD: str = "neo4jsecurepassword"
 
     # Redis
     REDIS_URL: str = "redis://localhost:6379"
@@ -33,13 +35,13 @@ class Settings(BaseSettings):
     CACHE_EXPIRY_SECONDS: int = 900
 
     # Gemini AI
-    GEMINI_API_KEY: str
+    GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-1.5-pro"
     GEMINI_MAX_TOKENS: int = 2048
     GEMINI_TEMPERATURE: float = 0.3
 
     # JWT
-    JWT_SECRET_KEY: str
+    JWT_SECRET_KEY: str = "CHANGE_THIS_IN_PRODUCTION_64_CHARS_MIN"
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRY_HOURS: int = 8
 
@@ -64,6 +66,14 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = True
+
+    @validator("JWT_SECRET_KEY")
+    def validate_jwt(cls, v):
+        if v == "CHANGE_THIS_IN_PRODUCTION_64_CHARS_MIN":
+            logging.getLogger(__name__).warning(
+                "⚠️  JWT_SECRET_KEY is using default value. Set a secure key in .env before deploying."
+            )
+        return v
 
 
 settings = Settings()

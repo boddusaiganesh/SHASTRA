@@ -246,5 +246,7 @@ async def get_report_by_id(db: AsyncSession, report_id: str) -> Optional[Dict[st
     
     if not report:
         return None
-    
-    return report.to_dict()
+    data = report.to_dict()
+    # Add file_url if file exists in storage
+    data["file_url"] = report.file_path or None
+    return data

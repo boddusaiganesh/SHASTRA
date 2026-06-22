@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Users, Bell, Database, Plus, Save } from "lucide-react";
 import { settingsService } from "../services/alertService";
+import { KARNATAKA_DISTRICTS } from "../constants/districtsList";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 
 interface User { user_id: string; username: string; full_name: string; role: string; district?: string; is_active: boolean; }
@@ -13,7 +14,7 @@ const SettingsPage: React.FC = () => {
   const [dataSources, setDataSources] = useState<unknown[]>([]);
   const [loading, setLoading] = useState(true);
   const [saveMsg, setSaveMsg] = useState("");
-  const [newUser, setNewUser] = useState({ username: "", full_name: "", role: "INVESTIGATOR", password: "" });
+  const [newUser, setNewUser] = useState({ username: "", full_name: "", role: "INVESTIGATOR", password: "", district: "" });
 
   useEffect(() => {
     Promise.all([
@@ -37,9 +38,13 @@ const SettingsPage: React.FC = () => {
 
   const handleAddUser = async () => {
     if (!newUser.username || !newUser.full_name) return;
-    const result = await settingsService.addUser(newUser);
-    setUsers((prev) => [...prev, result.user as unknown as User]);
-    setNewUser({ username: "", full_name: "", role: "INVESTIGATOR", password: "" });
+    const payload = {
+      ...newUser,
+      district_id: newUser.district || undefined
+    };
+    const result = await settingsService.addUser(payload);
+    setUsers((prev) => [...prev, (result.data || result.user) as unknown as User]);
+    setNewUser({ username: "", full_name: "", role: "INVESTIGATOR", password: "", district: "" });
   };
 
   if (loading) return <div className="flex-1 flex items-center justify-center"><LoadingSpinner size="lg" text="Loading settings..." /></div>;
@@ -75,11 +80,15 @@ const SettingsPage: React.FC = () => {
           {/* Add User Form */}
           <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4">
             <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2"><Plus className="h-4 w-4 text-blue-400" />Add New User</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-3">
               <input placeholder="Username" value={newUser.username} onChange={(e) => setNewUser({ ...newUser, username: e.target.value })} className={inputCls} />
               <input placeholder="Full Name" value={newUser.full_name} onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })} className={inputCls} />
               <select value={newUser.role} onChange={(e) => setNewUser({ ...newUser, role: e.target.value })} className={inputCls}>
                 {["SCRB_OFFICER", "DISTRICT_OFFICER", "INVESTIGATOR"].map((r) => <option key={r} value={r}>{r}</option>)}
+              </select>
+              <select value={newUser.district} onChange={(e) => setNewUser({ ...newUser, district: e.target.value })} className={inputCls}>
+                <option value="">State-Wide</option>
+                {KARNATAKA_DISTRICTS.map((d) => <option key={d} value={d}>{d}</option>)}
               </select>
               <input type="password" placeholder="Password" value={newUser.password} onChange={(e) => setNewUser({ ...newUser, password: e.target.value })} className={inputCls} />
             </div>

@@ -45,6 +45,7 @@ export const ENDPOINTS = {
     HIGH_RISK_AREAS: "/predictions/high-risk-areas",
     FORECAST: "/predictions/forecast",
     EMERGING_TYPOLOGIES: "/predictions/emerging-typologies",
+    SOCIOECONOMIC: "/predictions/socioeconomic-correlation",
   },
   // Anomalies
   ANOMALIES: {

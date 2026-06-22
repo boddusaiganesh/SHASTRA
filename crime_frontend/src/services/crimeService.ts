@@ -19,7 +19,7 @@ export const crimeService = {
   getDashboardSummary: async () => {
     try {
       const res = await api.get(ENDPOINTS.DASHBOARD.SUMMARY);
-      return res.data.data || res.data;
+      return res.data;
     } catch (error) {
       return mockDashboardSummary;
     }
@@ -27,7 +27,7 @@ export const crimeService = {
   getRecentCrimes: async (limit = 10) => {
     try {
       const res = await api.get(ENDPOINTS.DASHBOARD.RECENT_CRIMES, { params: { limit } });
-      return res.data.data || res.data;
+      return res.data;
     } catch {
       return mockRecentCrimes;
     }
@@ -35,7 +35,7 @@ export const crimeService = {
   getRecentAlerts: async (limit = 8) => {
     try {
       const res = await api.get(ENDPOINTS.DASHBOARD.RECENT_ALERTS, { params: { limit } });
-      return res.data.data || res.data;
+      return res.data;
     } catch {
       return mockRecentAlerts;
     }
@@ -43,7 +43,7 @@ export const crimeService = {
   getCrimeTrends: async () => {
     try {
       const res = await api.get(ENDPOINTS.DASHBOARD.CRIME_TRENDS);
-      return res.data.data || res.data;
+      return res.data;
     } catch (error) {
       return { trends: mockCrimeTrends, byType: mockCrimeTypeBreakdown, byDistrict: mockDistrictCrimeCounts };
     }
@@ -51,7 +51,7 @@ export const crimeService = {
   getMapData: async (filters?: Record<string, string>) => { 
     try {
       const response = await api.get(ENDPOINTS.CRIMES.MAP_DATA, { params: filters });
-      return response.data.data || response.data;
+      return response.data;
     } catch (error) {
       return mockMapCrimes;
     }
@@ -59,7 +59,7 @@ export const crimeService = {
   getCrimeDetail: async (id: string) => {
     try {
       const response = await api.get(ENDPOINTS.CRIMES.DETAIL(id));
-      return response.data.data || response.data;
+      return response.data;
     } catch (error) {
       return mockMapCrimes.find((c) => c.crime_id === id) || null;
     }
@@ -67,7 +67,7 @@ export const crimeService = {
   getHotspotClusters: async (filters?: any) => {
     try {
       const response = await api.get(ENDPOINTS.HOTSPOTS.CLUSTERS, { params: filters });
-      return response.data.data || response.data;
+      return response.data;
     } catch {
       return mockHotspotClusters;
     }
@@ -75,7 +75,7 @@ export const crimeService = {
   getTimePatterns: async (filters?: any) => {
     try {
       const response = await api.get(ENDPOINTS.HOTSPOTS.TIME_PATTERNS, { params: filters });
-      return response.data.data || response.data;
+      return response.data;
     } catch {
       return { byHour: mockTimePatternData, byDay: mockDayPatternData, byMonth: mockMonthPatternData };
     }
@@ -83,7 +83,7 @@ export const crimeService = {
   getTopHotspots: async (filters?: any) => {
     try {
       const response = await api.get(ENDPOINTS.HOTSPOTS.TOP_LIST, { params: filters });
-      return response.data.data || response.data;
+      return response.data;
     } catch {
       return mockHotspotClusters;
     }
@@ -91,7 +91,7 @@ export const crimeService = {
   getDeploymentSuggestions: async (filters?: any) => {
     try {
       const response = await api.get(ENDPOINTS.HOTSPOTS.DEPLOYMENT_SUGGESTIONS, { params: filters });
-      return response.data.data || response.data;
+      return response.data;
     } catch {
       return mockDeploymentSuggestions;
     }

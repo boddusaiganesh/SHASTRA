@@ -15,15 +15,17 @@ router = APIRouter()
 @router.post("/generate")
 async def generate_report_endpoint(
     report_type: str = Query(...),
-    report_name: str = Query(...),
+    report_name: Optional[str] = Query(None),
     district_id: Optional[str] = Query(None),
     date_from: Optional[str] = Query(None),
     date_to: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user)
 ):
+    from datetime import datetime
+    name = report_name or f"{report_type}_{datetime.now().strftime('%Y%m%d_%H%M')}"
     data = await generate_report(
-        db, report_type, report_name,
+        db, report_type, name,
         date_from=date_from, date_to=date_to,
         district_id=district_id, user_id=current_user["user_id"],
     )

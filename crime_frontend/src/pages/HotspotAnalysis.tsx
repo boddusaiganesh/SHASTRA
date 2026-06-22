@@ -17,12 +17,16 @@ const HotspotAnalysis: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [district, setDistrict] = useState("All Districts");
   const [crimeType, setCrimeType] = useState("All");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
-  const fetch = async () => {
-    setLoading(true);
+  const fetch = async (silent = false) => {
+    if (!silent) setLoading(true);
     const params: any = {};
     if (district !== "All Districts") params.district = district;
     if (crimeType !== "All") params.crime_type = crimeType;
+    if (dateFrom) params.date_from = dateFrom;
+    if (dateTo) params.date_to = dateTo;
 
     const [h, p, d] = await Promise.all([
       crimeService.getHotspotClusters(params),
@@ -32,12 +36,14 @@ const HotspotAnalysis: React.FC = () => {
     setHotspots(h);
     setPatterns(p as typeof patterns);
     setDeployment(d);
-    setLoading(false);
+    if (!silent) setLoading(false);
   };
 
   useEffect(() => {
     fetch();
-  }, []);
+    const interval = setInterval(() => fetch(true), 60000);
+    return () => clearInterval(interval);
+  }, [district, crimeType, dateFrom, dateTo]);
 
   const selectClass = "bg-slate-800 border border-slate-600 text-slate-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500";
 
@@ -67,6 +73,9 @@ const HotspotAnalysis: React.FC = () => {
           <select value={crimeType} onChange={(e) => setCrimeType(e.target.value)} className={selectClass}>
             {CRIME_TYPES.map((t) => <option key={t}>{t}</option>)}
           </select>
+          <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className={selectClass} />
+          <span className="text-slate-500 text-xs self-center">to</span>
+          <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className={selectClass} />
           <button onClick={fetch} className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-500 transition-colors">Apply Filters</button>
         </div>
       </div>

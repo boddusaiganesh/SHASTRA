@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Users, Search, Shield, ChevronRight } from "lucide-react";
-import { offenderService } from "../services/predictionService";
+import { offenderService } from "../services/offenderService";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 
 interface Offender {
@@ -17,12 +17,25 @@ const OffenderDatabase: React.FC = () => {
   const [selected, setSelected] = useState<Offender | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const [modusOperandi, setModusOperandi] = useState<Record<string, unknown> | null>(null);
+
   useEffect(() => {
-    offenderService.searchOffenders().then((d) => {
+    offenderService.searchOffenders("").then((d) => {
       setOffenders(d as unknown as Offender[]);
       setLoading(false);
     });
   }, []);
+
+  const handleSelectOffender = async (o: Offender) => {
+    setSelected(o);
+    setModusOperandi(null);
+    try {
+      const mo = await offenderService.getModusOperandi(o.offender_id);
+      if (mo) setModusOperandi(mo as Record<string, unknown>);
+    } catch {
+      // fallback handled below
+    }
+  };
 
   const handleSearch = async (q: string) => {
     setSearch(q);
@@ -58,7 +71,7 @@ const OffenderDatabase: React.FC = () => {
              const statusVal = o.status || o.offender_status;
              return (
             <motion.div key={o.offender_id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.03 }}
-              onClick={() => setSelected(o)}
+              onClick={() => handleSelectOffender(o)}
               className={`flex items-center gap-4 p-3 rounded-xl cursor-pointer transition-colors border ${
                 selected?.offender_id === o.offender_id
                   ? "bg-blue-900/30 border-blue-500/40"
@@ -115,13 +128,25 @@ const OffenderDatabase: React.FC = () => {
                   </div>
                 ))}
               </div>
-              {selected.modus_operandi && (
+              </div>
+              {selected.modus_operandi && !modusOperandi && (
                  <div className="bg-slate-800/60 rounded-lg p-3">
                    <p className="text-xs text-slate-400 mb-1 flex items-center gap-1"><Shield className="h-3 w-3" />Modus Operandi</p>
                    <p className="text-xs text-slate-200 leading-relaxed">
                      {typeof selected.modus_operandi === 'string' ? selected.modus_operandi : selected.modus_operandi.typical_target || "N/A"}
                    </p>
                  </div>
+              )}
+              {modusOperandi && (
+                <div className="bg-slate-800/60 rounded-lg p-3 space-y-1">
+                  <p className="text-xs font-semibold text-purple-400 mb-2 flex items-center gap-1"><Shield className="h-3 w-3" />Modus Operandi Analysis</p>
+                  {Object.entries(modusOperandi).map(([k, v]) => (
+                    <div key={k} className="flex justify-between text-xs">
+                      <span className="text-slate-400 capitalize">{k.replace(/_/g, " ")}</span>
+                      <span className="text-slate-200 text-right max-w-[60%]">{Array.isArray(v) ? v.join(", ") : String(v)}</span>
+                    </div>
+                  ))}
+                </div>
               )}
               <div>
                 <div className="flex justify-between text-xs mb-1">

@@ -52,8 +52,8 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState(new Date());
 
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const [s, t, c, ra] = await Promise.all([
         crimeService.getDashboardSummary(),
@@ -69,11 +69,15 @@ const Dashboard: React.FC = () => {
       setRecentAlerts(ra || []);
       setLastRefresh(new Date());
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { 
+    fetchData(); 
+    const interval = setInterval(() => fetchData(true), 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const stats = summary ? [
     { title: "Total Crimes This Month", value: summary.total_crimes_month as number, icon: Shield, trend: summary.total_crimes_trend as string, positive: false, color: "#EF4444", subtitle: "All reported cases" },

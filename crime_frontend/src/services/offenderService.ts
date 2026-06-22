@@ -3,12 +3,14 @@ import { ENDPOINTS } from "../constants/apiEndpoints";
 import { mockOffenders } from "./mockData";
 
 export const offenderService = {
-  searchOffenders: async (query: string) => {
+  searchOffenders: async (query: string = "") => {
     try {
       const res = await api.get(ENDPOINTS.OFFENDERS.SEARCH, { params: { query } });
       return res.data.data;
     } catch {
-      return mockOffenders.filter((o: any) => o.name.toLowerCase().includes(query.toLowerCase()));
+      return mockOffenders.filter((o: any) => 
+        !query || o.offender_name?.toLowerCase().includes(query.toLowerCase())
+      );
     }
   },
   getProfile: async (id: string) => {

@@ -16,12 +16,13 @@ interface Props {
   onDateFromChange: (v: string) => void;
   dateTo: string;
   onDateToChange: (v: string) => void;
+  onExport?: () => void;
 }
 
 const MapControls: React.FC<Props> = ({
   viewMode, onViewModeChange, crimeType, onCrimeTypeChange,
   district, onDistrictChange, timeOfDay, onTimeOfDayChange,
-  dateFrom, onDateFromChange, dateTo, onDateToChange,
+  dateFrom, onDateFromChange, dateTo, onDateToChange, onExport
 }) => {
   const selectClass = "bg-slate-800 border border-slate-600 text-slate-200 text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-blue-500";
   const inputClass = "bg-slate-800 border border-slate-600 text-slate-200 text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-blue-500";
@@ -47,7 +48,10 @@ const MapControls: React.FC<Props> = ({
         <button onClick={() => onViewModeChange("cluster")} className={btnClass(viewMode === "cluster")}><Layers className="h-3.5 w-3.5" />Cluster</button>
         <button onClick={() => onViewModeChange("pins")} className={btnClass(viewMode === "pins")}><MapPin className="h-3.5 w-3.5" />Pins</button>
       </div>
-      <button className="ml-auto flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 text-slate-300 text-xs rounded-lg hover:bg-slate-600 transition-colors">
+      <button 
+        onClick={onExport}
+        className="ml-auto flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 text-slate-300 text-xs rounded-lg hover:bg-slate-600 transition-colors"
+      >
         <Download className="h-3.5 w-3.5" />Export
       </button>
     </div>

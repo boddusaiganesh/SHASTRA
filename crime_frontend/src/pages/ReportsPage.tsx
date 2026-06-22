@@ -51,15 +51,28 @@ const ReportsPage: React.FC = () => {
 
   const handleDownload = async (reportId: string) => {
     try {
-      // Simulate download link
-      const link = document.createElement("a");
-      link.href = "#"; // Would be replaced by actual download URL
-      link.download = `report_${reportId}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      const result = await reportService.download(reportId);
+      if (result?.file_url) {
+        window.open(result.file_url, "_blank");
+      } else if (result?.report_data) {
+        const dataStr = JSON.stringify(result.report_data, null, 2);
+        const narrative = result.ai_narrative ? `\n\nAI Narrative:\n${result.ai_narrative}` : "";
+        const blob = new Blob([dataStr + narrative], { type: "text/plain" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `Report_${reportId}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } else {
+        setSuccessMsg(`Report ${reportId} is empty or still preparing.`);
+        setTimeout(() => setSuccessMsg(""), 4000);
+      }
     } catch (error) {
-      console.error("Download failed", error);
+      setSuccessMsg("Download failed. Please try again.");
+      setTimeout(() => setSuccessMsg(""), 3000);
     }
   };
 

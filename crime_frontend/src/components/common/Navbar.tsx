@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
-import { Bell, LogOut, Shield, User, Clock } from "lucide-react";
 import { RootState } from "../../store/store";
 import { logout } from "../../store/authSlice";
+import { clearUnreadCount } from "../../store/alertsSlice";
+import { useNavigate } from "react-router-dom";
+import { Bell, LogOut, Shield, User, Clock } from "lucide-react";
 import dayjs from "dayjs";
 
 interface Props { alertCount?: number; }
@@ -57,7 +58,10 @@ const Navbar: React.FC<Props> = ({ alertCount = 0 }) => {
 
       {/* Notifications */}
       <button
-        onClick={() => navigate("/alerts")}
+        onClick={() => {
+          dispatch(clearUnreadCount());
+          navigate("/alerts");
+        }}
         className="relative p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
       >
         <Bell className="h-5 w-5" />
