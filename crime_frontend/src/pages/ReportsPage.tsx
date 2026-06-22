@@ -1,0 +1,164 @@
+import React, { useEffect, useState } from "react";
+import { FileText, Download, Plus, CheckCircle, Clock, Loader2 } from "lucide-react";
+import { reportService } from "../services/alertService";
+import { KARNATAKA_DISTRICTS } from "../constants/districtsList";
+import LoadingSpinner from "../components/common/LoadingSpinner";
+
+const REPORT_TYPES = [
+  { value: "DISTRICT_SUMMARY", label: "District Crime Summary" },
+  { value: "STATE_WIDE", label: "State-Wide Overview" },
+  { value: "HOTSPOT_ANALYSIS", label: "Hotspot Analysis Report" },
+  { value: "OFFENDER_PROFILE", label: "Offender Profile Report" },
+  { value: "PREDICTION_REPORT", label: "Predictive Intelligence Report" },
+];
+
+interface SavedReport {
+  report_id: string; report_type: string; district?: string;
+  generated_at: string; status: string; file_size?: string;
+}
+
+const ReportsPage: React.FC = () => {
+  const [savedReports, setSavedReports] = useState<SavedReport[]>([]);
+  const [reportType, setReportType] = useState(REPORT_TYPES[0].value);
+  const [district, setDistrict] = useState("All Districts");
+  const [generating, setGenerating] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [successMsg, setSuccessMsg] = useState("");
+
+  useEffect(() => {
+    reportService.getSavedList().then((d) => {
+      setSavedReports(d as unknown as SavedReport[]);
+      setLoading(false);
+    });
+  }, []);
+
+  const handleGenerate = async () => {
+    setGenerating(true);
+    setSuccessMsg("");
+    try {
+      const params: Record<string, string> = { report_type: reportType };
+      if (district !== "All Districts") params.district_id = district;
+      const result = await reportService.generateReport(params);
+      if (result) {
+        setSavedReports((prev) => [result as unknown as SavedReport, ...prev]);
+        setSuccessMsg("Report generated successfully!");
+        setTimeout(() => setSuccessMsg(""), 3000);
+      }
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleDownload = async (reportId: string) => {
+    try {
+      // Simulate download link
+      const link = document.createElement("a");
+      link.href = "#"; // Would be replaced by actual download URL
+      link.download = `report_${reportId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error("Download failed", error);
+    }
+  };
+
+  if (loading) return <div className="flex-1 flex items-center justify-center"><LoadingSpinner size="lg" text="Loading reports..." /></div>;
+
+  return (
+    <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-white">Executive Reports</h1>
+          <p className="text-sm text-slate-400">Generate and download official crime intelligence reports</p>
+        </div>
+      </div>
+
+      <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5">
+        <h3 className="text-sm font-semibold text-white mb-4">Generate New Report</h3>
+        <div className="flex gap-4 items-end">
+          <div className="flex-1">
+            <label className="block text-xs text-slate-400 mb-1">Report Type</label>
+            <select
+              value={reportType}
+              onChange={(e) => setReportType(e.target.value)}
+              className="w-full bg-slate-900 border border-slate-600 text-slate-200 text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:border-blue-500"
+            >
+              {REPORT_TYPES.map((rt) => (
+                <option key={rt.value} value={rt.value}>{rt.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex-1">
+            <label className="block text-xs text-slate-400 mb-1">District Focus</label>
+            <select
+              value={district}
+              onChange={(e) => setDistrict(e.target.value)}
+              className="w-full bg-slate-900 border border-slate-600 text-slate-200 text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:border-blue-500"
+            >
+              <option value="All Districts">All Districts (State Wide)</option>
+              {KARNATAKA_DISTRICTS.map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+          </div>
+          <button
+            onClick={handleGenerate}
+            disabled={generating}
+            className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+          >
+            {generating ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5" />}
+            Generate Report
+          </button>
+        </div>
+        {successMsg && (
+          <div className="mt-3 flex items-center gap-2 text-green-400 text-sm">
+            <CheckCircle className="h-4 w-4" />
+            {successMsg}
+          </div>
+        )}
+      </div>
+
+      <div>
+        <h3 className="text-sm font-semibold text-white mb-4">Saved Reports</h3>
+        <div className="space-y-3">
+          {savedReports.map((report) => (
+            <div key={report.report_id} className="flex items-center justify-between p-4 bg-slate-800/50 border border-slate-700/50 rounded-xl">
+              <div className="flex items-center gap-4">
+                <div className="h-10 w-10 rounded-full bg-blue-900/30 flex items-center justify-center text-blue-400">
+                  <FileText className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-white">{report.report_type}</p>
+                  <div className="flex items-center gap-3 text-xs text-slate-400 mt-1">
+                    <span>ID: {report.report_id}</span>
+                    <span>•</span>
+                    <span>{report.district || "State Wide"}</span>
+                    <span>•</span>
+                    <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{new Date(report.generated_at).toLocaleDateString()}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className={`text-xs px-2 py-1 rounded-full ${report.status === "Ready" || report.status === "Completed" ? "bg-green-900/30 text-green-400" : "bg-yellow-900/30 text-yellow-400"}`}>
+                  {report.status || "Ready"}
+                </span>
+                <button
+                  onClick={() => handleDownload(report.report_id)}
+                  className="flex items-center gap-1 px-3 py-1.5 text-xs text-blue-400 hover:text-blue-300 hover:bg-blue-900/20 rounded-lg transition-colors"
+                >
+                  <Download className="h-4 w-4" /> Download
+                </button>
+              </div>
+            </div>
+          ))}
+          {savedReports.length === 0 && (
+            <div className="text-center py-8 text-slate-500 text-sm">No saved reports found.</div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ReportsPage;

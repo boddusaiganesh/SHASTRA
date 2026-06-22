@@ -18,19 +18,24 @@ const HotspotAnalysis: React.FC = () => {
   const [district, setDistrict] = useState("All Districts");
   const [crimeType, setCrimeType] = useState("All");
 
+  const fetch = async () => {
+    setLoading(true);
+    const params: any = {};
+    if (district !== "All Districts") params.district = district;
+    if (crimeType !== "All") params.crime_type = crimeType;
+
+    const [h, p, d] = await Promise.all([
+      crimeService.getHotspotClusters(params),
+      crimeService.getTimePatterns(params),
+      crimeService.getDeploymentSuggestions(params),
+    ]);
+    setHotspots(h);
+    setPatterns(p as typeof patterns);
+    setDeployment(d);
+    setLoading(false);
+  };
+
   useEffect(() => {
-    const fetch = async () => {
-      setLoading(true);
-      const [h, p, d] = await Promise.all([
-        crimeService.getHotspotClusters(),
-        crimeService.getTimePatterns(),
-        crimeService.getDeploymentSuggestions(),
-      ]);
-      setHotspots(h);
-      setPatterns(p as typeof patterns);
-      setDeployment(d);
-      setLoading(false);
-    };
     fetch();
   }, []);
 
@@ -62,7 +67,7 @@ const HotspotAnalysis: React.FC = () => {
           <select value={crimeType} onChange={(e) => setCrimeType(e.target.value)} className={selectClass}>
             {CRIME_TYPES.map((t) => <option key={t}>{t}</option>)}
           </select>
-          <button className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-500 transition-colors">Apply Filters</button>
+          <button onClick={fetch} className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-500 transition-colors">Apply Filters</button>
         </div>
       </div>
 

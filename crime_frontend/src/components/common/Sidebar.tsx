@@ -6,16 +6,16 @@ import {
 } from "lucide-react";
 
 const navItems = [
-  { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { path: "/crime-map", label: "Crime Map", icon: Map },
-  { path: "/hotspot-analysis", label: "Hotspot Analysis", icon: Flame },
-  { path: "/criminal-network", label: "Criminal Network", icon: Network },
-  { path: "/offender-profiles", label: "Offender Profiles", icon: Users },
-  { path: "/predictive-intelligence", label: "Predictive Intelligence", icon: Brain },
-  { path: "/anomaly-detection", label: "Anomaly Detection", icon: AlertOctagon },
-  { path: "/alerts", label: "Alerts", icon: Bell },
-  { path: "/reports", label: "Reports", icon: FileText },
-  { path: "/settings", label: "Settings", icon: Settings },
+  { path: "/",          label: "Dashboard",             icon: LayoutDashboard },
+  { path: "/map",       label: "Crime Map",             icon: Map },
+  { path: "/hotspots",  label: "Hotspot Analysis",      icon: Flame },
+  { path: "/network",   label: "Criminal Network",      icon: Network },
+  { path: "/offenders", label: "Offender Profiles",     icon: Users },
+  { path: "/predictions",label:"Predictive Intelligence",icon: Brain },
+  { path: "/anomalies", label: "Anomaly Detection",     icon: AlertOctagon },
+  { path: "/alerts",    label: "Alerts",                icon: Bell },
+  { path: "/reports",   label: "Reports",               icon: FileText },
+  { path: "/settings",  label: "Settings",              icon: Settings },
 ];
 
 interface Props { collapsed: boolean; onToggle: () => void; alertCount?: number; }

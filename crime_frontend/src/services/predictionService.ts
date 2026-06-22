@@ -6,7 +6,6 @@ import {
   mockEmergingTypologies,
   mockSocioeconomicData,
   mockOffenders,
-  mockPredictions,
   mockAnomalies,
 } from "./mockData";
 
@@ -19,7 +18,7 @@ export const predictionService = {
       return res.data;
     } catch (error) {
       console.warn("Using mock predictions data");
-      return mockPredictions;
+      return mockCrimeForecast;
     }
   },
 
@@ -63,16 +62,27 @@ export const offenderService = {
 export const anomalyService = {
   getList: async () => {
     try {
-      const res = await axios.get('http://localhost:8000/api/anomalies/');
+      const res = await api.get('/anomalies/list');
       return res.data;
     } catch (e) {
       console.error("Error fetching anomalies, falling back to mock:", e);
       return mockAnomalies;
     }
   },
-  getDetail: async (id: string) => { await delay(); return mockAnomalies.find((a) => a.anomaly_id === id) || null; },
+  getDetail: async (id: string) => {
+    try {
+      const res = await api.get(`/anomalies/detail/${id}`);
+      return res.data;
+    } catch {
+      return mockAnomalies.find((a) => a.anomaly_id === id) || null;
+    }
+  },
   updateStatus: async (id: string, status: string) => {
-    await delay();
-    return { success: true, anomaly_id: id, status };
+    try {
+      const res = await api.patch(`/anomalies/update-status/${id}`, { status });
+      return res.data;
+    } catch {
+      return { success: true, anomaly_id: id, status };
+    }
   },
 };

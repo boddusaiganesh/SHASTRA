@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from "react-leaflet";
+import MarkerClusterGroup from 'react-leaflet-cluster';
 import { CRIME_TYPE_COLORS } from "../../constants/crimeTypes";
 import { karnatakaCenter } from "../../utils/mapHelpers";
 import { formatDateTime } from "../../utils/dateFormatter";
@@ -39,44 +40,79 @@ const CrimeMap: React.FC<Props> = ({ crimes, viewMode, onCrimeSelect }) => {
         className="map-tiles"
       />
       <FitBounds />
-      {crimes.map((crime) => (
-        <CircleMarker
-          key={crime.crime_id}
-          center={[crime.latitude, crime.longitude]}
-          radius={getRadius()}
-          fillColor={CRIME_TYPE_COLORS[crime.crime_type] || "#6366f1"}
-          color={CRIME_TYPE_COLORS[crime.crime_type] || "#6366f1"}
-          weight={viewMode === "pins" ? 2 : 0}
-          fillOpacity={getOpacity()}
-          opacity={getOpacity()}
-          className={crime.status === "Active Search" || crime.status === "Under Investigation" ? "red-zone-pulse" : ""}
-          eventHandlers={{
-            click: () => {
-              onCrimeSelect?.(crime);
-            },
-          }}
-        >
-          <Popup className="crime-popup">
-            <div className="bg-slate-900 text-white rounded-lg p-3 min-w-[200px]">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold text-blue-400">{crime.crime_id}</span>
-                <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: CRIME_TYPE_COLORS[crime.crime_type] + "40", color: CRIME_TYPE_COLORS[crime.crime_type] }}>
-                  {crime.crime_type}
-                </span>
+      {viewMode === "cluster" ? (
+        <MarkerClusterGroup>
+          {crimes.map((crime) => (
+            <CircleMarker
+              key={crime.crime_id}
+              center={[crime.latitude, crime.longitude]}
+              radius={getRadius()}
+              fillColor={CRIME_TYPE_COLORS[crime.crime_type] || "#6366f1"}
+              color={CRIME_TYPE_COLORS[crime.crime_type] || "#6366f1"}
+              weight={viewMode === "pins" ? 2 : 0}
+              fillOpacity={getOpacity()}
+              opacity={getOpacity()}
+              className={crime.status === "Active Search" || crime.status === "Under Investigation" ? "red-zone-pulse" : ""}
+              eventHandlers={{ click: () => onCrimeSelect?.(crime) }}
+            >
+              <Popup className="crime-popup">
+                <div className="bg-slate-900 text-white rounded-lg p-3 min-w-[200px]">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold text-blue-400">{crime.crime_id}</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: CRIME_TYPE_COLORS[crime.crime_type] + "40", color: CRIME_TYPE_COLORS[crime.crime_type] }}>
+                      {crime.crime_type}
+                    </span>
+                  </div>
+                  <p className="text-sm font-semibold mb-1">{crime.location}</p>
+                  <p className="text-xs text-slate-400 mb-1">{crime.district} — {crime.police_station}</p>
+                  <p className="text-xs text-slate-400 mb-2">{formatDateTime(crime.date_time)}</p>
+                  <div className="flex items-center justify-between">
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${crime.status === "Arrested" || crime.status === "Solved" ? "bg-green-900/50 text-green-400" : "bg-yellow-900/50 text-yellow-400"}`}>
+                      {crime.status}
+                    </span>
+                    {crime.suspect_id && <span className="text-xs text-slate-500">Suspect: {crime.suspect_id}</span>}
+                  </div>
+                </div>
+              </Popup>
+            </CircleMarker>
+          ))}
+        </MarkerClusterGroup>
+      ) : (
+        crimes.map((crime) => (
+          <CircleMarker
+            key={crime.crime_id}
+            center={[crime.latitude, crime.longitude]}
+            radius={getRadius()}
+            fillColor={CRIME_TYPE_COLORS[crime.crime_type] || "#6366f1"}
+            color={CRIME_TYPE_COLORS[crime.crime_type] || "#6366f1"}
+            weight={viewMode === "pins" ? 2 : 0}
+            fillOpacity={getOpacity()}
+            opacity={getOpacity()}
+            className={crime.status === "Active Search" || crime.status === "Under Investigation" ? "red-zone-pulse" : ""}
+            eventHandlers={{ click: () => onCrimeSelect?.(crime) }}
+          >
+            <Popup className="crime-popup">
+              <div className="bg-slate-900 text-white rounded-lg p-3 min-w-[200px]">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-blue-400">{crime.crime_id}</span>
+                  <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: CRIME_TYPE_COLORS[crime.crime_type] + "40", color: CRIME_TYPE_COLORS[crime.crime_type] }}>
+                    {crime.crime_type}
+                  </span>
+                </div>
+                <p className="text-sm font-semibold mb-1">{crime.location}</p>
+                <p className="text-xs text-slate-400 mb-1">{crime.district} — {crime.police_station}</p>
+                <p className="text-xs text-slate-400 mb-2">{formatDateTime(crime.date_time)}</p>
+                <div className="flex items-center justify-between">
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${crime.status === "Arrested" || crime.status === "Solved" ? "bg-green-900/50 text-green-400" : "bg-yellow-900/50 text-yellow-400"}`}>
+                    {crime.status}
+                  </span>
+                  {crime.suspect_id && <span className="text-xs text-slate-500">Suspect: {crime.suspect_id}</span>}
+                </div>
               </div>
-              <p className="text-sm font-semibold mb-1">{crime.location}</p>
-              <p className="text-xs text-slate-400 mb-1">{crime.district} — {crime.police_station}</p>
-              <p className="text-xs text-slate-400 mb-2">{formatDateTime(crime.date_time)}</p>
-              <div className="flex items-center justify-between">
-                <span className={`text-xs px-2 py-0.5 rounded-full ${crime.status === "Arrested" || crime.status === "Solved" ? "bg-green-900/50 text-green-400" : "bg-yellow-900/50 text-yellow-400"}`}>
-                  {crime.status}
-                </span>
-                {crime.suspect_id && <span className="text-xs text-slate-500">Suspect: {crime.suspect_id}</span>}
-              </div>
-            </div>
-          </Popup>
-        </CircleMarker>
-      ))}
+            </Popup>
+          </CircleMarker>
+        ))
+      )}
     </MapContainer>
   );
 };

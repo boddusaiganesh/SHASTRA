@@ -1,7 +1,9 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "./store/store";
+import { setAlerts } from "./store/alertsSlice";
+import { alertService } from "./services/alertService";
 
 import Navbar from "./components/common/Navbar";
 import Sidebar from "./components/common/Sidebar";
@@ -11,19 +13,38 @@ import Dashboard from "./pages/Dashboard";
 import CrimeMapPage from "./pages/CrimeMapPage";
 import HotspotAnalysis from "./pages/HotspotAnalysis";
 import CriminalNetwork from "./pages/CriminalNetwork";
+import AnomalyDetection from "./pages/AnomalyDetection";
+import PredictiveAnalytics from "./pages/PredictiveAnalytics";
+import OffenderDatabase from "./pages/OffenderDatabase";
+import AlertsPage from "./pages/AlertsPage";
+import ReportsPage from "./pages/ReportsPage";
+import SettingsPage from "./pages/SettingsPage";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useSelector((state: RootState) => state.auth);
-  
+  const alerts = useSelector((state: RootState) => state.alerts);
+  const dispatch = useDispatch();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      alertService.getAlerts().then((data) => dispatch(setAlerts(data)));
+    }
+  }, [isAuthenticated, dispatch]);
+
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
-  
+
   return (
     <div className="flex h-screen bg-slate-900 overflow-hidden text-slate-200">
-      <Sidebar />
+      <Sidebar
+        collapsed={sidebarCollapsed}
+        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+        alertCount={alerts?.unreadCount || 0}
+      />
       <div className="flex flex-col flex-1 overflow-hidden">
-        <Navbar />
+        <Navbar alertCount={alerts?.unreadCount || 0} />
         <main className="flex-1 overflow-hidden bg-slate-900">
           {children}
         </main>
@@ -32,35 +53,21 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
-const PlaceholderPage = ({ title }: { title: string }) => (
-  <div className="flex-1 p-8">
-    <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-8 text-center">
-      <h2 className="text-2xl font-bold text-white mb-2">{title}</h2>
-      <p className="text-slate-400">This module is currently under development or integration.</p>
-    </div>
-  </div>
-);
-
 export default function App() {
   return (
     <Router>
       <Routes>
         <Route path="/login" element={<Login />} />
-        
         <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/map" element={<ProtectedRoute><CrimeMapPage /></ProtectedRoute>} />
         <Route path="/hotspots" element={<ProtectedRoute><HotspotAnalysis /></ProtectedRoute>} />
         <Route path="/network" element={<ProtectedRoute><CriminalNetwork /></ProtectedRoute>} />
-        
-        {/* Missing Routes mapped to Placeholder */}
-        <Route path="/anomalies" element={<ProtectedRoute><PlaceholderPage title="Anomaly Detection" /></ProtectedRoute>} />
-        <Route path="/predictions" element={<ProtectedRoute><PlaceholderPage title="Predictive Analytics" /></ProtectedRoute>} />
-        <Route path="/offenders" element={<ProtectedRoute><PlaceholderPage title="Offender Database" /></ProtectedRoute>} />
-        <Route path="/alerts" element={<ProtectedRoute><PlaceholderPage title="System Alerts" /></ProtectedRoute>} />
-        <Route path="/reports" element={<ProtectedRoute><PlaceholderPage title="Executive Reports" /></ProtectedRoute>} />
-        <Route path="/settings" element={<ProtectedRoute><PlaceholderPage title="Platform Settings" /></ProtectedRoute>} />
-        
-        {/* Catch all */}
+        <Route path="/anomalies" element={<ProtectedRoute><AnomalyDetection /></ProtectedRoute>} />
+        <Route path="/predictions" element={<ProtectedRoute><PredictiveAnalytics /></ProtectedRoute>} />
+        <Route path="/offenders" element={<ProtectedRoute><OffenderDatabase /></ProtectedRoute>} />
+        <Route path="/alerts" element={<ProtectedRoute><AlertsPage /></ProtectedRoute>} />
+        <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>

@@ -676,3 +676,8 @@ export const mockSavedReports = [
   { report_id: "RPT003", report_type: "Hotspot Analysis", district: "Kalaburagi", date_range: "Oct 2024", generated_at: "2024-11-01T09:00:00", generated_by: "Priya Devi" },
   { report_id: "RPT004", report_type: "Offender Activity", district: "All Karnataka", date_range: "2024 Annual", generated_at: "2024-11-30T16:00:00", generated_by: "Suresh Kumar" },
 ];
+
+export const mockNetworkData = {
+  nodes: mockNetworkNodes,
+  edges: mockNetworkEdges,
+};

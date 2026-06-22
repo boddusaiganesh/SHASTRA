@@ -22,6 +22,7 @@ const CrimeMapPage: React.FC = () => {
   const { mapCrimes, filters } = useSelector((s: RootState) => s.crimes);
   const [loading, setLoading] = useState(true);
   const [selectedCrime, setSelectedCrime] = useState<Crime | null>(null);
+  const [showCaseModal, setShowCaseModal] = useState(false);
   const [rightPanelData, setRightPanelData] = useState<{ total: number; byType: Record<string, number> }>({ total: 0, byType: {} });
 
   useEffect(() => {
@@ -44,6 +45,15 @@ const CrimeMapPage: React.FC = () => {
   const filteredCrimes = (mapCrimes as Crime[]).filter((c) => {
     if (filters.crimeType !== "All" && c.crime_type !== filters.crimeType) return false;
     if (filters.district !== "All Districts" && c.district !== filters.district) return false;
+    if (filters.dateFrom && new Date(c.date_time) < new Date(filters.dateFrom)) return false;
+    if (filters.dateTo && new Date(c.date_time) > new Date(filters.dateTo)) return false;
+    if (filters.timeOfDay && filters.timeOfDay !== "All Times") {
+       const hour = new Date(c.date_time).getHours();
+       if (filters.timeOfDay === "Morning (6AM-12PM)" && (hour < 6 || hour >= 12)) return false;
+       if (filters.timeOfDay === "Afternoon (12PM-6PM)" && (hour < 12 || hour >= 18)) return false;
+       if (filters.timeOfDay === "Evening (6PM-12AM)" && (hour < 18 || hour >= 24)) return false;
+       if (filters.timeOfDay === "Night (12AM-6AM)" && (hour >= 6)) return false;
+    }
     return true;
   });
 
@@ -162,7 +172,7 @@ const CrimeMapPage: React.FC = () => {
                 {selectedCrime.suspect_id && <p className="text-xs text-slate-500">Suspect: {selectedCrime.suspect_id}</p>}
               </div>
               <div className="mt-3 flex gap-2">
-                <button className="flex-1 py-1.5 bg-blue-600/20 border border-blue-500/30 text-blue-400 text-xs rounded-lg hover:bg-blue-600/30 transition-colors">View Full Case</button>
+                <button onClick={() => setShowCaseModal(true)} className="flex-1 py-1.5 bg-blue-600/20 border border-blue-500/30 text-blue-400 text-xs rounded-lg hover:bg-blue-600/30 transition-colors">View Full Case</button>
                 <button className="flex items-center gap-1 py-1.5 px-2 bg-slate-800 text-slate-400 text-xs rounded-lg hover:bg-slate-700 transition-colors">
                   <Info className="h-3 w-3" />
                 </button>
@@ -171,6 +181,45 @@ const CrimeMapPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {showCaseModal && selectedCrime && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl max-w-2xl w-full p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-white">Case File: {selectedCrime.crime_id}</h2>
+              <button onClick={() => setShowCaseModal(false)} className="text-slate-400 hover:text-white"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                 <div>
+                   <p className="text-xs text-slate-400">Crime Type</p>
+                   <p className="text-sm text-white font-medium">{selectedCrime.crime_type}</p>
+                 </div>
+                 <div>
+                   <p className="text-xs text-slate-400">Date & Time</p>
+                   <p className="text-sm text-white font-medium">{formatDateTime(selectedCrime.date_time)}</p>
+                 </div>
+                 <div>
+                   <p className="text-xs text-slate-400">Location</p>
+                   <p className="text-sm text-white font-medium">{selectedCrime.location}, {selectedCrime.district}</p>
+                 </div>
+                 <div>
+                   <p className="text-xs text-slate-400">Status</p>
+                   <p className="text-sm text-white font-medium">{selectedCrime.status}</p>
+                 </div>
+              </div>
+              <div className="bg-slate-900/50 rounded-lg p-4 mt-4">
+                <h3 className="text-sm font-semibold text-white mb-2">Investigation Details</h3>
+                <p className="text-sm text-slate-300">Detailed investigation reports and evidence logs are currently restricted based on your access level. Please request higher clearance from the SCRB Administrator.</p>
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end gap-3">
+              <button onClick={() => setShowCaseModal(false)} className="px-4 py-2 bg-slate-700 text-white text-sm rounded-lg hover:bg-slate-600">Close</button>
+              <button className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-500">Request Access</button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };

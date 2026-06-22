@@ -1,4 +1,4 @@
-import axios from 'axios';
+import api from './api';
 import {
   mockMapCrimes,
   mockDashboardSummary,
@@ -26,8 +26,24 @@ export const crimeService = {
       return mockDashboardSummary;
     }
   },
-  getRecentCrimes: async () => { await delay(); return mockRecentCrimes; },
-  getRecentAlerts: async () => { await delay(); return mockRecentAlerts; },
+  getRecentCrimes: async (limit = 10) => {
+    try {
+      const res = await api.get('/dashboard/recent-crimes', { params: { limit } });
+      return res.data;
+    } catch {
+      console.warn("Using mock recent crimes");
+      return mockRecentCrimes;
+    }
+  },
+  getRecentAlerts: async (limit = 8) => {
+    try {
+      const res = await api.get('/dashboard/recent-alerts', { params: { limit } });
+      return res.data;
+    } catch {
+      console.warn("Using mock recent alerts");
+      return mockRecentAlerts;
+    }
+  },
   getCrimeTrends: async () => {
     try {
       const res = await api.get('/dashboard/crime-trends');
@@ -47,8 +63,8 @@ export const crimeService = {
     }
   },
   getCrimeDetail: async (id: string) => { await delay(); return mockMapCrimes.find((c) => c.crime_id === id) || null; },
-  getHotspotClusters: async () => { await delay(); return mockHotspotClusters; },
-  getTimePatterns: async () => { await delay(); return { byHour: mockTimePatternData, byDay: mockDayPatternData, byMonth: mockMonthPatternData }; },
-  getTopHotspots: async () => { await delay(); return mockHotspotClusters; },
-  getDeploymentSuggestions: async () => { await delay(); return mockDeploymentSuggestions; },
+  getHotspotClusters: async (_filters?: any) => { await delay(); return mockHotspotClusters; },
+  getTimePatterns: async (_filters?: any) => { await delay(); return { byHour: mockTimePatternData, byDay: mockDayPatternData, byMonth: mockMonthPatternData }; },
+  getTopHotspots: async (_filters?: any) => { await delay(); return mockHotspotClusters; },
+  getDeploymentSuggestions: async (_filters?: any) => { await delay(); return mockDeploymentSuggestions; },
 };
