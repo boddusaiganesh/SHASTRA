@@ -17,13 +17,29 @@ import {
 const delay = (ms = 600) => new Promise((r) => setTimeout(r, ms));
 
 export const crimeService = {
-  getDashboardSummary: async () => { await delay(); return mockDashboardSummary; },
+  getDashboardSummary: async () => {
+    try {
+      const res = await api.get('/dashboard/summary');
+      return res.data;
+    } catch (error) {
+      console.warn("Using mock dashboard summary");
+      return mockDashboardSummary;
+    }
+  },
   getRecentCrimes: async () => { await delay(); return mockRecentCrimes; },
   getRecentAlerts: async () => { await delay(); return mockRecentAlerts; },
-  getCrimeTrends: async () => { await delay(); return { trends: mockCrimeTrends, byType: mockCrimeTypeBreakdown, byDistrict: mockDistrictCrimeCounts }; },
-  getMapData: async (_filters?: Record<string, string>) => { 
+  getCrimeTrends: async () => {
     try {
-      const response = await axios.get('http://localhost:8000/api/crimes/map-data');
+      const res = await api.get('/dashboard/crime-trends');
+      return res.data;
+    } catch (error) {
+      console.warn("Using mock crime trends");
+      return { trends: mockCrimeTrends, byType: mockCrimeTypeBreakdown, byDistrict: mockDistrictCrimeCounts };
+    }
+  },
+  getMapData: async (filters?: Record<string, string>) => { 
+    try {
+      const response = await api.get('/crimes/map-data', { params: filters });
       return response.data;
     } catch (error) {
       console.error('Error fetching map data from backend, falling back to mock data:', error);

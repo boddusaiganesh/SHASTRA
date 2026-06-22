@@ -14,7 +14,7 @@ MOCK_ANOMALIES = [
         "anomaly_id": "ANO001",
         "detection_datetime": "2026-06-15T09:30:00",
         "anomaly_type": "Crime Spike",
-        "severity_level": "Critical",
+        "severity": "CRITICAL",
         "location": "Whitefield, Bengaluru",
         "description": "Vehicle theft rate increased by 340% in a 48-hour window",
         "ai_explanation": "Gemini AI Analysis: The sudden spike in vehicle thefts in Whitefield appears to be coordinated. Network analysis links 4 of the 12 vehicles stolen to the same parking facility.",
@@ -28,7 +28,7 @@ MOCK_ANOMALIES = [
         "anomaly_id": "ANO002",
         "detection_datetime": "2026-06-14T18:45:00",
         "anomaly_type": "Cross-District Pattern",
-        "severity_level": "Critical",
+        "severity": "CRITICAL",
         "location": "Belagavi Border Areas",
         "description": "Unusual pattern of incidents at border checkpoints suggesting smuggling operation",
         "ai_explanation": "Gemini AI Analysis: Analysis reveals a systematic pattern of decoy items being seized at main checkpoints while high-value contraband passes through secondary routes.",
@@ -41,6 +41,7 @@ MOCK_ANOMALIES = [
 ]
 
 @router.get("/")
+@router.get("/list")
 async def get_anomalies(db: AsyncSession = Depends(get_db)):
     """
     Fetch detected anomalies from the DB.

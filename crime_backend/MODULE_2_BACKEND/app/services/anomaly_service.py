@@ -217,7 +217,7 @@ async def save_anomaly(
     
     anomaly = Anomaly(
         anomaly_type=anomaly_type,
-        severity=severity,
+        severity=severity.upper() if severity else severity,
         description=description,
         evidence_points=evidence_points,
         district_id=district_id,

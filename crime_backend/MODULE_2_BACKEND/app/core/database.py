@@ -53,25 +53,22 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 
 async def init_db():
-    """Initialize database - create all tables"""
+    """Initialize database and create tables"""
+    # Import all models here to ensure they are registered with Base.metadata before create_all
+    # Import in order of dependency (parent tables before child tables)
+    from app.models.database_models.user_model import User
+    from app.models.database_models.crime_model import District, PoliceStation, Crime
+    from app.models.database_models.offender_model import Offender, CrimeOffenderLink, OffenderAlias
+    from app.models.database_models.alert_model import Alert
+    from app.models.database_models.anomaly_model import Anomaly
+    from app.models.database_models.report_model import Report
+
     try:
         async with engine.begin() as conn:
             # Enable PostGIS extension
             await conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgis;"))
             await conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
             
-            # Import all models to ensure they are registered
-            from app.models.database_models import (
-                user_model,
-                crime_model,
-                offender_model,
-                victim_model,
-                location_model,
-                alert_model,
-                anomaly_model,
-                prediction_model,
-                report_model,
-            )
             
             await conn.run_sync(Base.metadata.create_all)
         

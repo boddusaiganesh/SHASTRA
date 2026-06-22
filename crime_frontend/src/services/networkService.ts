@@ -1,26 +1,28 @@
-import axios from 'axios';
-import { mockNetworkNodes, mockNetworkEdges, mockAiNetworkSummary } from "./mockData";
-
-const delay = (ms = 600) => new Promise((r) => setTimeout(r, ms));
+import api from './api';
+import { mockNetworkData } from './mockData';
 
 export const networkService = {
-  getGraphData: async () => {
+  getNetworkData: async (filters?: any) => {
     try {
-      const res = await axios.get('http://localhost:8000/api/network/graph');
-      return { nodes: res.data.nodes, edges: res.data.edges };
-    } catch (e) {
-      console.error("Error fetching network graph, falling back to mock", e);
-      return { nodes: mockNetworkNodes, edges: mockNetworkEdges };
-    }
-  },
-  getNodeDetail: async (id: string) => { await delay(); return mockNetworkNodes.find((n) => n.node_id === id) || null; },
-  getAiSummary: async () => {
-    try {
-      const res = await axios.get('http://localhost:8000/api/network/ai-summary');
+      const res = await api.get('/network/graph', { params: filters });
       return res.data;
-    } catch (e) {
-      console.error("Error fetching AI summary, falling back to mock", e);
-      return mockAiNetworkSummary;
+    } catch (error) {
+      console.warn("Using mock network data");
+      return mockNetworkData;
     }
   },
+
+  getAiSummary: async (networkId?: string) => {
+    try {
+      const res = await api.get('/network/ai-summary', { params: { id: networkId } });
+      return res.data;
+    } catch (error) {
+      console.warn("Using mock AI network summary");
+      return {
+        summary: "Gemini Analysis: The network shows a highly centralized structure built around two primary actors (ON-001 and ON-002). The Modus Operandi suggests coordinated vehicle theft followed by interstate trafficking. 40% of the nodes represent repeat offenders.",
+        key_actors: ["ON-001", "ON-002"],
+        recommended_actions: ["Target the bridge node ON-003 to disrupt communication.", "Increase surveillance at locations L-01 and L-04."]
+      };
+    }
+  }
 };

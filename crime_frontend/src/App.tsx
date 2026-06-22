@@ -32,6 +32,15 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
+const PlaceholderPage = ({ title }: { title: string }) => (
+  <div className="flex-1 p-8">
+    <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-8 text-center">
+      <h2 className="text-2xl font-bold text-white mb-2">{title}</h2>
+      <p className="text-slate-400">This module is currently under development or integration.</p>
+    </div>
+  </div>
+);
+
 export default function App() {
   return (
     <Router>
@@ -42,6 +51,14 @@ export default function App() {
         <Route path="/map" element={<ProtectedRoute><CrimeMapPage /></ProtectedRoute>} />
         <Route path="/hotspots" element={<ProtectedRoute><HotspotAnalysis /></ProtectedRoute>} />
         <Route path="/network" element={<ProtectedRoute><CriminalNetwork /></ProtectedRoute>} />
+        
+        {/* Missing Routes mapped to Placeholder */}
+        <Route path="/anomalies" element={<ProtectedRoute><PlaceholderPage title="Anomaly Detection" /></ProtectedRoute>} />
+        <Route path="/predictions" element={<ProtectedRoute><PlaceholderPage title="Predictive Analytics" /></ProtectedRoute>} />
+        <Route path="/offenders" element={<ProtectedRoute><PlaceholderPage title="Offender Database" /></ProtectedRoute>} />
+        <Route path="/alerts" element={<ProtectedRoute><PlaceholderPage title="System Alerts" /></ProtectedRoute>} />
+        <Route path="/reports" element={<ProtectedRoute><PlaceholderPage title="Executive Reports" /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><PlaceholderPage title="Platform Settings" /></ProtectedRoute>} />
         
         {/* Catch all */}
         <Route path="*" element={<Navigate to="/" replace />} />

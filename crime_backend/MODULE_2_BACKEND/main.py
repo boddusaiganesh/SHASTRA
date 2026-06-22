@@ -3,11 +3,18 @@ Karnataka State Police - Crime Intelligence & Analytical Platform
 Module 2 - FastAPI Backend - Main Entry Point
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from contextlib import asynccontextmanager
 import uvicorn
+import logging
+import sys
+
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 from app.core.config import settings
 from app.core.database import init_db
@@ -29,94 +36,100 @@ from app.routers import (
     settings_router,
 )
 
+# Setup logging
+logging.basicConfig(
+    level=logging.INFO if settings.ENVIRONMENT == "production" else logging.DEBUG,
+    format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)],
+)
+
+_db_ready = False
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown events"""
-    # Startup
-    print("🚀 Starting Karnataka State Police - Crime Intelligence Platform Backend...")
+    global _db_ready
+    print("🚀 Starting SHASTRA - Crime Intelligence Platform Backend...")
     
-    # Initialize database
-    await init_db()
-    print("✅ PostgreSQL Database connected and tables created")
+    try:
+        await init_db()
+        _db_ready = True
+        print("✅ PostgreSQL Database connected and tables created")
+    except Exception as e:
+        print(f"⚠️  Database not available: {e} — continuing in degraded mode")
     
-    # Initialize Redis
     await init_redis()
     print("✅ Redis Cache connected")
     
-    # Initialize Neo4j
     init_neo4j()
     print("✅ Neo4j Graph Database connected")
     
-    # Initialize Scheduler
-    init_scheduler()
-    print("✅ APScheduler started - Background intelligence tasks running")
+    if _db_ready:
+        init_scheduler()
+        print("✅ APScheduler started - Background intelligence tasks running")
+    else:
+        print("⚠️  Scheduler NOT started — database unavailable")
     
     print("✅ All systems operational. Backend ready on port", settings.BACKEND_PORT)
     
     yield
     
-    # Shutdown
-    print("🔄 Shutting down Crime Intelligence Platform Backend...")
-    shutdown_scheduler()
+    print("🔄 Shutting down SHASTRA Intelligence Platform Backend...")
+    if _db_ready:
+        shutdown_scheduler()
     await close_redis()
     close_neo4j()
     print("✅ Shutdown complete")
 
 
-# Create FastAPI application
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        return response
+
 app = FastAPI(
     title="SHASTRA - Crime Intelligence Platform",
     description="""
     ## SHASTRA Intelligence Platform API
     
     A state-of-the-art backend platform powering the Karnataka State Police (KSP)
-    Crime Intelligence System. This API provides:
-    
-    - **Advanced Crime Analytics** - Spatial and temporal crime pattern analysis
-    - **Hotspot Detection** - AI-powered crime cluster identification
-    - **Criminal Network Analysis** - Graph-based relationship mapping
-    - **Predictive Intelligence** - ML-driven crime forecasting
-    - **Anomaly Detection** - Automated unusual pattern detection
-    - **Socioeconomic Correlation** - Crime-poverty-urbanization analysis
-    - **Gemini AI Integration** - Natural language intelligence reports
-    
-    ### Authentication
-    All endpoints (except /api/auth/login) require a Bearer JWT token.
-    
-    ### Base URL
-    `http://localhost:8000/api`
-    
-    ### Support
-    Karnataka State Crime Records Bureau (SCRB)
+    Crime Intelligence System.
     """,
     version="1.0.0",
-    contact={
-        "name": "SCRB Technical Team",
-        "email": "scrb@ksp.gov.in",
-    },
-    license_info={
-        "name": "Karnataka State Police - Internal Use Only",
-    },
+    contact={"name": "SCRB Technical Team", "email": "scrb@ksp.gov.in"},
+    license_info={"name": "Karnataka State Police - Internal Use Only"},
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_url="/openapi.json",
 )
 
+# Security and Rate Limiting
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SecurityHeadersMiddleware)
+
 # CORS Middleware
+allowed_origins = [settings.FRONTEND_URL]
+if settings.ENVIRONMENT == "development":
+    allowed_origins += ["http://localhost:3000", "http://localhost:5173"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.FRONTEND_URL, "http://localhost:3000", "http://localhost:5173"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
-# GZip compression for large responses
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-# Include all routers
+# Include routers
 app.include_router(auth_router.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(dashboard_router.router, prefix="/api/dashboard", tags=["Dashboard"])
 app.include_router(crimes_router.router, prefix="/api/crimes", tags=["Crimes"])
@@ -129,31 +142,15 @@ app.include_router(alerts_router.router, prefix="/api/alerts", tags=["Alerts"])
 app.include_router(reports_router.router, prefix="/api/reports", tags=["Reports"])
 app.include_router(settings_router.router, prefix="/api/settings", tags=["Settings"])
 
-
 @app.get("/", tags=["Health"])
 async def root():
-    """Root health check endpoint"""
-    return {
-        "success": True,
-        "data": {
-            "service": "Karnataka State Police - Crime Intelligence Platform",
-            "version": "1.0.0",
-            "status": "operational",
-            "module": "Module 2 - Backend Intelligence Engine",
-            "docs": "/docs",
-            "api_base": "/api",
-        },
-        "message": "Crime Intelligence Platform Backend is running",
-    }
-
+    return {"success": True, "message": "SHASTRA API is running"}
 
 @app.get("/api/health", tags=["Health"])
 async def health_check():
-    """Detailed health check for all services"""
     from app.core.database import get_db_health
     from app.core.redis_connection import get_redis_health
     from app.core.neo4j_connection import get_neo4j_health
-
     return {
         "success": True,
         "data": {
@@ -161,17 +158,17 @@ async def health_check():
             "database": await get_db_health(),
             "redis": await get_redis_health(),
             "neo4j": get_neo4j_health(),
-            "scheduler": "running",
-        },
-        "message": "All systems healthy",
+            "scheduler": "running" if _db_ready else "stopped",
+        }
     }
 
-
 if __name__ == "__main__":
+    workers = 1 if settings.ENVIRONMENT == "development" else 4
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
         port=settings.BACKEND_PORT,
         reload=settings.ENVIRONMENT == "development",
+        workers=workers,
         log_level="info",
     )

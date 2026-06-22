@@ -1,60 +1,51 @@
-import React, { useState } from "react";
-import { useDispatch } from "react-redux";
-import { useNavigate } from "react-router-dom";
-import { Shield, Eye, EyeOff, Lock, User, ChevronDown, AlertCircle } from "lucide-react";
-import { motion } from "framer-motion";
-import { loginSuccess } from "../store/authSlice";
-import { authService } from "../services/authService";
-import { USER_ROLES } from "../constants/crimeTypes";
+import React, { useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { Shield, Lock, User, AlertCircle, Loader2 } from 'lucide-react';
+import { loginStart, loginSuccess, loginFailure } from '../store/authSlice';
+import { authService } from '../services/authService';
+import { RootState } from '../store/store';
 
-const Login: React.FC = () => {
+export default function Login() {
+  const [username, setUsername] = useState('admin');
+  const [password, setPassword] = useState('Admin@1234');
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [role, setRole] = useState(USER_ROLES[0]);
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const { isLoading, error } = useSelector((state: RootState) => state.auth);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    setLoading(true);
+    dispatch(loginStart());
+    
     try {
-      const result = await authService.login({ username, password, role });
-      dispatch(loginSuccess(result as Parameters<typeof loginSuccess>[0]));
-      navigate("/dashboard");
-    } catch {
-      setError("Invalid credentials. Please try again.");
-    } finally {
-      setLoading(false);
+      const response = await authService.login({ username, password });
+      dispatch(loginSuccess(response));
+      navigate('/');
+    } catch (err: any) {
+      dispatch(loginFailure(err.message || 'Login failed'));
     }
   };
 
-  const inputClass = "w-full bg-slate-800/60 border border-slate-600 text-white rounded-xl px-4 py-3 pl-11 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 placeholder-slate-500 transition-all";
-
   return (
-    <div className="min-h-screen bg-[#020817] flex items-center justify-center relative overflow-hidden">
+    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 relative overflow-hidden">
       {/* Background */}
-      <div className="absolute inset-0">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl" />
-        <div className="absolute inset-0" style={{
-          backgroundImage: "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.03) 1px, transparent 0)",
-          backgroundSize: "40px 40px",
-        }} />
+      <div className="absolute inset-0 z-0">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-900/20 via-slate-900 to-slate-900"></div>
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-500/20 to-transparent"></div>
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-500/20 to-transparent"></div>
       </div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="relative w-full max-w-md mx-4"
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-md z-10"
       >
-        {/* Card */}
-        <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-8 shadow-2xl">
-          {/* Header */}
+        <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-8 shadow-2xl relative overflow-hidden">
+          {/* Top accent line */}
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-indigo-600"></div>
+          
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 mb-4 shadow-lg shadow-blue-500/30">
               <Shield className="h-8 w-8 text-white" />
@@ -64,13 +55,6 @@ const Login: React.FC = () => {
             <p className="text-slate-500 text-xs mt-1">Authorized Personnel Only — Secure Access</p>
           </div>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Username */}
-            <div className="relative">
-              <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-              <input
-                type="text"
                 placeholder="Officer ID / Username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}

@@ -18,28 +18,28 @@ class Settings(BaseSettings):
     DATABASE_URL_SYNC: str = "postgresql://admin:securepassword@localhost:5432/crime_intelligence_db"
     DATABASE_NAME: str = "crime_intelligence_db"
     DATABASE_USER: str = "admin"
-    DATABASE_PASSWORD: str = "securepassword"
+    DATABASE_PASSWORD: str
     DATABASE_HOST: str = "localhost"
     DATABASE_PORT: int = 5432
 
     # Neo4j
     NEO4J_URL: str = "bolt://localhost:7687"
     NEO4J_USER: str = "neo4j"
-    NEO4J_PASSWORD: str = "neo4jsecurepassword"
+    NEO4J_PASSWORD: str
 
     # Redis
     REDIS_URL: str = "redis://localhost:6379"
-    REDIS_PASSWORD: Optional[str] = "redissecurepassword"
+    REDIS_PASSWORD: Optional[str] = None
     CACHE_EXPIRY_SECONDS: int = 900
 
     # Gemini AI
-    GEMINI_API_KEY: str = "your_gemini_api_key_here"
+    GEMINI_API_KEY: str
     GEMINI_MODEL: str = "gemini-1.5-pro"
     GEMINI_MAX_TOKENS: int = 2048
     GEMINI_TEMPERATURE: float = 0.3
 
     # JWT
-    JWT_SECRET_KEY: str = "karnataka_state_police_crime_intelligence_platform_jwt_secret_key_2024_secure"
+    JWT_SECRET_KEY: str
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRY_HOURS: int = 8
 

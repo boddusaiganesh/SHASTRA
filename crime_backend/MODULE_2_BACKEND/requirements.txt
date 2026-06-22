@@ -12,9 +12,11 @@ redis==5.0.4
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 python-multipart==0.0.9
+slowapi==0.1.94
 pandas==2.2.2
 numpy==1.26.4
 scikit-learn==1.4.2
+# Note: For prophet on Windows, you may need pre-compiled wheels or you can use --prefer-binary
 prophet==1.1.5
 geopandas==0.14.4
 shapely==2.0.4

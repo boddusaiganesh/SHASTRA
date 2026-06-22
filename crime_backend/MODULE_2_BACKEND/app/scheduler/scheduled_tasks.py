@@ -77,14 +77,14 @@ def init_scheduler():
     try:
         scheduler.add_job(
             run_anomaly_detection,
-            trigger=CronTrigger(minute=0),
+            trigger=IntervalTrigger(hours=1),
             id="anomaly_detection_job",
             replace_existing=True,
         )
         
         scheduler.add_job(
             run_crime_forecasting,
-            trigger=CronTrigger(hour=2, minute=0),
+            trigger=IntervalTrigger(days=1),
             id="crime_forecasting_job",
             replace_existing=True,
         )

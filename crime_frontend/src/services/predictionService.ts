@@ -1,4 +1,4 @@
-import axios from 'axios';
+import api from './api';
 import {
   mockDistrictRiskScores,
   mockHighRiskPredictions,
@@ -6,17 +6,37 @@ import {
   mockEmergingTypologies,
   mockSocioeconomicData,
   mockOffenders,
+  mockPredictions,
   mockAnomalies,
 } from "./mockData";
 
 const delay = (ms = 600) => new Promise((r) => setTimeout(r, ms));
 
 export const predictionService = {
+  getPredictions: async (filters?: any) => {
+    try {
+      const res = await api.get('/predictions/forecast', { params: filters });
+      return res.data;
+    } catch (error) {
+      console.warn("Using mock predictions data");
+      return mockPredictions;
+    }
+  },
+
+  getAnomalies: async (filters?: any) => {
+    try {
+      const res = await api.get('/anomalies/list', { params: filters });
+      return res.data;
+    } catch (error) {
+      console.warn("Using mock anomalies data");
+      return mockAnomalies;
+    }
+  },
   getRiskMap: async () => { await delay(); return mockDistrictRiskScores; },
   getHighRiskAreas: async () => { await delay(); return mockHighRiskPredictions; },
   getForecast: async () => {
     try {
-      const res = await axios.get('http://localhost:8000/api/predictions/forecast');
+      const res = await api.get('/predictions/forecast');
       return res.data;
     } catch (e) {
       console.error("Error fetching forecast, falling back to mock:", e);

@@ -10,7 +10,13 @@ interface AuthState {
 }
 
 const stored = localStorage.getItem("user_data");
-const parsedUser = stored ? JSON.parse(stored) : null;
+let parsedUser = null;
+try {
+  parsedUser = stored ? JSON.parse(stored) : null;
+} catch (e) {
+  console.error("Failed to parse user_data from localStorage", e);
+  localStorage.removeItem("user_data");
+}
 
 const initialState: AuthState = {
   isAuthenticated: !!localStorage.getItem("auth_token"),
