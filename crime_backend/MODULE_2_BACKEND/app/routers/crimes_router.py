@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 from typing import List, Any, Optional
@@ -7,6 +7,9 @@ import logging
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.database_models.crime_model import Crime, District, PoliceStation
+from app.models.response_models.crime_response import CreateCrimeRequest
+from app.services.crime_service import create_crime
+from app.utils.district_resolver import resolve_district_id
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -90,3 +93,34 @@ async def crime_detail(
         raise HTTPException(status_code=404, detail="Crime not found")
         
     return {"success": True, "data": crime.to_dict()}
+
+
+@router.post("", status_code=status.HTTP_201_CREATED)
+async def log_crime(
+    crime_data: CreateCrimeRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    """
+    Log a new crime record.
+    Role check: DISTRICT_OFFICER can only log crimes within their own district.
+    """
+    resolved_district = await resolve_district_id(db, crime_data.district_id)
+    
+    if current_user["role"] == "DISTRICT_OFFICER":
+        user_district = current_user.get("district_id")
+        if resolved_district != user_district:
+            raise HTTPException(
+                status_code=403,
+                detail="District officers can only log crimes within their own district."
+            )
+            
+    crime_dict = crime_data.model_dump()
+    crime_dict["district_id"] = resolved_district
+    
+    try:
+        new_crime = await create_crime(db, crime_dict, str(current_user["user_id"]))
+        return {"success": True, "data": new_crime}
+    except Exception as e:
+        logger.error(f"Error creating crime: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")

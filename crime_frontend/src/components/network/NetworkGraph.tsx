@@ -6,7 +6,7 @@ interface NetworkNode {
   node_id: string; node_type: string; label: string; risk_score: number; crime_count: number; profile_data: Record<string, unknown>;
 }
 interface NetworkEdge {
-  source: string; target: string; relationship_type: string; strength_score: number;
+  source?: string; target?: string; source_node_id?: string; target_node_id?: string; relationship_type: string; strength_score: number;
 }
 interface Props {
   nodes: NetworkNode[]; edges: NetworkEdge[];
@@ -36,8 +36,8 @@ const NetworkGraph: React.FC<Props> = ({ nodes, edges, onNodeSelect, selectedNod
         ...edges.map((e, i) => ({
           data: {
             id: `e${i}`,
-            source: e.source,
-            target: e.target,
+            source: e.source || e.source_node_id || "",
+            target: e.target || e.target_node_id || "",
             label: e.relationship_type,
             strength: e.strength_score,
           },

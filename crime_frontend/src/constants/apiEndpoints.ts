@@ -36,8 +36,10 @@ export const ENDPOINTS = {
   // Offenders
   OFFENDERS: {
     SEARCH: "/offenders/search",
-    PROFILE: (id: string) => `/offenders/profile/${id}`,
-    MODUS_OPERANDI: (id: string) => `/offenders/modus-operandi/${id}`,
+    PROFILE: (id: string) => `/offenders/${id}/profile`,
+    MODUS_OPERANDI: (id: string) => `/offenders/${id}/modus-operandi`,
+    NETWORK: (id: string) => `/offenders/${id}/network`,
+    RISK: (id: string) => `/offenders/${id}/risk`,
   },
   // Predictions
   PREDICTIONS: {

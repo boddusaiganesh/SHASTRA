@@ -2,13 +2,13 @@ import { RISK_COLORS } from "../constants/colorCodes";
 
 export const getRiskColor = (score: number): string => {
   if (score >= 75) return RISK_COLORS.High;
-  if (score >= 50) return RISK_COLORS.Medium;
+  if (score >= 40) return RISK_COLORS.Medium;
   return RISK_COLORS.Low;
 };
 
 export const getRiskLevel = (score: number): string => {
   if (score >= 75) return "High";
-  if (score >= 50) return "Medium";
+  if (score >= 40) return "Medium";
   return "Low";
 };
 

@@ -26,7 +26,7 @@ def detect_anomalies(
         List of detected anomaly dicts
     """
     
-    if len(crime_data) < 14:
+    if len(crime_data) < 7:
         logger.warning("Insufficient data for anomaly detection")
         return []
     

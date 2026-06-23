@@ -5,41 +5,145 @@ Risk Scoring - Random Forest Classifier for district and location risk assessmen
 import numpy as np
 from typing import List, Dict, Any, Optional
 import logging
+import os
+import joblib
+from datetime import date
 
 logger = logging.getLogger(__name__)
+
+
+def calculate_offender_recidivism_risk(offender: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Calculate recidivism risk score and factors for an individual offender
+    """
+    factors = []
+    base_prob = 30.0  # Base probability of reoffending
+
+    # Total crimes weight (up to 30%)
+    total_crimes = offender.get("total_crimes", 0) or 0
+    if total_crimes > 5:
+        base_prob += 30.0
+        factors.append(f"High frequency of offenses ({total_crimes} crimes)")
+    elif total_crimes > 2:
+        base_prob += 15.0
+        factors.append(f"Multiple recorded offenses ({total_crimes} crimes)")
+    elif total_crimes == 2:
+        base_prob += 5.0
+        factors.append("Second-time offender")
+
+    # Known associates weight (up to 15%)
+    associates = offender.get("known_associates", []) or []
+    num_associates = len(associates)
+    if num_associates > 3:
+        base_prob += 15.0
+        factors.append(f"Large criminal network ({num_associates} known associates)")
+    elif num_associates > 0:
+        base_prob += 5.0
+        factors.append("Has known criminal associates")
+
+    # Last offense recency (up to 15%)
+    last_offense = offender.get("last_offense_date")
+    if last_offense:
+        try:
+            if isinstance(last_offense, str):
+                last_offense_date = date.fromisoformat(last_offense)
+            else:
+                last_offense_date = last_offense
+            days_since = (date.today() - last_offense_date).days
+            if days_since < 180:
+                base_prob += 15.0
+                factors.append("Recent offense within the last 6 months")
+            elif days_since < 365:
+                base_prob += 10.0
+                factors.append("Offense within the past year")
+            elif days_since > 1095:  # 3+ years
+                base_prob -= 10.0
+        except Exception:
+            pass
+
+    # Status weight
+    status = offender.get("status", "ACTIVE")
+    if status == "ACTIVE":
+        base_prob += 10.0
+    elif status == "IMPRISONED" or status == "PRISON":
+        base_prob -= 15.0
+        factors.append("Currently imprisoned")
+
+    probability = max(5.0, min(base_prob, 95.0))
+    if probability >= 70.0:
+        risk_level = "HIGH"
+    elif probability >= 40.0:
+        risk_level = "MEDIUM"
+    else:
+        risk_level = "LOW"
+
+    if not factors:
+        factors.append("No significant risk factors identified")
+
+    return {
+        "probability": round(probability, 1),
+        "risk_level": risk_level,
+        "factors": factors
+    }
 
 
 def calculate_district_risk(
     features: Dict[str, Any],
 ) -> Dict[str, Any]:
     """
-    Calculate risk score for a district using Random Forest model
-    
-    Features:
-    - historical_crime_rate: crimes per 100k population
-    - unemployment_rate: percentage
-    - poverty_index: 0-100
-    - population_density: per sqkm
-    - recent_trend: INCREASING/STABLE/DECREASING
-    - hotspot_count: number of active hotspots
-    - urbanization_rate: percentage
-    - young_male_population: percentage
-    - cctv_coverage: percentage
-    - street_lighting_coverage: percentage
+    Calculate risk score for a district using Random Forest model or rule-based fallback
     """
+    model_path = "app/ml_models/saved_models/risk_scoring_rf.pkl"
+    encoder_path = "app/ml_models/saved_models/risk_label_encoder.pkl"
     
-    try:
-        risk_score = _rule_based_risk_score(features)
-    except Exception as e:
-        logger.error(f"Risk scoring error: {e}")
-        risk_score = 50.0
+    use_ml = False
+    risk_score = 50.0
+    risk_level = "MEDIUM"
     
-    if risk_score >= 75:
-        risk_level = "HIGH"
-    elif risk_score >= 40:
-        risk_level = "MEDIUM"
-    else:
-        risk_level = "LOW"
+    if os.path.exists(model_path) and os.path.exists(encoder_path):
+        try:
+            model = joblib.load(model_path)
+            le = joblib.load(encoder_path)
+            
+            feature_cols = [
+                "historical_crime_rate", "unemployment_rate", "poverty_index",
+                "population_density", "hotspot_count", "urbanization_rate",
+                "young_male_population", "cctv_coverage", "street_lighting_coverage",
+            ]
+            X = np.array([[features.get(col, 0.0) for col in feature_cols]])
+            y_pred = model.predict(X)
+            risk_level = le.inverse_transform(y_pred)[0]
+            
+            if hasattr(model, "predict_proba"):
+                probs = model.predict_proba(X)[0]
+                class_scores = []
+                for cls_name in le.classes_:
+                    if cls_name == "HIGH":
+                        class_scores.append(85.0)
+                    elif cls_name == "MEDIUM":
+                        class_scores.append(55.0)
+                    else:
+                        class_scores.append(20.0)
+                risk_score = float(sum(p * s for p, s in zip(probs, class_scores)))
+            else:
+                risk_score = 85.0 if risk_level == "HIGH" else (55.0 if risk_level == "MEDIUM" else 20.0)
+            use_ml = True
+        except Exception as e:
+            logger.warning(f"ML risk prediction failed: {e}. Falling back to rules.")
+            
+    if not use_ml:
+        try:
+            risk_score = _rule_based_risk_score(features)
+        except Exception as e:
+            logger.error(f"Risk scoring error: {e}")
+            risk_score = 50.0
+        
+        if risk_score >= 75:
+            risk_level = "HIGH"
+        elif risk_score >= 40:
+            risk_level = "MEDIUM"
+        else:
+            risk_level = "LOW"
     
     # Top contributing factors
     factors = _identify_contributing_factors(features, risk_score)

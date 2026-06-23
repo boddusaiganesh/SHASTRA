@@ -1,4 +1,5 @@
 import api from "./api";
+import { ENDPOINTS } from "../constants/apiEndpoints";
 
 export interface LoginCredentials {
   username: string;
@@ -15,13 +16,13 @@ export interface AuthResponse {
 
 export const authService = {
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
-    const res = await api.post("/auth/login", credentials);
+    const res = await api.post(ENDPOINTS.AUTH.LOGIN, credentials);
     return res.data;
   },
 
   logout: async (): Promise<void> => {
     try {
-      await api.post("/auth/logout");
+      await api.post(ENDPOINTS.AUTH.LOGOUT);
     } catch (e) {
       // Token already expired or backend down — clear locally anyway
     }
@@ -29,7 +30,7 @@ export const authService = {
 
   verifyToken: async (): Promise<boolean> => {
     try {
-      await api.get("/auth/verify-token");
+      await api.get(ENDPOINTS.AUTH.VERIFY_TOKEN);
       return true;
     } catch {
       return false;

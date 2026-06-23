@@ -188,6 +188,20 @@ async def detect_and_generate_alerts(db: AsyncSession):
     district_result = await db.execute(select(District))
     districts = district_result.scalars().all()
     
+    # Load threshold from SystemSettings
+    from app.models.database_models.system_settings_model import SystemSettings
+    try:
+        settings_result = await db.execute(select(SystemSettings).where(SystemSettings.id == 1))
+        system_settings = settings_result.scalar_one_or_none()
+        crime_spike_threshold = (
+            system_settings.crime_spike_percent 
+            if system_settings and system_settings.crime_spike_percent is not None
+            else settings.CRIME_SPIKE_THRESHOLD
+        )
+    except Exception as e:
+        logger.warning(f"Failed to load SystemSettings, using default: {e}")
+        crime_spike_threshold = settings.CRIME_SPIKE_THRESHOLD
+
     for district in districts:
         # Count crimes in last 24 hours
         recent_result = await db.execute(
@@ -218,7 +232,7 @@ async def detect_and_generate_alerts(db: AsyncSession):
         if daily_average > 0 and recent_count > 0:
             spike_percentage = ((recent_count - daily_average) / daily_average) * 100
             
-            if spike_percentage >= settings.CRIME_SPIKE_THRESHOLD:
+            if spike_percentage >= crime_spike_threshold:
                 severity = "CRITICAL" if spike_percentage >= 100 else "HIGH"
                 
                 await create_alert(

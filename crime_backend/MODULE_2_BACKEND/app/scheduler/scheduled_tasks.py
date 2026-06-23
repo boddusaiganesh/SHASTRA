@@ -3,20 +3,25 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
-from sqlalchemy import select, func
+from sqlalchemy import select, func, delete
 from datetime import datetime, timedelta, timezone
 
 from app.core.database import AsyncSessionLocal
+from app.core.config import settings
 from app.ml_models.anomaly_detection import run_full_anomaly_scan
 from app.ml_models.crime_forecasting import forecast_crimes
 from app.models.database_models.anomaly_model import Anomaly
 from app.models.database_models.prediction_model import Prediction
 from app.models.database_models.crime_model import Crime
+from app.models.database_models.location_model import Hotspot
 from app.ml_models.model_trainer import retrain_all_models
+from app.services.alert_service import detect_and_generate_alerts, cleanup_expired_alerts
+from app.services.hotspot_service import generate_hotspots_from_crimes
 
 logger = logging.getLogger(__name__)
 
 scheduler = AsyncIOScheduler()
+
 
 async def run_anomaly_detection():
     logger.info("Running background anomaly detection (Isolation Forest)...")
@@ -39,6 +44,7 @@ async def run_anomaly_detection():
                 logger.info(f"Saved {len(anomalies)} anomalies to database.")
     except Exception as e:
         logger.error(f"Error in anomaly detection task: {e}")
+
 
 async def run_crime_forecasting():
     logger.info("Running background crime forecasting (Facebook Prophet)...")
@@ -75,6 +81,7 @@ async def run_crime_forecasting():
     except Exception as e:
         logger.error(f"Error in crime forecasting task: {e}")
 
+
 async def run_model_retraining():
     logger.info("Running scheduled ML model retraining...")
     try:
@@ -85,23 +92,83 @@ async def run_model_retraining():
         logger.error(f"Error in model retraining task: {e}")
 
 
+async def run_alert_detection():
+    logger.info("Running background alert detection (Crime Spikes)...")
+    try:
+        async with AsyncSessionLocal() as db:
+            await detect_and_generate_alerts(db)
+    except Exception as e:
+        logger.error(f"Error in alert detection task: {e}")
+
+
+async def run_alert_cleanup():
+    logger.info("Running background alert database cleanup...")
+    try:
+        async with AsyncSessionLocal() as db:
+            await cleanup_expired_alerts(db)
+    except Exception as e:
+        logger.error(f"Error in alert cleanup task: {e}")
+
+
+async def run_hotspot_regeneration():
+    logger.info("Running background hotspot regeneration (DBSCAN)...")
+    try:
+        async with AsyncSessionLocal() as db:
+            # Clear old active hotspots
+            await db.execute(delete(Hotspot))
+            
+            # Generate new hotspots across all districts
+            hotspots_data = await generate_hotspots_from_crimes(db)
+            
+            for hd in hotspots_data:
+                hotspot = Hotspot(
+                    hotspot_name=hd["hotspot_name"],
+                    district_id=hd["district_id"],
+                    center_latitude=hd["center_latitude"],
+                    center_longitude=hd["center_longitude"],
+                    radius_meters=hd["radius_meters"],
+                    boundary_geojson=hd["boundary_geojson"],
+                    crime_count=hd["crime_count"],
+                    dominant_crime_type=hd["dominant_crime_type"],
+                    risk_level=hd["risk_level"],
+                    risk_score=hd["risk_score"],
+                    peak_time_start=hd["peak_time_start"],
+                    peak_time_end=hd["peak_time_end"],
+                    peak_days=hd["peak_days"],
+                    trend=hd["trend"],
+                    trend_percentage=hd["trend_percentage"],
+                    deployment_suggestion=hd["deployment_suggestion"],
+                    is_active=hd["is_active"],
+                )
+                db.add(hotspot)
+            
+            await db.commit()
+            logger.info(f"Successfully regenerated and saved {len(hotspots_data)} hotspots.")
+    except Exception as e:
+        logger.error(f"Error in hotspot regeneration task: {e}")
+
+
 def init_scheduler():
     """Initialize and start the background scheduler."""
     try:
+        # 1. Anomaly detection interval
         scheduler.add_job(
             run_anomaly_detection,
-            trigger=IntervalTrigger(hours=1),
+            trigger=IntervalTrigger(hours=settings.ANOMALY_SCAN_INTERVAL_HOURS),
             id="anomaly_detection_job",
             replace_existing=True,
         )
         
+        # 2. Crime forecasting - weekly on specified day
+        day_str = settings.FORECAST_UPDATE_DAY[:3].lower()
         scheduler.add_job(
             run_crime_forecasting,
-            trigger=IntervalTrigger(days=1),
+            trigger=CronTrigger(day_of_week=day_str, hour=2, minute=30),
             id="crime_forecasting_job",
             replace_existing=True,
         )
         
+        # 3. Model retraining - weekly on Sunday at 2 AM
         scheduler.add_job(
             run_model_retraining,
             trigger=CronTrigger(day_of_week="sun", hour=2, minute=0),
@@ -109,11 +176,42 @@ def init_scheduler():
             replace_existing=True,
         )
 
+        # 4. Alert generation - hourly
+        scheduler.add_job(
+            run_alert_detection,
+            trigger=IntervalTrigger(hours=1),
+            id="alert_detection_job",
+            replace_existing=True,
+        )
+        
+        # 5. Alert database cleanup - daily
+        scheduler.add_job(
+            run_alert_cleanup,
+            trigger=IntervalTrigger(hours=24),
+            id="alert_cleanup_job",
+            replace_existing=True,
+        )
+        
+        # 6. Hotspot regeneration - daily at configured hour
+        scheduler.add_job(
+            run_hotspot_regeneration,
+            trigger=CronTrigger(hour=settings.HOTSPOT_UPDATE_HOUR, minute=0),
+            id="hotspot_regeneration_job",
+            replace_existing=True,
+        )
+
+        # 7. Run initial hotspot generation immediately on startup if empty
+        scheduler.add_job(
+            run_hotspot_regeneration,
+            id="hotspot_regeneration_startup",
+            replace_existing=True,
+        )
         
         scheduler.start()
         logger.info("Background ML scheduler started successfully.")
     except Exception as e:
         logger.error(f"Failed to start ML scheduler: {e}")
+
 
 def shutdown_scheduler():
     """Shutdown the scheduler."""

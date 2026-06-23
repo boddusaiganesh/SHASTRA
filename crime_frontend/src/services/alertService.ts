@@ -6,7 +6,7 @@ export const alertService = {
   getAlerts: async () => {
     try {
       const res = await api.get(ENDPOINTS.ALERTS.LIST);
-      return res.data || mockRecentAlerts;
+      return res.data?.alerts || res.data || mockRecentAlerts;
     } catch {
       return mockRecentAlerts;
     }
@@ -33,9 +33,9 @@ export const settingsService = {
   addUser: async (user: Record<string, string>) => {
     try {
       const res = await api.post(ENDPOINTS.SETTINGS.USERS_ADD, user);
-      return res.data;
+      return { data: res.data };
     } catch {
-      return { success: true, user };
+      return { user: { ...user, user_id: "mock-id-" + Math.random().toString(36).substring(2, 11) } };
     }
   },
   getDistricts: async () => {

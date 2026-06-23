@@ -168,7 +168,7 @@ async def get_crime_trends(
     months: int = 12,
     district_id: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Get crime trend data for the past N months"""
+    """Get crime trend data for the past N months with type and district breakdowns"""
     
     cache_key = f"crime_trends:{months}:{district_id}"
     cached = await cache_get(cache_key)
@@ -176,10 +176,10 @@ async def get_crime_trends(
         return cached
     
     now = datetime.now(timezone.utc)
-    
     from app.core.config import CRIME_TYPES
     
     trend_data = []
+    trends_list = []
     
     for i in range(months - 1, -1, -1):
         target_date = now.date().replace(day=1) - timedelta(days=i * 30)
@@ -203,6 +203,14 @@ async def get_crime_trends(
         )
         total = total_result.scalar() or 0
         
+        # Solved count
+        solved_result = await db.execute(
+            select(func.count(Crime.crime_id)).where(
+                and_(*conditions, Crime.status == "SOLVED")
+            )
+        )
+        solved = solved_result.scalar() or 0
+        
         # Count by crime type
         by_type = {}
         for crime_type in CRIME_TYPES:
@@ -215,14 +223,60 @@ async def get_crime_trends(
             if count > 0:
                 by_type[crime_type] = count
         
+        month_name = MONTH_NAMES[target_month - 1]
         trend_data.append({
-            "month": MONTH_NAMES[target_month - 1],
+            "month": month_name,
             "year": target_year,
             "total_crimes": total,
             "by_type": by_type,
         })
+        trends_list.append({
+            "month": month_name,
+            "crimes": total,
+            "solved": solved,
+        })
+        
+    # Aggregate counts by crime type for byType
+    period_start = now.date().replace(day=1) - timedelta(days=(months - 1) * 30)
+    type_query = (
+        select(Crime.crime_type, func.count(Crime.crime_id).label("count"))
+        .where(Crime.date_of_occurrence >= period_start)
+    )
+    if district_id:
+        type_query = type_query.where(Crime.district_id == district_id)
+    type_result = await db.execute(
+        type_query.group_by(Crime.crime_type).order_by(desc("count"))
+    )
+    total_period_crimes = 0
+    by_type_list = []
+    for row in type_result.all():
+        by_type_list.append({"type": row[0], "count": row[1]})
+        total_period_crimes += row[1]
     
-    response = {"trend_data": trend_data}
+    for item in by_type_list:
+        item["percentage"] = round((item["count"] / max(total_period_crimes, 1)) * 100, 1)
+        
+    # Aggregate counts by district for byDistrict
+    district_query = (
+        select(District.district_name, func.count(Crime.crime_id).label("count"))
+        .join(District, Crime.district_id == District.district_id)
+        .where(Crime.date_of_occurrence >= period_start)
+    )
+    if district_id:
+        district_query = district_query.where(Crime.district_id == district_id)
+    district_result = await db.execute(
+        district_query.group_by(District.district_name).order_by(desc("count"))
+    )
+    by_district_list = []
+    for row in district_result.all():
+        by_district_list.append({"district": row[0], "count": row[1]})
+        
+    response = {
+        "trend_data": trend_data,
+        "trends": trends_list,
+        "byType": by_type_list,
+        "byDistrict": by_district_list,
+    }
     await cache_set(cache_key, response, expiry=1800)
     return response
 
@@ -253,6 +307,7 @@ async def get_recent_crimes(
             "crime_type": c.crime_type,
             "location": c.address or c.landmark or "Unknown",
             "district": district_map.get(c.district_id, c.district_id),
+            "date_time": f"{c.date_of_occurrence} {c.time_of_occurrence or ''}".strip() if c.date_of_occurrence else "",
             "datetime": f"{c.date_of_occurrence} {c.time_of_occurrence or ''}".strip() if c.date_of_occurrence else "",
             "status": c.status,
             "severity": c.severity,

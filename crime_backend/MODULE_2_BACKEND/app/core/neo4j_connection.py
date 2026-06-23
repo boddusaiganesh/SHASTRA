@@ -191,7 +191,7 @@ def get_network_graph(
     {match_clause}
     WITH n LIMIT $node_limit
     OPTIONAL MATCH (n)-[r]-(connected)
-    RETURN n, r, connected
+    RETURN n, labels(n) AS labels_n, r, type(r) AS type_r, connected, labels(connected) AS labels_connected
     LIMIT $limit
     """
     
@@ -217,14 +217,15 @@ def get_network_graph(
             )
             
             if node_id not in nodes_map:
-                # Determine node type from available keys
-                if node.get("victim_id"):
+                # Determine node type from available labels or keys
+                labels_n = record.get("labels_n") or []
+                if "Victim" in labels_n or node.get("victim_id"):
                     node_type = "victim"
                     color = "#3b82f6"
-                elif node.get("location_id"):
+                elif "Location" in labels_n or node.get("location_id"):
                     node_type = "location"
                     color = "#22c55e"
-                elif node.get("org_id"):
+                elif "Organization" in labels_n or node.get("org_id"):
                     node_type = "organization"
                     color = "#a855f7"
                 else:
@@ -261,13 +262,14 @@ def get_network_graph(
             
             # Add connected node
             if target_id not in nodes_map:
-                if connected.get("victim_id"):
+                labels_conn = record.get("labels_connected") or []
+                if "Victim" in labels_conn or connected.get("victim_id"):
                     conn_type = "victim"
                     conn_color = "#3b82f6"
-                elif connected.get("location_id"):
+                elif "Location" in labels_conn or connected.get("location_id"):
                     conn_type = "location"
                     conn_color = "#22c55e"
-                elif connected.get("org_id"):
+                elif "Organization" in labels_conn or connected.get("org_id"):
                     conn_type = "organization"
                     conn_color = "#a855f7"
                 else:
@@ -288,7 +290,7 @@ def get_network_graph(
                 "edge_id": f"{source_id}_{target_id}",
                 "source_node_id": source_id,
                 "target_node_id": target_id,
-                "relationship_type": type(rel).__name__ if rel else "LINKED_TO",
+                "relationship_type": record.get("type_r") or "LINKED_TO",
                 "strength_score": rel.get("strength_score", 50) if rel else 50,
                 "confidence_level": rel.get("confidence_level", "SUSPECTED") if rel else "SUSPECTED",
                 "crime_count": len(rel.get("crime_ids", [])) if rel else 0,

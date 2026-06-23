@@ -2,12 +2,12 @@
 Core Configuration - Loads all environment variables using Pydantic Settings
 """
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional
 import os
 import logging
 from dotenv import load_dotenv
-from pydantic import validator
+from pydantic import field_validator
 
 load_dotenv()
 
@@ -63,11 +63,10 @@ class Settings(BaseSettings):
     ANOMALY_SENSITIVITY: str = "MEDIUM"
     PREDICTION_CONFIDENCE_MIN: int = 60
 
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
+    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True)
 
-    @validator("JWT_SECRET_KEY")
+    @field_validator("JWT_SECRET_KEY")
+    @classmethod
     def validate_jwt(cls, v):
         if v == "CHANGE_THIS_IN_PRODUCTION_64_CHARS_MIN":
             logging.getLogger(__name__).warning(
