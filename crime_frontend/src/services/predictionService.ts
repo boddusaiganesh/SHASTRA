@@ -13,7 +13,7 @@ export const predictionService = {
   getPredictions: async (filters?: any) => {
     try {
       const res = await api.get(ENDPOINTS.PREDICTIONS.FORECAST, { params: filters });
-      return res.data.data || res.data;
+      return res.data;
     } catch (error) {
       return mockCrimeForecast;
     }
@@ -21,7 +21,7 @@ export const predictionService = {
   getAnomalies: async (filters?: any) => {
     try {
       const res = await api.get(ENDPOINTS.ANOMALIES.LIST, { params: filters });
-      return res.data.data || res.data;
+      return res.data;
     } catch (error) {
       return mockAnomalies;
     }
@@ -29,7 +29,7 @@ export const predictionService = {
   getRiskMap: async () => {
     try {
       const res = await api.get(ENDPOINTS.PREDICTIONS.RISK_MAP);
-      return res.data.data || res.data;
+      return res.data;
     } catch {
       return mockDistrictRiskScores;
     }
@@ -37,7 +37,7 @@ export const predictionService = {
   getHighRiskAreas: async () => {
     try {
       const res = await api.get(ENDPOINTS.PREDICTIONS.HIGH_RISK_AREAS);
-      return res.data.data || res.data;
+      return res.data;
     } catch {
       return mockHighRiskPredictions;
     }
@@ -45,7 +45,7 @@ export const predictionService = {
   getForecast: async () => {
     try {
       const res = await api.get(ENDPOINTS.PREDICTIONS.FORECAST);
-      return res.data.data || res.data;
+      return res.data;
     } catch {
       return mockCrimeForecast;
     }
@@ -53,7 +53,7 @@ export const predictionService = {
   getEmergingTypologies: async () => {
     try {
       const res = await api.get(ENDPOINTS.PREDICTIONS.EMERGING_TYPOLOGIES);
-      return res.data.data || res.data;
+      return res.data;
     } catch {
       return mockEmergingTypologies;
     }
@@ -61,7 +61,7 @@ export const predictionService = {
   getSocioeconomicData: async (filters?: any) => {
     try {
       const res = await api.get(ENDPOINTS.PREDICTIONS.SOCIOECONOMIC, { params: filters });
-      return res.data.data || res.data;
+      return res.data;
     } catch {
       return mockSocioeconomicData;
     }
@@ -72,7 +72,7 @@ export const anomalyService = {
   getList: async () => {
     try {
       const res = await api.get(ENDPOINTS.ANOMALIES.LIST);
-      return res.data.data || res.data;
+      return res.data;
     } catch (e) {
       return mockAnomalies;
     }
@@ -80,7 +80,7 @@ export const anomalyService = {
   getDetail: async (id: string) => {
     try {
       const res = await api.get(ENDPOINTS.ANOMALIES.DETAIL(id));
-      return res.data.data || res.data;
+      return res.data;
     } catch {
       return mockAnomalies.find((a) => a.anomaly_id === id) || null;
     }
@@ -88,7 +88,7 @@ export const anomalyService = {
   updateStatus: async (id: string, status: string) => {
     try {
       const res = await api.patch(ENDPOINTS.ANOMALIES.UPDATE_STATUS(id), { status });
-      return res.data.data || res.data;
+      return res.data;
     } catch {
       return { success: true, anomaly_id: id, status };
     }

@@ -81,8 +81,6 @@ async def calculate_correlations(
     factor: str = "all",
 ) -> List[Dict[str, Any]]:
     """Calculate Pearson correlation between socioeconomic factors and crime rates"""
-    import numpy as np
-    
     overlay_data = await get_overlay_data(db, None)  # Need all districts for correlation
     
     if len(overlay_data) < 3:

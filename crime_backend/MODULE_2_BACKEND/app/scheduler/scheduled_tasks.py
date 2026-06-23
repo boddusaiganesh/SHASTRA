@@ -4,7 +4,7 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
 from sqlalchemy import select, func
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from app.core.database import AsyncSessionLocal
 from app.ml_models.anomaly_detection import run_full_anomaly_scan
@@ -44,7 +44,7 @@ async def run_crime_forecasting():
     logger.info("Running background crime forecasting (Facebook Prophet)...")
     try:
         async with AsyncSessionLocal() as db:
-            sixty_days_ago = datetime.utcnow() - timedelta(days=60)
+            sixty_days_ago = datetime.now(timezone.utc) - timedelta(days=60)
             result = await db.execute(
                 select(
                     func.date(Crime.date_of_occurrence).label('date'),

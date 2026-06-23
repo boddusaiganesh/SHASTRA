@@ -32,7 +32,7 @@ async def crime_trends(
 ):
     if current_user["role"] == "DISTRICT_OFFICER":
         district_id = current_user.get("district_id")
-    data = await get_crime_trends(db, district_id)
+    data = await get_crime_trends(db, district_id=district_id)
     return {"success": True, "data": data}
 
 @router.get("/recent-crimes")

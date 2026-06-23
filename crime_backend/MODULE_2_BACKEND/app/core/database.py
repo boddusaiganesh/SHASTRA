@@ -57,8 +57,11 @@ async def init_db():
     # Import all models here to ensure they are registered with Base.metadata before create_all
     # Import in order of dependency (parent tables before child tables)
     from app.models.database_models.user_model import User
-    from app.models.database_models.crime_model import District, PoliceStation, Crime
-    from app.models.database_models.offender_model import Offender, CrimeOffenderLink, OffenderAlias
+    from app.models.database_models.crime_model import District, PoliceStation, Crime, CrimeOffenderLink, CrimeVictimLink
+    from app.models.database_models.offender_model import Offender
+    from app.models.database_models.victim_model import Victim
+    from app.models.database_models.location_model import Hotspot, Location, SocioeconomicData
+    from app.models.database_models.prediction_model import Prediction
     from app.models.database_models.alert_model import Alert
     from app.models.database_models.anomaly_model import Anomaly
     from app.models.database_models.report_model import Report

@@ -6,7 +6,7 @@ export const alertService = {
   getAlerts: async () => {
     try {
       const res = await api.get(ENDPOINTS.ALERTS.LIST);
-      return Array.isArray(res.data) ? res.data : (res.data?.data || mockRecentAlerts);
+      return res.data || mockRecentAlerts;
     } catch {
       return mockRecentAlerts;
     }
@@ -25,7 +25,7 @@ export const settingsService = {
   getUsers: async () => {
     try {
       const res = await api.get(ENDPOINTS.SETTINGS.USERS);
-      return res.data.data;
+      return res.data;
     } catch {
       return mockUsers;
     }
@@ -41,7 +41,7 @@ export const settingsService = {
   getDistricts: async () => {
     try {
       const res = await api.get(ENDPOINTS.SETTINGS.DISTRICTS);
-      return res.data.data;
+      return res.data;
     } catch {
       return [];
     }
@@ -49,7 +49,7 @@ export const settingsService = {
   getAlertThresholds: async () => {
     try {
       const res = await api.get(ENDPOINTS.SETTINGS.ALERT_THRESHOLDS);
-      return res.data.data;
+      return res.data;
     } catch {
       return mockAlertThresholds;
     }
@@ -89,7 +89,7 @@ export const reportService = {
       const res = await api.post(
         `${ENDPOINTS.REPORTS.GENERATE}?${new URLSearchParams(queryParams).toString()}`
       );
-      return res.data.data || res.data;
+      return res.data;
     } catch {
       return {
         report_id: `RPT_${Date.now()}`,
@@ -102,7 +102,7 @@ export const reportService = {
   getSavedList: async () => {
     try {
       const res = await api.get(ENDPOINTS.REPORTS.SAVED_LIST);
-      return res.data.data;
+      return res.data;
     } catch {
       return mockSavedReports;
     }

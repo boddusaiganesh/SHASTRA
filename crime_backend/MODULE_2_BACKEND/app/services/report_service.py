@@ -3,7 +3,7 @@ Report Generation Service
 """
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_, desc
+from sqlalchemy import select, func, and_, desc, true as sa_true
 from typing import Optional, Dict, Any, List
 from datetime import datetime, timezone, date
 import uuid
@@ -58,14 +58,14 @@ async def generate_report(
     if report_type in ["DISTRICT_SUMMARY", "CRIME_TREND"]:
         # Crime statistics
         total_result = await db.execute(
-            select(func.count(Crime.crime_id)).where(and_(*conditions))
+            select(func.count(Crime.crime_id)).where(and_(*conditions) if conditions else sa_true())
         )
         report_data["total_crimes"] = total_result.scalar() or 0
         
         # By crime type
         type_result = await db.execute(
             select(Crime.crime_type, func.count(Crime.crime_id).label("count"))
-            .where(and_(*conditions))
+            .where(and_(*conditions) if conditions else sa_true())
             .group_by(Crime.crime_type)
             .order_by(desc("count"))
         )
@@ -77,7 +77,7 @@ async def generate_report(
         # By status
         status_result = await db.execute(
             select(Crime.status, func.count(Crime.crime_id).label("count"))
-            .where(and_(*conditions))
+            .where(and_(*conditions) if conditions else sa_true())
             .group_by(Crime.status)
         )
         report_data["by_status"] = {
@@ -87,7 +87,7 @@ async def generate_report(
         # By severity
         severity_result = await db.execute(
             select(Crime.severity, func.count(Crime.crime_id).label("count"))
-            .where(and_(*conditions))
+            .where(and_(*conditions) if conditions else sa_true())
             .group_by(Crime.severity)
         )
         report_data["by_severity"] = {
@@ -98,7 +98,7 @@ async def generate_report(
         if not district_id:
             district_result = await db.execute(
                 select(Crime.district_id, func.count(Crime.crime_id).label("count"))
-                .where(and_(*conditions))
+                .where(and_(*conditions) if conditions else sa_true())
                 .group_by(Crime.district_id)
                 .order_by(desc("count"))
                 .limit(10)

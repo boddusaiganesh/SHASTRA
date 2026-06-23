@@ -32,6 +32,12 @@ api.interceptors.response.use(
       localStorage.removeItem("user_data");
       window.location.href = "/login";
     }
+    try {
+      (window as any).__using_mock_data = true;
+      window.dispatchEvent(new CustomEvent("mock-data-detected"));
+    } catch (e) {
+      // Ignore
+    }
     return Promise.reject(error);
   }
 );

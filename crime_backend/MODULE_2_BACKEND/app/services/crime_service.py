@@ -77,6 +77,17 @@ async def get_crimes_for_map(
     district_map = await _get_district_map(db)
     station_map = await _get_station_map(db)
     
+    # Get victim counts for these crimes
+    crime_ids = [crime.crime_id for crime in crimes]
+    victim_counts = {}
+    if crime_ids:
+        vc_result = await db.execute(
+            select(CrimeVictimLink.crime_id, func.count(CrimeVictimLink.victim_id))
+            .where(CrimeVictimLink.crime_id.in_(crime_ids))
+            .group_by(CrimeVictimLink.crime_id)
+        )
+        victim_counts = {row[0]: row[1] for row in vc_result.all()}
+    
     crime_list = []
     for crime in crimes:
         crime_list.append({
@@ -90,7 +101,7 @@ async def get_crimes_for_map(
             "police_station": station_map.get(crime.police_station_id, ""),
             "status": crime.status,
             "severity": crime.severity,
-            "victim_count": 0,
+            "victim_count": victim_counts.get(crime.crime_id, 0),
         })
     
     response = {

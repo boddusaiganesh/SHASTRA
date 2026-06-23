@@ -70,20 +70,6 @@ def _prophet_forecast(
     )
     
     # Add Indian festivals as holidays
-    indian_holidays = pd.DataFrame({
-        "holiday": [
-            "Republic Day", "Independence Day", "Gandhi Jayanti",
-            "Diwali", "Holi", "Eid ul Fitr", "Christmas",
-            "Kannada Rajyotsava", "Ugadi",
-        ],
-        "ds": pd.to_datetime([
-            "2024-01-26", "2024-08-15", "2024-10-02",
-            "2024-11-01", "2024-03-25", "2024-04-10", "2024-12-25",
-            "2024-11-01", "2024-04-09",
-        ]),
-        "lower_window": -1,
-        "upper_window": 1,
-    })
     model.add_country_holidays(country_name='IN')
     
     # Fit model

@@ -217,9 +217,19 @@ def get_network_graph(
             )
             
             if node_id not in nodes_map:
-                # Determine node type
-                node_type = "criminal"
-                color = "#ef4444"
+                # Determine node type from available keys
+                if node.get("victim_id"):
+                    node_type = "victim"
+                    color = "#3b82f6"
+                elif node.get("location_id"):
+                    node_type = "location"
+                    color = "#22c55e"
+                elif node.get("org_id"):
+                    node_type = "organization"
+                    color = "#a855f7"
+                else:
+                    node_type = "criminal"
+                    color = "#ef4444"
                 
                 nodes_map[node_id] = {
                     "node_id": node_id,
@@ -251,14 +261,26 @@ def get_network_graph(
             
             # Add connected node
             if target_id not in nodes_map:
+                if connected.get("victim_id"):
+                    conn_type = "victim"
+                    conn_color = "#3b82f6"
+                elif connected.get("location_id"):
+                    conn_type = "location"
+                    conn_color = "#22c55e"
+                elif connected.get("org_id"):
+                    conn_type = "organization"
+                    conn_color = "#a855f7"
+                else:
+                    conn_type = "criminal"
+                    conn_color = "#f97316"
                 nodes_map[target_id] = {
                     "node_id": target_id,
-                    "node_type": "criminal",
+                    "node_type": conn_type,
                     "label": connected.get("name", "Unknown"),
                     "risk_score": connected.get("risk_score", 0),
                     "crime_count": connected.get("crime_count", 0),
                     "size": 15,
-                    "color": "#f97316",
+                    "color": conn_color,
                     "profile_data": dict(connected),
                 }
             

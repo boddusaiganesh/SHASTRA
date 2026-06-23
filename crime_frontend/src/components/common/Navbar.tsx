@@ -4,7 +4,7 @@ import { RootState } from "../../store/store";
 import { logout } from "../../store/authSlice";
 import { clearUnreadCount } from "../../store/alertsSlice";
 import { useNavigate } from "react-router-dom";
-import { Bell, LogOut, Shield, User, Clock } from "lucide-react";
+import { Bell, LogOut, Shield, User, Clock, AlertTriangle } from "lucide-react";
 import dayjs from "dayjs";
 
 interface Props { alertCount?: number; }
@@ -14,6 +14,14 @@ const Navbar: React.FC<Props> = ({ alertCount = 0 }) => {
   const navigate = useNavigate();
   const auth = useSelector((s: RootState) => s.auth);
   const [now, setNow] = useState(dayjs());
+
+  const [usingMockData, setUsingMockData] = useState((window as any).__using_mock_data || false);
+
+  useEffect(() => {
+    const handleMockData = () => setUsingMockData(true);
+    window.addEventListener("mock-data-detected", handleMockData);
+    return () => window.removeEventListener("mock-data-detected", handleMockData);
+  }, []);
 
   useEffect(() => {
     const t = setInterval(() => setNow(dayjs()), 1000);
@@ -26,7 +34,8 @@ const Navbar: React.FC<Props> = ({ alertCount = 0 }) => {
   };
 
   return (
-    <header className="h-14 bg-slate-900/95 backdrop-blur border-b border-slate-700/50 flex items-center px-4 gap-4 z-40 sticky top-0">
+    <>
+      <header className="h-14 bg-slate-900/95 backdrop-blur border-b border-slate-700/50 flex items-center px-4 gap-4 z-40 sticky top-0">
       {/* Logo */}
       <div className="flex items-center gap-2">
         <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
@@ -81,7 +90,14 @@ const Navbar: React.FC<Props> = ({ alertCount = 0 }) => {
         <span className="hidden sm:inline">Logout</span>
       </button>
     </header>
-  );
+    {usingMockData && (
+      <div className="bg-amber-500/10 border-b border-amber-500/30 text-amber-400 text-xs py-1.5 px-4 text-center font-medium z-30 flex items-center justify-center gap-1.5 backdrop-blur-sm flex-shrink-0">
+        <AlertTriangle className="h-3.5 w-3.5 text-amber-500 animate-pulse" />
+        <span>Offline Mode: Backend connection unavailable. Displaying simulated mock intelligence data.</span>
+      </div>
+    )}
+  </>
+);
 };
 
 export default Navbar;

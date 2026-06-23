@@ -1,5 +1,4 @@
 import api from "./api";
-import { mockAuthResponse } from "./mockData";
 
 export interface LoginCredentials {
   username: string;

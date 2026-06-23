@@ -255,7 +255,7 @@ def classify_anomaly(
 
 async def run_full_anomaly_scan(db) -> List[Dict[str, Any]]:
     """
-    Full anomaly detection scan - called by scheduler every 6 hours
+    Full anomaly detection scan - called by scheduler every hour
     """
     from sqlalchemy.ext.asyncio import AsyncSession
     from sqlalchemy import select, func, and_
