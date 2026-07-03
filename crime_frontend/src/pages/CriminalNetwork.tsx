@@ -58,7 +58,7 @@ const CriminalNetwork: React.FC = () => {
   const NodeIcon = selectedNode ? (nodeTypeIcons[selectedNode.node_type] || Users) : Users;
 
   return (
-    <div className="flex-1 overflow-hidden flex flex-col">
+    <div className="flex-1 min-h-0 overflow-hidden flex flex-col w-full">
       {/* Header + Controls */}
       <div className="p-4 border-b border-slate-700/50 bg-slate-900/50">
         <div className="flex items-center justify-between mb-3">
@@ -74,24 +74,31 @@ const CriminalNetwork: React.FC = () => {
             ))}
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
             <input
-              type="text" placeholder="Search by name..."
-              value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-slate-800 border border-slate-600 text-slate-200 text-xs rounded-lg pl-8 pr-3 py-2 focus:outline-none focus:border-blue-500 w-48"
+              type="text"
+              placeholder="Search nodes by name..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
             />
           </div>
-          <select value={nodeTypeFilter} onChange={(e) => setNodeTypeFilter(e.target.value)}
-            className="bg-slate-800 border border-slate-600 text-slate-200 text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500">
-            <option value="all">All Types</option>
-            <option value="criminal">Criminals</option>
-            <option value="victim">Victims</option>
-            <option value="location">Locations</option>
-            <option value="organization">Organizations</option>
-          </select>
-          <div className="flex items-center gap-2 ml-auto">
+          <div className="flex items-center gap-1.5">
+            {[["all", "All Nodes"], ["criminal", "Criminals"], ["victim", "Victims"], ["location", "Locations"], ["organization", "Orgs"]].map(([val, label]) => (
+              <button
+                key={val}
+                onClick={() => setNodeTypeFilter(val)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+                  nodeTypeFilter === val ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="ml-auto flex items-center gap-3">
             {[["criminal", "Criminals"], ["victim", "Victims"], ["location", "Locations"], ["organization", "Organizations"]].map(([type, label]) => (
               <div key={type} className="flex items-center gap-1.5">
                 <div className="h-3 w-3 rounded-full" style={{ background: NODE_COLORS[type] }} />
@@ -102,7 +109,7 @@ const CriminalNetwork: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 min-h-0 flex overflow-hidden">
         {/* Network Graph */}
         <div className="flex-1 relative">
           <NetworkGraph nodes={filteredNodes} edges={edges} onNodeSelect={setSelectedNode} selectedNodeId={selectedNode?.node_id} />
@@ -112,7 +119,7 @@ const CriminalNetwork: React.FC = () => {
         </div>
 
         {/* Right Panel */}
-        <div className="w-80 bg-slate-900/95 border-l border-slate-700/50 flex flex-col overflow-y-auto">
+        <div className="w-80 bg-slate-900/95 border-l border-slate-700/50 flex flex-col overflow-y-auto custom-scrollbar">
           {/* Node Detail */}
           {selectedNode ? (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 border-b border-slate-700/50">
@@ -192,14 +199,14 @@ const CriminalNetwork: React.FC = () => {
                 <AlertTriangle className="h-3 w-3" />Suspicious Associations
               </h4>
               <div className="space-y-2 mb-3">
-                {aiSummary.suspicious_associations.map((s, i) => (
+                {(Array.isArray(aiSummary?.suspicious_associations) ? aiSummary.suspicious_associations : []).map((s, i) => (
                   <div key={i} className="p-2 bg-orange-950/20 border border-orange-500/20 rounded-lg">
                     <div className="flex items-center gap-1 mb-1">
                       <span className={`text-xs font-bold ${s.severity === "Critical" ? "text-red-400" : "text-orange-400"}`}>{s.severity}</span>
                     </div>
                     <p className="text-xs text-slate-300">{s.reason}</p>
                     <div className="flex gap-1 mt-1">
-                      {s.entities.map((e) => <span key={e} className="text-xs text-slate-500 font-mono">{e}</span>)}
+                      {(Array.isArray(s?.entities) ? s.entities : []).map((e) => <span key={e} className="text-xs text-slate-500 font-mono">{e}</span>)}
                     </div>
                   </div>
                 ))}
@@ -209,7 +216,7 @@ const CriminalNetwork: React.FC = () => {
                 <ChevronRight className="h-3 w-3" />Investigation Priorities
               </h4>
               <div className="space-y-1">
-                {aiSummary.investigation_priorities.map((p, i) => (
+                {(Array.isArray(aiSummary?.investigation_priorities) ? aiSummary.investigation_priorities : []).map((p, i) => (
                   <div key={i} className="flex items-start gap-2 text-xs text-slate-300">
                     <span className="text-green-400 font-bold mt-0.5">{i + 1}.</span>
                     <span>{p}</span>

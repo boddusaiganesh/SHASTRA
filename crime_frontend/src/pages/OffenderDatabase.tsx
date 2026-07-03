@@ -20,8 +20,8 @@ const OffenderDatabase: React.FC = () => {
   const [modusOperandi, setModusOperandi] = useState<Record<string, unknown> | null>(null);
 
   useEffect(() => {
-    offenderService.searchOffenders("").then((d) => {
-      setOffenders(d as unknown as Offender[]);
+    offenderService.searchOffenders("").then((d: any) => {
+      setOffenders(Array.isArray(d) ? d : (d?.offenders || []));
       setLoading(false);
     });
   }, []);
@@ -39,14 +39,14 @@ const OffenderDatabase: React.FC = () => {
 
   const handleSearch = async (q: string) => {
     setSearch(q);
-    const data = await offenderService.searchOffenders(q);
-    setOffenders(data as unknown as Offender[]);
+    const data: any = await offenderService.searchOffenders(q);
+    setOffenders(Array.isArray(data) ? data : (data?.offenders || []));
   };
 
   if (loading) return <div className="flex-1 flex items-center justify-center"><LoadingSpinner size="lg" text="Loading offender database..." /></div>;
 
   return (
-    <div className="flex-1 overflow-hidden flex flex-col">
+    <div className="flex-1 min-h-0 overflow-hidden flex flex-col w-full">
       <div className="p-6 border-b border-slate-700/50">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -64,10 +64,10 @@ const OffenderDatabase: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden flex">
+      <div className="flex-1 min-h-0 flex overflow-hidden">
         {/* List */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-2">
-          {offenders.map((o, i) => {
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-2">
+          {(Array.isArray(offenders) ? offenders : []).map((o, i) => {
              const statusVal = o.status || o.offender_status;
              return (
             <motion.div key={o.offender_id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.03 }}
@@ -89,11 +89,13 @@ const OffenderDatabase: React.FC = () => {
                     "bg-yellow-900/40 text-yellow-400"
                   }`}>{statusVal}</span>
                 </div>
-                <p className="text-xs text-slate-400">{o.primary_crime_type || (o.modus_operandi?.preferred_crime_types?.[0])} · {o.district}</p>
-              </div>
-              <div className="text-right flex-shrink-0">
-                <p className={`text-sm font-bold ${o.risk_score >= 80 ? "text-red-400" : o.risk_score >= 60 ? "text-orange-400" : "text-yellow-400"}`}>{o.risk_score}</p>
-                <p className="text-xs text-slate-500">Risk</p>
+                <div className="flex items-center gap-4 text-xs text-slate-400">
+                  <span>{o.age || o.offender_age} yrs</span>
+                  <span>·</span>
+                  <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{o.district}</span>
+                  <span>·</span>
+                  <span className="flex items-center gap-1"><AlertTriangle className="h-3 w-3 text-red-400" />{o.dominant_crime || o.crime_type || o.primary_crime_type}</span>
+                </div>
               </div>
               <ChevronRight className="h-4 w-4 text-slate-600" />
             </motion.div>
@@ -103,7 +105,7 @@ const OffenderDatabase: React.FC = () => {
         {/* Detail Panel */}
         {selected && (
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
-            className="w-80 border-l border-slate-700/50 overflow-y-auto p-4 bg-slate-900/50">
+            className="w-80 min-h-0 border-l border-slate-700/50 overflow-y-auto custom-scrollbar p-4 bg-slate-900/50">
             <div className="flex items-center gap-3 mb-4">
               <div className="h-14 w-14 rounded-full bg-slate-700 flex items-center justify-center">
                 <Users className="h-7 w-7 text-slate-400" />
@@ -127,7 +129,6 @@ const OffenderDatabase: React.FC = () => {
                     <span className="text-slate-200 font-medium">{String(val)}</span>
                   </div>
                 ))}
-              </div>
               </div>
               {selected.modus_operandi && !modusOperandi && (
                  <div className="bg-slate-800/60 rounded-lg p-3">

@@ -6,7 +6,8 @@ export const alertService = {
   getAlerts: async () => {
     try {
       const res = await api.get(ENDPOINTS.ALERTS.LIST);
-      return res.data?.alerts || res.data || mockRecentAlerts;
+      const data = res.data;
+      return Array.isArray(data) ? data : (data?.alerts || data?.data || mockRecentAlerts);
     } catch {
       return mockRecentAlerts;
     }
@@ -25,7 +26,8 @@ export const settingsService = {
   getUsers: async () => {
     try {
       const res = await api.get(ENDPOINTS.SETTINGS.USERS);
-      return res.data;
+      const data = res.data;
+      return Array.isArray(data) ? data : (data?.users || data?.data || mockUsers);
     } catch {
       return mockUsers;
     }
@@ -41,7 +43,8 @@ export const settingsService = {
   getDistricts: async () => {
     try {
       const res = await api.get(ENDPOINTS.SETTINGS.DISTRICTS);
-      return res.data;
+      const data = res.data;
+      return Array.isArray(data) ? data : (data?.districts || data?.data || []);
     } catch {
       return [];
     }
@@ -102,7 +105,8 @@ export const reportService = {
   getSavedList: async () => {
     try {
       const res = await api.get(ENDPOINTS.REPORTS.SAVED_LIST);
-      return res.data;
+      const data = res.data;
+      return Array.isArray(data) ? data : (data?.reports || data?.data || mockSavedReports);
     } catch {
       return mockSavedReports;
     }

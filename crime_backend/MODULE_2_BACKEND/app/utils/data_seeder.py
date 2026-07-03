@@ -71,6 +71,7 @@ async def seed_all_data(session: AsyncSession):
             
         session.add_all(districts)
         session.add_all(stations)
+        await session.flush()
         
         # Seed 200 Crimes
         for i in range(200):

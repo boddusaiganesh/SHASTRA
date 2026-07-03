@@ -47,7 +47,7 @@ const AlertsPage: React.FC = () => {
   if (loading) return <div className="flex-1 flex items-center justify-center"><LoadingSpinner size="lg" text="Loading alerts..." /></div>;
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 space-y-6">
+    <div className="flex-1 min-h-0 w-full overflow-y-auto custom-scrollbar p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-white">System Alerts</h1>
@@ -99,7 +99,7 @@ const AlertsPage: React.FC = () => {
       </div>
 
       {/* Alerts List */}
-      <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4">
+      <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 overflow-x-auto custom-scrollbar">
         <AlertsTable
           alerts={filtered as any}
           onMarkRead={handleMarkRead}

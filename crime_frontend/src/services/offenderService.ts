@@ -25,12 +25,12 @@ export const offenderService = {
   searchOffenders: async (query: string = "") => {
     try {
       const res = await api.get(ENDPOINTS.OFFENDERS.SEARCH, { params: { query } });
-      const list = res.data?.offenders || res.data || [];
-      return list.map(normalizeOffender);
+      const list = res.data?.offenders || res.data?.data || res.data || [];
+      return (Array.isArray(list) ? list : []).map(normalizeOffender).filter(Boolean);
     } catch {
       return mockOffenders.filter((o: any) => 
         !query || o.offender_name?.toLowerCase().includes(query.toLowerCase())
-      ).map(normalizeOffender);
+      ).map(normalizeOffender).filter(Boolean);
     }
   },
   getProfile: async (id: string) => {

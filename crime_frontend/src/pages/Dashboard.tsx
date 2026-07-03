@@ -62,11 +62,11 @@ const Dashboard: React.FC = () => {
         crimeService.getRecentAlerts(),
       ]);
       setSummary(s as Record<string, number | string>);
-      setTrends(t.trends);
-      setCrimeTypes(t.byType);
-      setDistrictData(t.byDistrict);
-      setRecentCrimes(c);
-      setRecentAlerts(ra || []);
+      setTrends(Array.isArray(t?.trends) ? t.trends : []);
+      setCrimeTypes(Array.isArray(t?.byType) ? t.byType : []);
+      setDistrictData(Array.isArray(t?.byDistrict) ? t.byDistrict : []);
+      setRecentCrimes(Array.isArray(c) ? c : ((c as any)?.crimes || []));
+      setRecentAlerts(Array.isArray(ra) ? ra : ((ra as any)?.alerts || []));
       setLastRefresh(new Date());
     } finally {
       if (!silent) setLoading(false);
@@ -91,7 +91,7 @@ const Dashboard: React.FC = () => {
   if (loading) return <div className="flex-1 flex items-center justify-center"><LoadingSpinner size="lg" text="Loading dashboard..." /></div>;
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 space-y-6">
+    <div className="flex-1 min-h-0 w-full overflow-y-auto custom-scrollbar p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

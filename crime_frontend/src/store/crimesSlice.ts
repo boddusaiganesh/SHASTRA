@@ -32,7 +32,9 @@ const crimesSlice = createSlice({
   name: "crimes",
   initialState,
   reducers: {
-    setMapCrimes: (state, action: PayloadAction<unknown[]>) => { state.mapCrimes = action.payload; },
+    setMapCrimes: (state, action: PayloadAction<unknown[]>) => { 
+      state.mapCrimes = Array.isArray(action.payload) ? action.payload : ((action.payload as any)?.crimes || []); 
+    },
     setSelectedCrime: (state, action: PayloadAction<unknown | null>) => { state.selectedCrime = action.payload; },
     setFilters: (state, action: PayloadAction<Partial<CrimesState["filters"]>>) => { state.filters = { ...state.filters, ...action.payload }; },
     setLoading: (state, action: PayloadAction<boolean>) => { state.loading = action.payload; },

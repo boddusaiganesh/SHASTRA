@@ -17,18 +17,18 @@ const PredictiveAnalytics: React.FC = () => {
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      const [f, r, t, rm] = await Promise.all([
+      const [f, r, t, rm, s] = await Promise.all([
         predictionService.getForecast(),
         predictionService.getHighRiskAreas(),
         predictionService.getEmergingTypologies(),
         predictionService.getRiskMap(),
         predictionService.getSocioeconomicData(),
       ]);
-      setForecast(f as unknown[]);
-      setRiskAreas(r as unknown[]);
-      setTypologies(t as unknown[]);
-      setRiskMapData(rm as unknown[]);
-      setSocioData(s as unknown[]);
+      setForecast(Array.isArray(f) ? f : ((f as any)?.forecast || []));
+      setRiskAreas(Array.isArray(r) ? r : ((r as any)?.areas || []));
+      setTypologies(Array.isArray(t) ? t : ((t as any)?.typologies || []));
+      setRiskMapData(Array.isArray(rm) ? rm : ((rm as any)?.districts || []));
+      setSocioData(Array.isArray(s) ? s : ((s as any)?.indicators || []));
       setLoading(false);
     };
     load();
@@ -37,7 +37,7 @@ const PredictiveAnalytics: React.FC = () => {
   if (loading) return <div className="flex-1 flex items-center justify-center"><LoadingSpinner size="lg" text="Running predictive models..." /></div>;
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 space-y-6">
+    <div className="flex-1 min-h-0 w-full overflow-y-auto custom-scrollbar p-6 space-y-6">
       <div>
         <h1 className="text-xl font-bold text-white">Predictive Intelligence</h1>
         <p className="text-sm text-slate-400">AI/ML-powered crime forecasting and risk assessment</p>

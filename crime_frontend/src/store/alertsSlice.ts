@@ -17,8 +17,9 @@ const alertsSlice = createSlice({
   initialState,
   reducers: {
     setAlerts: (state, action: PayloadAction<unknown[]>) => {
-      state.alerts = action.payload;
-      state.unreadCount = (action.payload as { is_read: boolean }[]).filter((a) => !a.is_read).length;
+      const list = Array.isArray(action.payload) ? action.payload : ((action.payload as any)?.alerts || []);
+      state.alerts = list;
+      state.unreadCount = (list as { is_read: boolean }[]).filter((a) => !a?.is_read).length;
     },
     markAlertRead: (state, action: PayloadAction<string>) => {
       state.alerts = (state.alerts as { alert_id: string; is_read: boolean }[]).map((a) =>

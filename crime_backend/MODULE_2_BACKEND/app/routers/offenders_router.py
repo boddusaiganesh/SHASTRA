@@ -15,11 +15,11 @@ router = APIRouter()
 
 @router.get("/search")
 async def search(
-    query: str = Query(..., min_length=3),
+    query: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user)
 ):
-    data = await search_offenders(db, query)
+    data = await search_offenders(db, name=query if query else None)
     return {"success": True, "data": data}
 
 @router.get("/{offender_id}/profile")

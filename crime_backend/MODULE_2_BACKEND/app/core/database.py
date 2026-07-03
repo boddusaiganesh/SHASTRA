@@ -67,13 +67,17 @@ async def init_db():
     from app.models.database_models.report_model import Report
     from app.models.database_models.system_settings_model import SystemSettings
 
+    # Enable PostGIS extension (optional if installed) in its own transaction so errors don't abort create_all
+    try:
+        async with engine.connect() as ext_conn:
+            await ext_conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgis;"))
+            await ext_conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
+            await ext_conn.commit()
+    except Exception as ext_e:
+        logger.warning(f"Optional PostgreSQL extensions not available: {ext_e}")
+
     try:
         async with engine.begin() as conn:
-            # Enable PostGIS extension
-            await conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgis;"))
-            await conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
-            
-            
             await conn.run_sync(Base.metadata.create_all)
         
         logger.info("Database tables created successfully")

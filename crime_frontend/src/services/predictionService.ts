@@ -21,7 +21,8 @@ export const predictionService = {
   getAnomalies: async (filters?: any) => {
     try {
       const res = await api.get(ENDPOINTS.ANOMALIES.LIST, { params: filters });
-      return res.data;
+      const data = res.data;
+      return Array.isArray(data) ? data : (data?.anomalies || []);
     } catch (error) {
       return mockAnomalies;
     }
@@ -72,7 +73,8 @@ export const anomalyService = {
   getList: async () => {
     try {
       const res = await api.get(ENDPOINTS.ANOMALIES.LIST);
-      return res.data;
+      const data = res.data;
+      return Array.isArray(data) ? data : (data?.anomalies || []);
     } catch (e) {
       return mockAnomalies;
     }

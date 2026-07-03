@@ -26,8 +26,8 @@ const ReportsPage: React.FC = () => {
   const [successMsg, setSuccessMsg] = useState("");
 
   useEffect(() => {
-    reportService.getSavedList().then((d) => {
-      setSavedReports(d as unknown as SavedReport[]);
+    reportService.getSavedList().then((d: any) => {
+      setSavedReports(Array.isArray(d) ? d : (d?.reports || d?.data || []));
       setLoading(false);
     });
   }, []);
@@ -79,7 +79,7 @@ const ReportsPage: React.FC = () => {
   if (loading) return <div className="flex-1 flex items-center justify-center"><LoadingSpinner size="lg" text="Loading reports..." /></div>;
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 space-y-6">
+    <div className="flex-1 min-h-0 w-full overflow-y-auto custom-scrollbar p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-white">Executive Reports</h1>
@@ -135,7 +135,7 @@ const ReportsPage: React.FC = () => {
       <div>
         <h3 className="text-sm font-semibold text-white mb-4">Saved Reports</h3>
         <div className="space-y-3">
-          {savedReports.map((report) => (
+          {(Array.isArray(savedReports) ? savedReports : []).map((report) => (
             <div key={report.report_id} className="flex items-center justify-between p-4 bg-slate-800/50 border border-slate-700/50 rounded-xl">
               <div className="flex items-center gap-4">
                 <div className="h-10 w-10 rounded-full bg-blue-900/30 flex items-center justify-center text-blue-400">

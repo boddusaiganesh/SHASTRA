@@ -30,7 +30,7 @@ const MapControls: React.FC<Props> = ({
     `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${active ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white"}`;
 
   return (
-    <div className="flex flex-wrap items-center gap-2 p-3 bg-slate-900/90 backdrop-blur border-b border-slate-700/50">
+    <div className="flex items-center gap-2 p-3 bg-slate-900/90 backdrop-blur border-b border-slate-700/50 overflow-x-auto custom-scrollbar whitespace-nowrap">
       <input type="date" value={dateFrom} onChange={(e) => onDateFromChange(e.target.value)} className={inputClass} />
       <span className="text-slate-500 text-xs">to</span>
       <input type="date" value={dateTo} onChange={(e) => onDateToChange(e.target.value)} className={inputClass} />

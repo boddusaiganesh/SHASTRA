@@ -90,7 +90,7 @@ const CrimeMapPage: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex-1 flex flex-col min-h-0 w-full overflow-hidden">
       {/* Controls */}
       <MapControls
         viewMode={filters.viewMode}
@@ -108,7 +108,7 @@ const CrimeMapPage: React.FC = () => {
         onExport={handleExport}
       />
 
-      <div className="flex flex-1 overflow-hidden relative">
+      <div className="flex flex-1 min-h-0 overflow-hidden relative">
         {/* Map */}
         <div className="flex-1 relative">
           {loading ? (
@@ -143,7 +143,7 @@ const CrimeMapPage: React.FC = () => {
         </div>
 
         {/* Right Panel */}
-        <div className="w-72 bg-slate-900/95 border-l border-slate-700/50 flex flex-col overflow-y-auto">
+        <div className="w-72 bg-slate-900/95 border-l border-slate-700/50 flex flex-col overflow-y-auto custom-scrollbar">
           <div className="p-4 border-b border-slate-700/50">
             <h3 className="text-sm font-semibold text-white mb-3">Map Statistics</h3>
             <div className="grid grid-cols-2 gap-2 mb-4">
@@ -216,7 +216,7 @@ const CrimeMapPage: React.FC = () => {
             </div>
             <div className="space-y-4">
               {caseDetail ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm max-h-[70vh] overflow-y-auto pr-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm max-h-[70vh] overflow-y-auto custom-scrollbar pr-2">
                   {Object.entries(caseDetail)
                     .filter(([k]) => !["latitude","longitude"].includes(k))
                     .map(([k, v]) => (

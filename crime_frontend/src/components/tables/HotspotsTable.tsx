@@ -11,7 +11,7 @@ interface Props { hotspots: Hotspot[] }
 const riskColors: Record<string, string> = { High: "bg-red-900/40 text-red-400", Medium: "bg-orange-900/40 text-orange-400", Low: "bg-green-900/40 text-green-400" };
 
 const HotspotsTable: React.FC<Props> = ({ hotspots }) => (
-  <div className="overflow-x-auto">
+  <div className="overflow-x-auto custom-scrollbar">
     <table className="w-full text-sm">
       <thead>
         <tr className="border-b border-slate-700/50">

@@ -21,10 +21,10 @@ const SettingsPage: React.FC = () => {
       settingsService.getUsers(),
       settingsService.getAlertThresholds(),
       settingsService.getDataSources(),
-    ]).then(([u, t, d]) => {
-      setUsers(u as unknown as User[]);
+    ]).then(([u, t, d]: any[]) => {
+      setUsers(Array.isArray(u) ? u : (u?.users || u?.data || []));
       setThresholds(t as unknown as AlertThresholds);
-      setDataSources(d as unknown[]);
+      setDataSources(Array.isArray(d) ? d : (d?.sources || d?.data || []));
       setLoading(false);
     });
   }, []);
@@ -52,7 +52,7 @@ const SettingsPage: React.FC = () => {
   const inputCls = "w-full bg-slate-900 border border-slate-600 text-slate-200 text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:border-blue-500";
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 space-y-6">
+    <div className="flex-1 min-h-0 w-full overflow-y-auto custom-scrollbar p-6 space-y-6">
       <div>
         <h1 className="text-xl font-bold text-white">Platform Settings</h1>
         <p className="text-sm text-slate-400">System configuration and user management</p>
@@ -95,7 +95,7 @@ const SettingsPage: React.FC = () => {
             <button onClick={handleAddUser} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded-lg transition-colors">Add User</button>
           </div>
           {/* Users List */}
-          <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-hidden">
+          <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-x-auto custom-scrollbar">
             <table className="w-full text-sm">
               <thead><tr className="border-b border-slate-700/50">
                 {["User", "Username", "Role", "District", "Status"].map((h) => (
@@ -103,7 +103,7 @@ const SettingsPage: React.FC = () => {
                 ))}
               </tr></thead>
               <tbody>
-                {users.map((u) => (
+                {(Array.isArray(users) ? users : []).map((u) => (
                   <tr key={u.user_id} className="border-b border-slate-800/50 hover:bg-slate-800/30">
                     <td className="py-3 px-4 text-white font-medium">{u.full_name || (u as any).user_name}</td>
                     <td className="py-3 px-4 text-slate-400 font-mono text-xs">{u.username || (u as any).email}</td>
@@ -123,28 +123,18 @@ const SettingsPage: React.FC = () => {
         <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5">
           <h3 className="text-sm font-semibold text-white mb-4">Alert Trigger Thresholds</h3>
           <div className="space-y-5 max-w-md">
-            {[
-              { key: "crime_spike_percent", label: "Crime Spike Alert (%)", min: 10, max: 500 },
-              { key: "anomaly_confidence", label: "Anomaly Confidence Threshold (%)", min: 50, max: 99 },
-              { key: "high_risk_score", label: "High Risk Score Threshold", min: 50, max: 100 },
-            ].map(({ key, label, min, max }) => (
-              <div key={key}>
-                <div className="flex justify-between text-xs mb-2">
-                  <span className="text-slate-300">{label}</span>
-                  <span className="text-blue-400 font-bold">{thresholds[key as keyof AlertThresholds] || 0}</span>
-                </div>
-                <input type="range" min={min} max={max}
-                  value={thresholds[key as keyof AlertThresholds] || 0}
-                  onChange={(e) => setThresholds({ ...thresholds, [key]: Number(e.target.value) })}
-                  className="w-full accent-blue-500"
-                />
+            {Object.entries(thresholds).map(([k, v]) => (
+              <div key={k}>
+                <label className="block text-xs font-medium text-slate-400 mb-1 capitalize">{k.replace(/_/g, " ")}</label>
+                <input type="number" value={v as number}
+                  onChange={(e) => setThresholds({ ...thresholds, [k]: Number(e.target.value) })}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm" />
               </div>
             ))}
-            <button onClick={handleSaveThresholds}
-              className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded-lg transition-colors">
-              <Save className="h-4 w-4" /> Save Thresholds
+            <button onClick={handleSaveThresholds} className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded-lg transition-colors">
+              <Save className="h-4 w-4" /> Save Changes
             </button>
-            {saveMsg && <p className="text-xs text-green-400">{saveMsg}</p>}
+            {saveMsg && <span className="text-xs text-green-400 ml-2">{saveMsg}</span>}
           </div>
         </div>
       )}
@@ -154,7 +144,7 @@ const SettingsPage: React.FC = () => {
         <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4">
           <h3 className="text-sm font-semibold text-white mb-4">Connected Data Sources</h3>
           <div className="space-y-3">
-            {(dataSources as { name: string; source_name?: string; type: string; status: string; last_sync: string }[]).map((ds, i) => (
+            {(Array.isArray(dataSources) ? (dataSources as { name: string; source_name?: string; type: string; status: string; last_sync: string }[]) : []).map((ds, i) => (
               <div key={i} className="flex items-center justify-between p-3 bg-slate-900/60 rounded-lg border border-slate-700/50">
                 <div>
                   <p className="text-sm text-white">{ds.name || ds.source_name}</p>

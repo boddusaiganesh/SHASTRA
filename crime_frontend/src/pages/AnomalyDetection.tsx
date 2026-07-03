@@ -25,8 +25,8 @@ const AnomalyDetection: React.FC = () => {
 
   const fetch = async () => {
     setLoading(true);
-    const data = await anomalyService.getList();
-    setAnomalies(data as Anomaly[]);
+    const data: any = await anomalyService.getList();
+    setAnomalies(Array.isArray(data) ? data : (data?.anomalies || []));
     setLoading(false);
   };
 
@@ -37,14 +37,15 @@ const AnomalyDetection: React.FC = () => {
     setAnomalies((prev) => prev.map((a) => a.anomaly_id === id ? { ...a, status } : a));
   };
 
+  const safeAnomalies = Array.isArray(anomalies) ? anomalies : [];
   const filtered = statusFilter === "All"
-    ? anomalies
-    : anomalies.filter((a) => a.status === statusFilter);
+    ? safeAnomalies
+    : safeAnomalies.filter((a) => a.status === statusFilter);
 
   if (loading) return <div className="flex-1 flex items-center justify-center"><LoadingSpinner size="lg" text="Running anomaly detection..." /></div>;
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 space-y-6">
+    <div className="flex-1 min-h-0 w-full overflow-y-auto custom-scrollbar p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-white">Anomaly Detection</h1>
@@ -58,7 +59,7 @@ const AnomalyDetection: React.FC = () => {
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {["Critical", "High", "Medium", "Low"].map((sev) => {
-          const count = anomalies.filter((a) => a.severity === sev).length;
+          const count = safeAnomalies.filter((a) => a.severity === sev).length;
           return (
             <div key={sev} className={`rounded-xl border p-4 ${severityColors[sev]}`}>
               <p className="text-2xl font-bold text-white">{count}</p>

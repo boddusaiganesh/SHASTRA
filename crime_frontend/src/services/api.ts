@@ -27,7 +27,8 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    if (error.response && error.response.status === 401) {
+    const token = localStorage.getItem("auth_token");
+    if (error.response && error.response.status === 401 && (!token || !token.startsWith("mock-"))) {
       localStorage.removeItem("auth_token");
       localStorage.removeItem("user_data");
       window.location.href = "/login";

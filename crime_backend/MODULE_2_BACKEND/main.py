@@ -11,6 +11,10 @@ from contextlib import asynccontextmanager
 import uvicorn
 import logging
 import sys
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -43,13 +47,38 @@ logging.basicConfig(
     handlers=[logging.StreamHandler(sys.stdout)],
 )
 
+import subprocess
+import os
+
 _db_ready = False
+
+def start_local_postgres():
+    """Automatically start local PostgreSQL server if installed and not running"""
+    pg_ctl = r"D:\PostgreSQL_17\bin\pg_ctl.exe"
+    pg_data = r"D:\PostgreSQL_17\data"
+    if os.path.exists(pg_ctl) and os.path.exists(pg_data):
+        try:
+            res = subprocess.run([pg_ctl, "status", "-D", pg_data], capture_output=True, text=True)
+            if "no server running" in res.stdout or res.returncode != 0:
+                print("⏳ Local PostgreSQL not running. Auto-starting local server...")
+                subprocess.run(
+                    [pg_ctl, "start", "-D", pg_data, "-w", "-t", "5"],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, "CREATE_NO_WINDOW") else 0
+                )
+                print("✅ Auto-started local PostgreSQL 17 server!")
+            else:
+                print("✅ Local PostgreSQL 17 server is already running.")
+        except Exception as e:
+            print(f"⚠️ Could not auto-start local PostgreSQL: {e}")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown events"""
     global _db_ready
     print("🚀 Starting SHASTRA - Crime Intelligence Platform Backend...")
+    start_local_postgres()
     
     try:
         await init_db()

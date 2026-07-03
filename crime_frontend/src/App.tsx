@@ -43,9 +43,9 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
         alertCount={alerts?.unreadCount || 0}
       />
-      <div className="flex flex-col flex-1 overflow-hidden">
+      <div className="flex flex-col flex-1 overflow-hidden min-w-0 min-h-0">
         <Navbar alertCount={alerts?.unreadCount || 0} />
-        <main className="flex-1 overflow-hidden bg-slate-900">
+        <main className="flex-1 overflow-y-auto custom-scrollbar bg-slate-900 flex flex-col min-h-0 min-w-0 relative">
           {children}
         </main>
       </div>

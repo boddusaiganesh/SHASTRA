@@ -48,7 +48,8 @@ export const crimeService = {
   getRecentCrimes: async (limit = 10) => {
     try {
       const res = await api.get(ENDPOINTS.DASHBOARD.RECENT_CRIMES, { params: { limit } });
-      return res.data;
+      const data = res.data;
+      return Array.isArray(data) ? data : (data?.crimes || data?.data || mockRecentCrimes);
     } catch {
       return mockRecentCrimes;
     }
@@ -56,7 +57,8 @@ export const crimeService = {
   getRecentAlerts: async (limit = 8) => {
     try {
       const res = await api.get(ENDPOINTS.DASHBOARD.RECENT_ALERTS, { params: { limit } });
-      return res.data;
+      const data = res.data;
+      return Array.isArray(data) ? data : (data?.alerts || data?.data || mockRecentAlerts);
     } catch {
       return mockRecentAlerts;
     }
@@ -72,7 +74,8 @@ export const crimeService = {
   getMapData: async (filters?: Record<string, string>) => { 
     try {
       const response = await api.get(ENDPOINTS.CRIMES.MAP_DATA, { params: filters });
-      return response.data;
+      const data = response.data;
+      return Array.isArray(data) ? data : (data?.crimes || data?.data || mockMapCrimes);
     } catch (error) {
       return mockMapCrimes;
     }
@@ -103,7 +106,26 @@ export const crimeService = {
   getTimePatterns: async (filters?: any) => {
     try {
       const response = await api.get(ENDPOINTS.HOTSPOTS.TIME_PATTERNS, { params: filters });
-      return response.data;
+      const data = response.data;
+      if (data) {
+        const rawHour = data.hourly_pattern || data.byHour || [];
+        const byHour = (Array.isArray(rawHour) ? rawHour : []).map((h: any) => ({
+          label: h.label || (h.hour !== undefined ? `${String(h.hour).padStart(2, "0")}:00` : "00:00"),
+          crimes: h.crimes ?? h.crime_count ?? 0,
+        }));
+        const rawDay = data.daily_pattern || data.byDay || [];
+        const byDay = (Array.isArray(rawDay) ? rawDay : []).map((d: any) => ({
+          day: d.day ? (d.day.length > 3 ? d.day.slice(0, 3) : d.day) : "Mon",
+          crimes: d.crimes ?? d.crime_count ?? 0,
+        }));
+        const rawMonth = data.monthly_pattern || data.byMonth || [];
+        const byMonth = (Array.isArray(rawMonth) ? rawMonth : []).map((m: any) => ({
+          month: m.month || "Jan",
+          crimes: m.crimes ?? m.crime_count ?? 0,
+        }));
+        return { byHour, byDay, byMonth };
+      }
+      return { byHour: mockTimePatternData, byDay: mockDayPatternData, byMonth: mockMonthPatternData };
     } catch {
       return { byHour: mockTimePatternData, byDay: mockDayPatternData, byMonth: mockMonthPatternData };
     }

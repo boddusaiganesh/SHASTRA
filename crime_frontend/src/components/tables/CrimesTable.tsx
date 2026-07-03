@@ -18,7 +18,7 @@ const statusColor: Record<string, string> = {
 };
 
 const CrimesTable: React.FC<Props> = ({ crimes, compact }) => (
-  <div className="overflow-x-auto">
+  <div className="overflow-x-auto custom-scrollbar">
     <table className="w-full text-sm">
       <thead>
         <tr className="border-b border-slate-700/50">

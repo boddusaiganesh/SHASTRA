@@ -33,7 +33,7 @@ const HotspotAnalysis: React.FC = () => {
       crimeService.getTimePatterns(params),
       crimeService.getDeploymentSuggestions(params),
     ]);
-    setHotspots(h);
+    setHotspots(Array.isArray(h) ? h : (h?.hotspots || []));
     setPatterns(p as typeof patterns);
     setDeployment(d);
     if (!silent) setLoading(false);
@@ -52,7 +52,7 @@ const HotspotAnalysis: React.FC = () => {
   const dep = deployment as { suggestions: { area: string; patrol_timing: string; officers_needed: number; priority: string; reason: string }[]; ai_summary: string } | null;
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 space-y-6">
+    <div className="flex-1 min-h-0 w-full overflow-y-auto custom-scrollbar p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-white">Hotspot Analysis</h1>
@@ -92,7 +92,7 @@ const HotspotAnalysis: React.FC = () => {
           </div>
         </div>
 
-        <div className="space-y-3">
+        <div className="max-h-[400px] overflow-y-auto custom-scrollbar pr-1 space-y-3">
           {(hotspots as { hotspot_id: string; location: string; district: string; intensity: number; risk_level: string; crime_count: number; trend: string }[]).slice(0, 4).map((h, i) => (
             <motion.div key={h.hotspot_id} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }}
               className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-3">
@@ -182,7 +182,7 @@ const HotspotAnalysis: React.FC = () => {
             <p className="text-xs text-blue-200 leading-relaxed">{dep.ai_summary}</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {dep.suggestions.map((s, i) => (
+            {(Array.isArray(dep?.suggestions) ? dep.suggestions : []).map((s, i) => (
               <div key={i} className="bg-slate-900/50 border border-slate-700/50 rounded-lg p-3">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-sm font-medium text-white truncate">{s.area}</p>
