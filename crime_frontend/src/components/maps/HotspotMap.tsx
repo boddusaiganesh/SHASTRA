@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from "react-leaf
 import { karnatakaCenter } from "../../utils/mapHelpers";
 
 interface Hotspot {
-  hotspot_id: string; location: string; district: string; latitude: number; longitude: number;
+  hotspot_id: string; location: string; district: string; center_latitude: number; center_longitude: number;
   intensity: number; risk_level: string; crime_count: number; most_common_crime: string; trend: string;
 }
 
@@ -29,7 +29,7 @@ const HotspotMap: React.FC<Props> = ({ hotspots }) => (
     {hotspots.map((h) => (
       <CircleMarker
         key={h.hotspot_id}
-        center={[h.latitude, h.longitude]}
+        center={[h.center_latitude, h.center_longitude]}
         radius={10 + h.intensity / 8}
         fillColor={getHotspotColor(h.intensity)}
         color={getHotspotColor(h.intensity)}

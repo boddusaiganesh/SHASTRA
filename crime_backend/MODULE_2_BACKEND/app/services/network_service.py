@@ -39,10 +39,14 @@ async def get_network_graph_data(
         node_limit=node_limit,
     )
     
-    # If Neo4j is not available, build from PostgreSQL
-    if not graph_data["nodes"]:
-        graph_data = await build_network_from_postgres(db, search_query, district_id, node_limit)
+    # If Neo4j is offline, return the status explicitly
+    if graph_data.get("status") == "offline":
+        return graph_data
     
+    # If Neo4j is available but there is no data
+    if not graph_data.get("nodes"):
+        graph_data["status"] = "no_data"
+        
     await cache_set(cache_key, graph_data, expiry=600)
     return graph_data
 

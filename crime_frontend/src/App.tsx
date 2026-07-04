@@ -45,7 +45,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     if (isAuthenticated) {
       alertService.getAlerts().then((data) => dispatch(setAlerts(data)));
       
-      const wsUrl = import.meta.env.VITE_WS_URL || "ws://localhost:8000/ws/alerts";
+      const wsUrl = import.meta.env.VITE_WS_URL || "ws://localhost:8000/api/alerts/ws";
       const ws = new WebSocket(wsUrl);
       ws.onmessage = (event) => {
         try {

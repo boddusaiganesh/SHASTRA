@@ -5,7 +5,9 @@ import uuid
 import random
 
 from app.models.database_models.user_model import User
-from app.models.database_models.crime_model import District, PoliceStation, Crime
+from app.models.database_models.crime_model import District, PoliceStation, Crime, CrimeOffenderLink, CrimeVictimLink
+from app.models.database_models.offender_model import Offender
+from app.models.database_models.victim_model import Victim
 from app.core.security import hash_password
 from app.core.config import settings
 
@@ -77,6 +79,7 @@ async def seed_all_data(session: AsyncSession):
         logger.info("Generating 5000 crimes...")
         # High density districts for clustering (Bangalore Urban, Mysuru, Dakshina Kannada)
         high_density_districts = ["KA-01", "KA-03", "KA-08"]
+        crimes_list = []
         
         for i in range(5000):
             # 60% chance to be in a high density district
@@ -113,10 +116,69 @@ async def seed_all_data(session: AsyncSession):
                 address=f"Sector {random.randint(1, 20)}, {d_obj.district_name}",
                 status=random.choice(CRIME_STATUS_VALUES)
             )
+            crimes_list.append(c)
             session.add(c)
             
+        await session.flush()
+        
+        logger.info("Generating 100 offenders and 100 victims...")
+        first_names = ["Rajan", "Suresh", "Mohammad", "Ramesh", "Ajay", "Venkat", "Kiran", "Vikram", "Arun", "Sanjay"]
+        last_names = ["Mehta", "Naik", "Ilyas", "Gowda", "Shetty", "Reddy", "Kumar", "Singh", "Patil", "Rao"]
+        v_first_names = ["Priya", "Karim", "Anita", "Ravi", "Meena", "Rahul", "Sneha", "Karthik", "Lakshmi", "Vijay"]
+
+        offenders_list = []
+        for i in range(100):
+            o = Offender(
+                offender_id=uuid.uuid4(),
+                offender_reference=f"OFF-{date.today().year}-{i+1000}",
+                first_name=random.choice(first_names),
+                last_name=random.choice(last_names),
+                age=random.randint(18, 65),
+                gender="Male",
+                status=random.choice(["ACTIVE", "IMPRISONED", "ABSCONDING"]),
+                risk_level=random.choice(["LOW", "MEDIUM", "HIGH", "CRITICAL"]),
+                risk_score=random.uniform(30.0, 95.0),
+                district_id=random.choice(district_ids),
+                total_crimes=random.randint(1, 15)
+            )
+            offenders_list.append(o)
+        session.add_all(offenders_list)
+        
+        victims_list = []
+        for i in range(100):
+            v = Victim(
+                victim_id=uuid.uuid4(),
+                first_name=random.choice(v_first_names),
+                last_name=random.choice(last_names),
+                age=random.randint(12, 80),
+                gender=random.choice(["Male", "Female"]),
+                district_id=random.choice(district_ids)
+            )
+            victims_list.append(v)
+        session.add_all(victims_list)
+        await session.flush()
+
+        logger.info("Linking offenders and victims to crimes...")
+        for o in offenders_list:
+            for _ in range(random.randint(1, 5)):
+                c = random.choice(crimes_list)
+                session.add(CrimeOffenderLink(
+                    crime_id=c.crime_id,
+                    offender_id=o.offender_id,
+                    role_in_crime=random.choice(["Principal", "Accessory", "Conspirator"]),
+                    is_confirmed=True
+                ))
+        
+        for v in victims_list:
+            for _ in range(random.randint(1, 2)):
+                c = random.choice(crimes_list)
+                session.add(CrimeVictimLink(
+                    crime_id=c.crime_id,
+                    victim_id=v.victim_id
+                ))
+                
         await session.commit()
-        logger.info("Successfully seeded users, districts, stations, and crimes.")
+        logger.info("Successfully seeded users, districts, stations, crimes, offenders, and victims.")
     except Exception as e:
         await session.rollback()
         logger.error(f"Error seeding data: {e}")

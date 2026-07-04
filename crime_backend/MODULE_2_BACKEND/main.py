@@ -232,17 +232,6 @@ app.include_router(search_router.router, prefix="/api/search", tags=["Search"])
 app.include_router(evidence_router.router, prefix="/api/evidence", tags=["Evidence"])
 app.include_router(assistant_router.router, prefix="/api/assistant", tags=["Assistant"])
 
-from fastapi import WebSocket, WebSocketDisconnect
-from app.core.websocket import manager
-
-@app.websocket("/ws/alerts")
-async def websocket_alerts(websocket: WebSocket):
-    await manager.connect(websocket)
-    try:
-        while True:
-            await websocket.receive_text()
-    except WebSocketDisconnect:
-        manager.disconnect(websocket)
 
 @app.get("/", tags=["Health"])
 async def root():

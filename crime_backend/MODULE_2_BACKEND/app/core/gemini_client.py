@@ -59,9 +59,14 @@ async def init_gemini_models():
     try:
         genai.configure(api_key=keys[0])
         models = genai.list_models()
-        valid_models = [m.name for m in models if 'generateContent' in m.supported_generation_methods and 'gemini' in m.name.lower()]
+        valid_models = [
+            m.name for m in models 
+            if 'generateContent' in m.supported_generation_methods 
+            and 'gemini' in m.name.lower()
+            and 'pro' not in m.name.lower()
+        ]
         
-        # Sort using the ranking heuristic (highest version and 'pro' first)
+        # Sort using the ranking heuristic
         valid_models.sort(key=_rank_model, reverse=True)
         
         # Store top 5 models

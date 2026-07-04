@@ -181,6 +181,10 @@ def get_network_graph(
 ) -> Dict[str, Any]:
     """Get the criminal network graph from Neo4j"""
     
+    if not _driver:
+        logger.warning("Neo4j not available")
+        return {"status": "offline", "error": "Graph database (Neo4j) is not connected"}
+
     # Build the Cypher query dynamically
     if search_query:
         match_clause = "MATCH (n) WHERE n.name CONTAINS $search OR n.offender_id = $search"
@@ -306,3 +310,4 @@ def get_network_graph(
         "network_density": round(len(edges) / max(len(nodes), 1), 2),
         "key_players": [n["node_id"] for n in sorted(nodes, key=lambda x: x["crime_count"], reverse=True)[:5]],
     }
+
