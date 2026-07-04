@@ -6,6 +6,36 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    environment:
+      DATABASE_HOST: postgres
+      DATABASE_URL: postgresql+asyncpg://${DATABASE_USER}:${DATABASE_PASSWORD}@postgres:5432/${DATABASE_NAME}
+      DATABASE_URL_SYNC: postgresql://${DATABASE_USER}:${DATABASE_PASSWORD}@postgres:5432/${DATABASE_NAME}
+      NEO4J_URL: bolt://neo4j:7687
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+    networks:
+      - crime_intelligence_network
+
+  scheduler:
+    build: .
+    restart: unless-stopped
+    command: ["python", "-m", "app.scheduler.run_standalone"]
+    env_file:
+      - .env
+    environment:
+      DATABASE_HOST: postgres
+      DATABASE_URL: postgresql+asyncpg://${DATABASE_USER}:${DATABASE_PASSWORD}@postgres:5432/${DATABASE_NAME}
+      DATABASE_URL_SYNC: postgresql://${DATABASE_USER}:${DATABASE_PASSWORD}@postgres:5432/${DATABASE_NAME}
+      NEO4J_URL: bolt://neo4j:7687
+      REDIS_URL: redis://redis:6379
     depends_on:
       postgres:
         condition: service_healthy
@@ -19,10 +49,12 @@ services:
   postgres:
     image: postgis/postgis:15-3.4
     restart: unless-stopped
-    env_file:
-      - .env
+    environment:
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_DB: ${DATABASE_NAME}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$DATABASE_USER"]
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER} -d ${DATABASE_NAME}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -34,9 +66,8 @@ services:
   neo4j:
     image: neo4j:5.18-community
     restart: unless-stopped
-    env_file:
-      - .env
     environment:
+      NEO4J_AUTH: ${NEO4J_USER}/${NEO4J_PASSWORD}
       NEO4J_PLUGINS: '["apoc"]'
       NEO4J_dbms_security_procedures_unrestricted: apoc.*
     healthcheck:
@@ -66,11 +97,13 @@ services:
       - crime_intelligence_network
 
   frontend:
-    build: ../crime_frontend
+    build:
+      context: ../../crime_frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${FRONTEND_VITE_API_URL}
+        VITE_WS_URL: ${FRONTEND_VITE_WS_URL}
     restart: unless-stopped
-    environment:
-      - VITE_API_URL=${FRONTEND_VITE_API_URL}
-      - VITE_WS_URL=${FRONTEND_VITE_WS_URL}
     ports:
       - "80:80"
     networks:

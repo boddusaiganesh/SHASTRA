@@ -45,7 +45,7 @@ Keep the analysis factual and actionable.
 """
     
     result = await call_gemini(prompt)
-    return result or "Network analysis temporarily unavailable. Please review the raw network data."
+    return result.get("text", "") or "Network analysis temporarily unavailable. Please review the raw network data."
 
 
 async def get_deployment_suggestions_ai(
@@ -80,7 +80,7 @@ Format as a clear operational directive suitable for a District Superintendent o
 """
     
     result = await call_gemini(prompt)
-    return result or "AI deployment strategy generation temporarily unavailable. Use standard patrol protocols for identified hotspots."
+    return result.get("text", "") or "AI deployment strategy generation temporarily unavailable. Use standard patrol protocols for identified hotspots."
 
 
 async def get_offender_ai_analysis(
@@ -123,7 +123,7 @@ Be specific and evidence-based.
 """
     
     result = await call_gemini(prompt)
-    return result or f"Risk assessment for this offender indicates {offender_data.get('risk_level', 'MEDIUM')} risk based on crime history."
+    return result.get("text", "") or f"Risk assessment for this offender indicates {offender_data.get('risk_level', 'MEDIUM')} risk based on crime history."
 
 
 async def get_mo_analysis(mo_data: Dict, offender_data: Dict) -> str:
@@ -160,7 +160,7 @@ Write in a professional forensic analysis style.
 """
     
     result = await call_gemini(prompt)
-    return result or "MO analysis based on crime history indicates consistent behavioral patterns. Full analysis requires additional data."
+    return result.get("text", "") or "MO analysis based on crime history indicates consistent behavioral patterns. Full analysis requires additional data."
 
 
 async def get_anomaly_explanation(anomaly_data: Dict) -> str:
@@ -192,7 +192,7 @@ Keep the analysis concise and actionable for law enforcement use.
 """
     
     result = await call_gemini(prompt)
-    return result or "Anomaly detected through statistical analysis. Pattern deviates from baseline. Recommend immediate investigation."
+    return result.get("text", "") or "Anomaly detected through statistical analysis. Pattern deviates from baseline. Recommend immediate investigation."
 
 
 async def get_prediction_recommended_action(prediction_data: Dict) -> str:
@@ -212,7 +212,7 @@ Provide a single, specific recommended police action in 2-3 sentences.
 """
     
     result = await call_gemini(prompt)
-    return result or "Deploy additional patrol units to the identified area during predicted high-risk periods."
+    return result.get("text", "") or "Deploy additional patrol units to the identified area during predicted high-risk periods."
 
 
 async def get_report_narrative(report_data: Dict, report_type: str) -> str:
@@ -242,7 +242,7 @@ Use formal government report language.
 """
     
     result = await call_gemini(prompt)
-    return result or "Executive summary generation temporarily unavailable. Refer to the statistical data within this report."
+    return result.get("text", "") or "Executive summary generation temporarily unavailable. Refer to the statistical data within this report."
 
 
 async def get_emerging_typology_explanation(data: Dict) -> str:
@@ -287,7 +287,7 @@ Be specific to Karnataka's socioeconomic context.
 """
     
     result = await call_gemini(prompt)
-    return result or "Emerging crime typology detected. Statistical analysis indicates growth trend requiring monitoring."
+    return result.get("text", "") or "Emerging crime typology detected. Statistical analysis indicates growth trend requiring monitoring."
 
 
 async def get_socioeconomic_ai_analysis(correlations: List[Dict], overlay_data: List[Dict]) -> str:
@@ -318,4 +318,4 @@ Reference Karnataka's specific context (urbanization, agricultural economy, tech
 """
     
     result = await call_gemini(prompt)
-    return result or "Socioeconomic correlation analysis indicates multiple factors influencing crime rates. Unemployment and urbanization show strongest correlation with property crimes."
+    return result.get("text", "") or "Socioeconomic correlation analysis indicates multiple factors influencing crime rates. Unemployment and urbanization show strongest correlation with property crimes."

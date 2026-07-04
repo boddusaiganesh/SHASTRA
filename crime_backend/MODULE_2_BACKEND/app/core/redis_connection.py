@@ -20,7 +20,7 @@ async def init_redis():
     try:
         _redis_client = aioredis.from_url(
             settings.REDIS_URL,
-            password=settings.REDIS_PASSWORD,
+            password=settings.REDIS_PASSWORD or None,
             encoding="utf-8",
             decode_responses=True,
             max_connections=50,

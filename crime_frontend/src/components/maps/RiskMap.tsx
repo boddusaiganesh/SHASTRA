@@ -23,7 +23,7 @@ const getRiskColor = (score: number) => {
 
 const RiskMap: React.FC<Props> = ({ districts }) => (
   <MapContainer center={karnatakaCenter} zoom={7} className="h-full w-full">
-    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+    <TileLayer url={`https://api.maptiler.com/maps/basic-v2/256/{z}/{x}/{y}.png?key=${import.meta.env.VITE_MAPTILER_KEY || 'DEMO_KEY'}`} attribution='&copy; MapTiler &copy; OpenStreetMap contributors' />
     <FitBounds />
     {districts.map((d) => (
       <CircleMarker

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MessageSquare, X, Send, Bot, User } from 'lucide-react';
+import { MessageSquare, X, Send, Bot, User, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../../services/api';
 
@@ -7,6 +7,7 @@ interface Message {
   id: string;
   type: 'user' | 'assistant';
   text: string;
+  isFallback?: boolean;
 }
 
 export default function AIChatWidget() {
@@ -28,7 +29,8 @@ export default function AIChatWidget() {
     try {
       const res = await api.post('/assistant/ask', { question: userMsg.text });
       const answer = res.data?.data?.answer || 'Sorry, no response available.';
-      setMessages(prev => [...prev, { id: Date.now().toString(), type: 'assistant', text: answer }]);
+      const isFallback = res.data?.data?.is_fallback || false;
+      setMessages(prev => [...prev, { id: Date.now().toString(), type: 'assistant', text: answer, isFallback }]);
     } catch (err) {
       setMessages(prev => [...prev, { id: Date.now().toString(), type: 'assistant', text: 'Error connecting to the intelligence network.' }]);
     } finally {
@@ -71,6 +73,11 @@ export default function AIChatWidget() {
                   </div>
                   <div className={`max-w-[75%] rounded-2xl p-3 text-sm ${m.type === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-slate-800 text-slate-200 rounded-tl-none border border-slate-700/50'}`}>
                     {m.text}
+                    {m.isFallback && (
+                      <div className="mt-2 text-[10px] text-amber-500 flex items-center gap-1 bg-amber-500/10 px-2 py-1 rounded w-max">
+                        <AlertTriangle className="h-3 w-3" /> Offline Mode Response
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}

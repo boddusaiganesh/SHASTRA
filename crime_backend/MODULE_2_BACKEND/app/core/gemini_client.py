@@ -123,7 +123,9 @@ def generate_prompt_hash(prompt: str) -> str:
     return hashlib.sha256(prompt.encode()).hexdigest()
 
 
-async def call_gemini(prompt: str, use_cache: bool = True) -> Optional[str]:
+from typing import Optional, Dict, Any
+
+async def call_gemini(prompt: str, use_cache: bool = True) -> Dict[str, Any]:
     """
     Call Gemini API with caching support
     
@@ -132,7 +134,8 @@ async def call_gemini(prompt: str, use_cache: bool = True) -> Optional[str]:
         use_cache: Whether to use Redis cache for this request
     
     Returns:
-        The generated text response, or None if failed
+        A dict containing the text response and a boolean indicating if it was a fallback:
+        {"text": result, "is_fallback": bool}
     """
     from app.core.redis_connection import cache_gemini_response, get_cached_gemini_response
     
@@ -143,7 +146,12 @@ async def call_gemini(prompt: str, use_cache: bool = True) -> Optional[str]:
         cached = await get_cached_gemini_response(prompt_hash)
         if cached:
             logger.info("Returning cached Gemini response")
-            return cached
+            # If we cached it as a string previously, this wrapper ensures backwards compatibility.
+            # Realistically we should cache whether it was a fallback too, but for simplicity
+            # we assume cached responses are valid responses (not fallbacks).
+            if isinstance(cached, dict):
+                return cached
+            return {"text": cached, "is_fallback": False}
     
     # Call Gemini API with retry logic
     keys = settings.get_gemini_api_keys()
@@ -155,7 +163,7 @@ async def call_gemini(prompt: str, use_cache: bool = True) -> Optional[str]:
             api_key, model_name = get_next_key_and_model()
             if not api_key:
                 logger.error("No API key available for Gemini request.")
-                return generate_fallback_response(prompt)
+                return {"text": generate_fallback_response(prompt), "is_fallback": True}
                 
             # Configure with the selected key
             genai.configure(api_key=api_key)
@@ -175,7 +183,7 @@ async def call_gemini(prompt: str, use_cache: bool = True) -> Optional[str]:
                 if use_cache:
                     await cache_gemini_response(prompt_hash, result)
                 
-                return result
+                return {"text": result, "is_fallback": False}
             else:
                 logger.warning(f"Gemini returned empty response on attempt {attempt + 1} with model {model_name}")
                 continue # Try next key/model
@@ -183,11 +191,11 @@ async def call_gemini(prompt: str, use_cache: bool = True) -> Optional[str]:
         except Exception as e:
             logger.error(f"Gemini API error on attempt {attempt + 1} with model {model_name}: {e}")
             if attempt == max_retries - 1:
-                return generate_fallback_response(prompt)
+                return {"text": generate_fallback_response(prompt), "is_fallback": True}
             continue # Try next key/model
             
     logger.error("All Gemini API attempts failed. Using fallback.")
-    return generate_fallback_response(prompt)
+    return {"text": generate_fallback_response(prompt), "is_fallback": True}
 
 
 def generate_fallback_response(prompt: str) -> str:

@@ -31,13 +31,13 @@ class Settings(BaseSettings):
 
     # Redis
     REDIS_URL: str = "redis://localhost:6379"
-    REDIS_PASSWORD: str
+    REDIS_PASSWORD: str = ""
     CACHE_EXPIRY_SECONDS: int = 900
 
     # Gemini AI
     GEMINI_API_KEY: str = ""
     GEMINI_API_KEYS: str = ""
-    GEMINI_MODEL: str = "gemini-1.5-pro"
+    GEMINI_MODEL: str = "gemini-2.5-flash"
     GEMINI_MAX_TOKENS: int = 2048
     GEMINI_TEMPERATURE: float = 0.3
 
@@ -113,7 +113,7 @@ RISK_LEVELS = ["HIGH", "MEDIUM", "LOW"]
 
 SEVERITY_LEVELS = ["CRITICAL", "HIGH", "MEDIUM", "LOW"]
 
-CRIME_STATUS_VALUES = ["REPORTED", "INVESTIGATING", "SOLVED", "CLOSED"]
+CRIME_STATUS_VALUES = ["REPORTED", "UNDER_INVESTIGATION", "SOLVED", "CLOSED", "ARCHIVED"]
 
 OFFENDER_STATUS_VALUES = ["ACTIVE", "IMPRISONED", "ABSCONDING", "DECEASED"]
 

@@ -12,7 +12,7 @@ from app.models.database_models.victim_model import Victim
 
 router = APIRouter()
 
-@router.get("")
+@router.get("/global")
 async def global_search(
     q: str = Query(..., min_length=2),
     db: AsyncSession = Depends(get_db),

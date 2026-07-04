@@ -19,7 +19,7 @@ const Navbar: React.FC<Props> = ({ alertCount = 0 }) => {
 
   const [usingMockData, setUsingMockData] = useState((window as any).__using_mock_data || false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<{crimes: any[], offenders: any[]}>({crimes: [], offenders: []});
+  const [searchResults, setSearchResults] = useState<{crimes: any[], offenders: any[], victims: any[]}>({crimes: [], offenders: [], victims: []});
   const [isSearching, setIsSearching] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
 
@@ -45,7 +45,7 @@ const Navbar: React.FC<Props> = ({ alertCount = 0 }) => {
 
   useEffect(() => {
     if (searchQuery.length < 2) {
-      setSearchResults({crimes: [], offenders: []});
+      setSearchResults({crimes: [], offenders: [], victims: []});
       setShowDropdown(false);
       return;
     }
@@ -54,7 +54,8 @@ const Navbar: React.FC<Props> = ({ alertCount = 0 }) => {
       setShowDropdown(true);
       try {
         const api = (await import("../../services/api")).default;
-        const res = await api.get("/search/global", { params: { q: searchQuery } });
+        const { ENDPOINTS } = await import("../../constants/apiEndpoints");
+        const res = await api.get(ENDPOINTS.SEARCH.GLOBAL, { params: { q: searchQuery } });
         setSearchResults(res.data);
       } catch (e) {
         console.error(e);
@@ -115,6 +116,17 @@ const Navbar: React.FC<Props> = ({ alertCount = 0 }) => {
                   <div key={o.offender_id} className="px-3 py-2 border-b border-slate-700/50 hover:bg-slate-700/50 cursor-pointer text-xs" onClick={() => navigate('/offenders')}>
                     <div className="text-white font-medium">{o.first_name} {o.last_name}</div>
                     <div className="text-slate-400">{o.risk_level} Risk</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {!isSearching && searchResults.victims && searchResults.victims.length > 0 && (
+              <div className="flex flex-col">
+                <div className="bg-slate-900/50 px-3 py-1.5 text-xs font-semibold text-slate-300">Victims</div>
+                {searchResults.victims.map(v => (
+                  <div key={v.victim_id} className="px-3 py-2 border-b border-slate-700/50 hover:bg-slate-700/50 cursor-pointer text-xs" onClick={() => navigate('/crimes')}>
+                    <div className="text-white font-medium">{v.first_name} {v.last_name}</div>
+                    <div className="text-slate-400">{v.phone_number || "No Phone"}</div>
                   </div>
                 ))}
               </div>

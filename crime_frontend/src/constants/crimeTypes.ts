@@ -10,10 +10,8 @@ export const CRIME_TYPES = [
   "Sexual Offense",
   "Vehicle Theft",
   "Burglary",
-  "Arson",
   "Cybercrime",
-  "Extortion",
-  "Human Trafficking",
+  "Domestic Violence",
 ];
 
 export const CRIME_TYPE_COLORS: Record<string, string> = {
@@ -27,10 +25,8 @@ export const CRIME_TYPE_COLORS: Record<string, string> = {
   "Sexual Offense": "#EC4899",
   "Vehicle Theft": "#6366F1",
   Burglary: "#8B5CF6",
-  Arson: "#FF6B35",
   Cybercrime: "#06B6D4",
-  Extortion: "#84CC16",
-  "Human Trafficking": "#F43F5E",
+  "Domestic Violence": "#F43F5E",
 };
 
 export const RISK_LEVELS = ["High", "Medium", "Low"] as const;

@@ -74,4 +74,8 @@ export const ENDPOINTS = {
     ALERT_THRESHOLDS: "/settings/alert-thresholds",
     AUDIT_LOGS: "/settings/audit-logs",
   },
+  // Search
+  SEARCH: {
+    GLOBAL: "/search/global",
+  },
 };

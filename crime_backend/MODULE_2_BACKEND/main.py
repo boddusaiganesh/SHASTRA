@@ -6,7 +6,7 @@ Module 2 - FastAPI Backend - Main Entry Point
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.gzip import GZipMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from contextlib import asynccontextmanager
 import uvicorn
@@ -97,10 +97,9 @@ async def lifespan(app: FastAPI):
         print(f"⚠️  Neo4j unavailable: {e} — continuing in degraded mode")
     
     if _db_ready:
-        init_scheduler()
-        print("✅ APScheduler started - Background intelligence tasks running")
+        print("✅ Database ready (scheduler runs as a separate service — see scheduler container)")
     else:
-        print("⚠️  Scheduler NOT started — database unavailable")
+        print("⚠️  Database not available for scheduler")
     
     print("✅ All systems operational. Backend ready on port", settings.BACKEND_PORT)
     
@@ -108,7 +107,7 @@ async def lifespan(app: FastAPI):
     
     print("🔄 Shutting down SHASTRA Intelligence Platform Backend...")
     if _db_ready:
-        shutdown_scheduler()
+        pass
     await close_redis()
     await close_neo4j()
 
@@ -125,9 +124,9 @@ app = FastAPI(
     contact={"name": "SCRB Technical Team", "email": "scrb@ksp.gov.in"},
     license_info={"name": "Karnataka State Police - Internal Use Only"},
     lifespan=lifespan,
-    docs_url="/docs",
-    redoc_url="/redoc",
-    openapi_url="/openapi.json",
+    docs_url="/docs" if settings.ENVIRONMENT != "production" else None,
+    redoc_url="/redoc" if settings.ENVIRONMENT != "production" else None,
+    openapi_url="/openapi.json" if settings.ENVIRONMENT != "production" else None,
 )
 
 from fastapi.responses import JSONResponse
@@ -179,7 +178,18 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-        response.headers["Content-Security-Policy"] = "default-src 'self'; connect-src 'self' https://your-api-domain"
+
+        if request.url.path in ("/docs", "/redoc"):
+            response.headers["Content-Security-Policy"] = (
+                "default-src 'self'; "
+                "script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; "
+                "style-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; "
+                "img-src 'self' data: https://fastapi.tiangolo.com"
+            )
+        else:
+            response.headers["Content-Security-Policy"] = (
+                f"default-src 'self'; connect-src 'self' {settings.FRONTEND_URL}"
+            )
         return response
 
 app.add_middleware(SecurityHeadersMiddleware)

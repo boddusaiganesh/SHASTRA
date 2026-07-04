@@ -30,8 +30,11 @@ DATA: {context}
 
 QUESTION: {question}
 """
-    answer = await call_gemini(prompt)
+    result = await call_gemini(prompt)
+    answer = result.get("text", "")
+    is_fallback = result.get("is_fallback", False)
+    
     if not answer:
         answer = "I'm currently unable to access the intelligence database. Please try again later."
         
-    return {"success": True, "data": {"answer": answer}}
+    return {"success": True, "data": {"answer": answer, "is_fallback": is_fallback}}

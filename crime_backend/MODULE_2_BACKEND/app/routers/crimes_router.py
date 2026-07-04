@@ -180,9 +180,10 @@ async def update_crime_status(
     from app.services.crime_service import update_crime_record
     from app.utils.audit import log_action
     
-    valid = {"REPORTED", "UNDER_INVESTIGATION", "CLOSED", "SOLVED", "ARCHIVED"}
-    if status_value not in valid:
-        raise HTTPException(status_code=400, detail=f"status must be one of {valid}")
+    from app.core.config import CRIME_STATUS_VALUES
+    
+    if status_value not in CRIME_STATUS_VALUES:
+        raise HTTPException(status_code=400, detail=f"status must be one of {CRIME_STATUS_VALUES}")
     updated = await update_crime_record(db, crime_id, {"status": status_value})
     if not updated:
         raise HTTPException(status_code=404, detail="Crime not found")

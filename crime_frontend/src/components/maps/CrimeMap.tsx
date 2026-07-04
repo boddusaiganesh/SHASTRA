@@ -35,8 +35,8 @@ const CrimeMap: React.FC<Props> = ({ crimes, viewMode, onCrimeSelect }) => {
       style={{ background: "#0f172a" }}
     >
       <TileLayer
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        attribution='&copy; OpenStreetMap contributors'
+        url={`https://api.maptiler.com/maps/basic-v2/256/{z}/{x}/{y}.png?key=${import.meta.env.VITE_MAPTILER_KEY || 'DEMO_KEY'}`}
+        attribution='&copy; MapTiler &copy; OpenStreetMap contributors'
         className="map-tiles"
       />
       <FitBounds />
@@ -52,7 +52,7 @@ const CrimeMap: React.FC<Props> = ({ crimes, viewMode, onCrimeSelect }) => {
               weight={0}
               fillOpacity={getOpacity()}
               opacity={getOpacity()}
-              className={crime.status === "Active Search" || crime.status === "Under Investigation" ? "red-zone-pulse" : ""}
+              className={crime.status === "REPORTED" || crime.status === "UNDER_INVESTIGATION" ? "red-zone-pulse" : ""}
               eventHandlers={{ click: () => onCrimeSelect?.(crime) }}
             >
               <Popup className="crime-popup">
@@ -67,7 +67,7 @@ const CrimeMap: React.FC<Props> = ({ crimes, viewMode, onCrimeSelect }) => {
                   <p className="text-xs text-slate-400 mb-1">{crime.district} — {crime.police_station}</p>
                   <p className="text-xs text-slate-400 mb-2">{formatDateTime(crime.date_time)}</p>
                   <div className="flex items-center justify-between">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${crime.status === "Arrested" || crime.status === "Solved" ? "bg-green-900/50 text-green-400" : "bg-yellow-900/50 text-yellow-400"}`}>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${crime.status === "CLOSED" || crime.status === "SOLVED" || crime.status === "ARCHIVED" ? "bg-green-900/50 text-green-400" : "bg-yellow-900/50 text-yellow-400"}`}>
                       {crime.status}
                     </span>
                     {crime.suspect_id && <span className="text-xs text-slate-500">Suspect: {crime.suspect_id}</span>}
@@ -88,7 +88,7 @@ const CrimeMap: React.FC<Props> = ({ crimes, viewMode, onCrimeSelect }) => {
             weight={viewMode === "pins" ? 2 : 0}
             fillOpacity={getOpacity()}
             opacity={getOpacity()}
-            className={crime.status === "Active Search" || crime.status === "Under Investigation" ? "red-zone-pulse" : ""}
+            className={crime.status === "REPORTED" || crime.status === "UNDER_INVESTIGATION" ? "red-zone-pulse" : ""}
             eventHandlers={{ click: () => onCrimeSelect?.(crime) }}
           >
             <Popup className="crime-popup">
@@ -103,7 +103,7 @@ const CrimeMap: React.FC<Props> = ({ crimes, viewMode, onCrimeSelect }) => {
                 <p className="text-xs text-slate-400 mb-1">{crime.district} — {crime.police_station}</p>
                 <p className="text-xs text-slate-400 mb-2">{formatDateTime(crime.date_time)}</p>
                 <div className="flex items-center justify-between">
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${crime.status === "Arrested" || crime.status === "Solved" ? "bg-green-900/50 text-green-400" : "bg-yellow-900/50 text-yellow-400"}`}>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${crime.status === "CLOSED" || crime.status === "SOLVED" || crime.status === "ARCHIVED" ? "bg-green-900/50 text-green-400" : "bg-yellow-900/50 text-yellow-400"}`}>
                     {crime.status}
                   </span>
                   {crime.suspect_id && <span className="text-xs text-slate-500">Suspect: {crime.suspect_id}</span>}
