@@ -50,6 +50,7 @@ const Dashboard: React.FC = () => {
   const [recentCrimes, setRecentCrimes] = useState<unknown[]>([]);
   const [recentAlerts, setRecentAlerts] = useState<unknown[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState(new Date());
 
   const fetchData = async (silent = false) => {
@@ -67,7 +68,11 @@ const Dashboard: React.FC = () => {
       setDistrictData(Array.isArray(t?.byDistrict) ? t.byDistrict : []);
       setRecentCrimes(Array.isArray(c) ? c : ((c as any)?.crimes || []));
       setRecentAlerts(Array.isArray(ra) ? ra : ((ra as any)?.alerts || []));
+      setError(null);
       setLastRefresh(new Date());
+    } catch (e: any) {
+      console.error(e);
+      setError(e.response?.data?.detail || "Failed to connect to backend. Please check if the server is running.");
     } finally {
       if (!silent) setLoading(false);
     }
@@ -89,6 +94,7 @@ const Dashboard: React.FC = () => {
   ] : [];
 
   if (loading) return <div className="flex-1 flex items-center justify-center"><LoadingSpinner size="lg" text="Loading dashboard..." /></div>;
+  if (error) return <div className="flex-1 flex flex-col items-center justify-center text-slate-400 gap-4"><AlertTriangle className="h-12 w-12 text-red-500" /><p>{error}</p><button onClick={() => fetchData()} className="px-4 py-2 bg-slate-800 rounded-lg text-white hover:bg-slate-700">Retry</button></div>;
 
   return (
     <div className="flex-1 min-h-0 w-full overflow-y-auto custom-scrollbar p-6 space-y-6">

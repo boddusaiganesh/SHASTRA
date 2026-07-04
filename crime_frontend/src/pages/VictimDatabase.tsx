@@ -8,6 +8,7 @@ export default function VictimDatabase() {
   const [searchQuery, setSearchQuery] = useState('');
   const [victims, setVictims] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [selectedVictim, setSelectedVictim] = useState<any>(null);
   
   const { user_role } = useSelector((state: RootState) => state.auth);
@@ -18,8 +19,10 @@ export default function VictimDatabase() {
     try {
       const data = await victimService.search(searchQuery);
       setVictims(data || []);
-    } catch (err) {
+      setError(null);
+    } catch (err: any) {
       console.error(err);
+      setError(err.response?.data?.detail || "Failed to search victims");
     } finally {
       setLoading(false);
     }
@@ -90,6 +93,12 @@ export default function VictimDatabase() {
                 <tr>
                   <td colSpan={5} className="p-8 text-center text-slate-500">
                     Loading victims...
+                  </td>
+                </tr>
+              ) : error ? (
+                <tr>
+                  <td colSpan={5} className="p-8 text-center text-red-400">
+                    {error}
                   </td>
                 </tr>
               ) : victims.length === 0 ? (

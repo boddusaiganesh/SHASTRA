@@ -16,12 +16,18 @@ const OffenderDatabase: React.FC = () => {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Offender | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [modusOperandi, setModusOperandi] = useState<Record<string, unknown> | null>(null);
 
   useEffect(() => {
     offenderService.searchOffenders("").then((d: any) => {
       setOffenders(Array.isArray(d) ? d : (d?.offenders || []));
+      setError(null);
+    }).catch(e => {
+      console.error(e);
+      setError(e.response?.data?.detail || "Failed to connect to backend");
+    }).finally(() => {
       setLoading(false);
     });
   }, []);
@@ -39,11 +45,18 @@ const OffenderDatabase: React.FC = () => {
 
   const handleSearch = async (q: string) => {
     setSearch(q);
-    const data: any = await offenderService.searchOffenders(q);
-    setOffenders(Array.isArray(data) ? data : (data?.offenders || []));
+    try {
+      const data: any = await offenderService.searchOffenders(q);
+      setOffenders(Array.isArray(data) ? data : (data?.offenders || []));
+      setError(null);
+    } catch (e: any) {
+      console.error(e);
+      setError(e.response?.data?.detail || "Failed to search offenders");
+    }
   };
 
   if (loading) return <div className="flex-1 flex items-center justify-center"><LoadingSpinner size="lg" text="Loading offender database..." /></div>;
+  if (error) return <div className="flex-1 flex flex-col items-center justify-center text-slate-400 gap-4"><AlertTriangle className="h-12 w-12 text-red-500" /><p>{error}</p><button onClick={() => window.location.reload()} className="px-4 py-2 bg-slate-800 rounded-lg text-white hover:bg-slate-700">Retry</button></div>;
 
   return (
     <div className="flex-1 min-h-0 overflow-hidden flex flex-col w-full">

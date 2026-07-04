@@ -36,22 +36,27 @@ const CriminalNetwork: React.FC = () => {
   useEffect(() => {
     const fetch = async () => {
       setLoading(true);
-      const [g, ai] = await Promise.all([
-        networkService.getGraphData(),
-        networkService.getAiSummary(),
-      ]);
-      
-      if (g.status === "offline") {
+      try {
+        const [g, ai] = await Promise.all([
+          networkService.getGraphData(),
+          networkService.getAiSummary(),
+        ]);
+        
+        if (g.status === "offline") {
+          setStatus("offline");
+          setErrorMessage(g.error || "Graph database is disconnected");
+        } else if (g.status === "no_data") {
+          setStatus("no_data");
+          setErrorMessage("No graph data available");
+        } else {
+          setStatus("ok");
+          setNodes(g.nodes as NetworkNode[]);
+          setEdges(g.edges as NetworkEdge[]);
+          setAiSummary(ai as typeof aiSummary);
+        }
+      } catch (e: any) {
         setStatus("offline");
-        setErrorMessage(g.error || "Graph database is disconnected");
-      } else if (g.status === "no_data") {
-        setStatus("no_data");
-        setErrorMessage("No graph data available");
-      } else {
-        setStatus("ok");
-        setNodes(g.nodes as NetworkNode[]);
-        setEdges(g.edges as NetworkEdge[]);
-        setAiSummary(ai as typeof aiSummary);
+        setErrorMessage(e.response?.data?.detail || "Failed to connect to backend");
       }
       setLoading(false);
     };

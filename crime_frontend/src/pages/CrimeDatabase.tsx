@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Search, X, Upload } from "lucide-react";
+import { Search, X, Upload, AlertTriangle } from "lucide-react";
 import { crimeService } from "../services/crimeService";
 import CrimesTable from "../components/tables/CrimesTable";
 import LoadingSpinner from "../components/common/LoadingSpinner";
@@ -7,6 +7,7 @@ import LoadingSpinner from "../components/common/LoadingSpinner";
 export default function CrimeDatabase() {
   const [crimes, setCrimes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   
   const [selectedCrime, setSelectedCrime] = useState<string | null>(null);
@@ -19,8 +20,10 @@ export default function CrimeDatabase() {
       const data = await crimeService.getMapData(); 
       // Reuse mapData endpoint as it returns all crimes, or filter endpoint.
       setCrimes(data);
-    } catch (e) {
+      setError(null);
+    } catch (e: any) {
       console.error(e);
+      setError(e.response?.data?.detail || "Failed to load crime data");
     }
     setLoading(false);
   };
@@ -100,6 +103,8 @@ export default function CrimeDatabase() {
       <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-hidden">
         {loading ? (
           <div className="p-8 flex justify-center"><LoadingSpinner /></div>
+        ) : error ? (
+          <div className="p-8 flex flex-col items-center text-red-400 gap-4"><AlertTriangle className="h-12 w-12" /><p>{error}</p></div>
         ) : (
           <CrimesTable 
             crimes={filtered} 

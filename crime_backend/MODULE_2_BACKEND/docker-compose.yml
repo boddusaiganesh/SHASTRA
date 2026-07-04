@@ -1,36 +1,31 @@
 version: '3.8'
 
 services:
-  frontend:
-    build:
-      context: ../crime_frontend
-    ports:
-      - "5173:5173"
-    environment:
-      - VITE_API_URL=${FRONTEND_VITE_API_URL:-http://localhost:8000/api}
-      - VITE_WS_URL=${FRONTEND_VITE_WS_URL:-ws://localhost:8000/api/alerts/ws}
-    networks:
-      - crime_intelligence_network
-
   backend:
     build: .
-    ports:
-      - "8000:8000"
+    restart: unless-stopped
     env_file:
       - .env
     depends_on:
-      - postgres
-      - neo4j
-      - redis
-    volumes:
-      - .:/app
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
     networks:
       - crime_intelligence_network
 
   postgres:
     image: postgis/postgis:15-3.4
+    restart: unless-stopped
     env_file:
       - .env
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$DATABASE_USER"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -38,11 +33,17 @@ services:
 
   neo4j:
     image: neo4j:5.18-community
+    restart: unless-stopped
     env_file:
       - .env
     environment:
       NEO4J_PLUGINS: '["apoc"]'
       NEO4J_dbms_security_procedures_unrestricted: apoc.*
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:7474 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
     volumes:
       - neo4j_data:/data
     networks:
@@ -50,11 +51,28 @@ services:
 
   redis:
     image: redis:7.2-alpine
+    restart: unless-stopped
     command: /bin/sh -c 'redis-server --requirepass "$$REDIS_PASSWORD"'
     env_file:
       - .env
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "$$REDIS_PASSWORD", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     volumes:
       - redis_data:/data
+    networks:
+      - crime_intelligence_network
+
+  frontend:
+    build: ../crime_frontend
+    restart: unless-stopped
+    environment:
+      - VITE_API_URL=${FRONTEND_VITE_API_URL}
+      - VITE_WS_URL=${FRONTEND_VITE_WS_URL}
+    ports:
+      - "80:80"
     networks:
       - crime_intelligence_network
 

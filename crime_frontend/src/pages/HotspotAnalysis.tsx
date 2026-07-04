@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Flame, Filter, Users, Clock, Calendar, Brain } from "lucide-react";
+import { Flame, Filter, Users, Clock, Calendar, Brain, AlertTriangle } from "lucide-react";
 import { crimeService } from "../services/crimeService";
 import HotspotMap from "../components/maps/HotspotMap";
 import TimePatternChart from "../components/charts/TimePatternChart";
@@ -15,6 +15,7 @@ const HotspotAnalysis: React.FC = () => {
   const [patterns, setPatterns] = useState<{ byHour: unknown[]; byDay: unknown[]; byMonth: unknown[] } | null>(null);
   const [deployment, setDeployment] = useState<unknown>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [district, setDistrict] = useState("All Districts");
   const [crimeType, setCrimeType] = useState("All");
   const [dateFrom, setDateFrom] = useState("");
@@ -28,15 +29,22 @@ const HotspotAnalysis: React.FC = () => {
     if (dateFrom) params.date_from = dateFrom;
     if (dateTo) params.date_to = dateTo;
 
-    const [h, p, d] = await Promise.all([
-      crimeService.getHotspotClusters(params),
-      crimeService.getTimePatterns(params),
-      crimeService.getDeploymentSuggestions(params),
-    ]);
-    setHotspots(Array.isArray(h) ? h : (h?.hotspots || []));
-    setPatterns(p as typeof patterns);
-    setDeployment(d);
-    if (!silent) setLoading(false);
+    try {
+      const [h, p, d] = await Promise.all([
+        crimeService.getHotspotClusters(params),
+        crimeService.getTimePatterns(params),
+        crimeService.getDeploymentSuggestions(params),
+      ]);
+      setHotspots(Array.isArray(h) ? h : (h?.hotspots || []));
+      setPatterns(p as typeof patterns);
+      setDeployment(d);
+      setError(null);
+    } catch (e: any) {
+      console.error(e);
+      setError(e.response?.data?.detail || "Failed to load hotspot data");
+    } finally {
+      if (!silent) setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -55,6 +63,7 @@ const HotspotAnalysis: React.FC = () => {
   const selectClass = "bg-slate-800 border border-slate-600 text-slate-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500";
 
   if (loading) return <div className="flex-1 flex items-center justify-center"><LoadingSpinner size="lg" text="Analyzing hotspots..." /></div>;
+  if (error) return <div className="flex-1 flex flex-col items-center justify-center text-slate-400 gap-4"><AlertTriangle className="h-12 w-12 text-red-500" /><p>{error}</p><button onClick={() => fetch()} className="px-4 py-2 bg-slate-800 rounded-lg text-white hover:bg-slate-700">Retry</button></div>;
 
   const dep = deployment as { suggestions: { area: string; patrol_timing: string; officers_needed: number; priority: string; reason: string }[]; ai_summary: string } | null;
 
