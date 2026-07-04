@@ -8,8 +8,9 @@ export const alertService = {
       const res = await api.get(ENDPOINTS.ALERTS.LIST);
       const data = res.data;
       return Array.isArray(data) ? data : (data?.alerts || data?.data || mockRecentAlerts);
-    } catch {
-      return mockRecentAlerts;
+    } catch (error) {
+      if (import.meta.env.VITE_DEMO_MODE === 'true') return mockRecentAlerts;
+      throw error;
     }
   },
   markRead: async (id: string) => {
@@ -28,16 +29,18 @@ export const settingsService = {
       const res = await api.get(ENDPOINTS.SETTINGS.USERS);
       const data = res.data;
       return Array.isArray(data) ? data : (data?.users || data?.data || mockUsers);
-    } catch {
-      return mockUsers;
+    } catch (error) {
+      if (import.meta.env.VITE_DEMO_MODE === 'true') return mockUsers;
+      throw error;
     }
   },
   addUser: async (user: Record<string, string>) => {
     try {
       const res = await api.post(ENDPOINTS.SETTINGS.USERS_ADD, user);
       return { data: res.data };
-    } catch {
-      return { user: { ...user, user_id: "mock-id-" + Math.random().toString(36).substring(2, 11) } };
+    } catch (error) {
+      if (import.meta.env.VITE_DEMO_MODE === 'true') return { user: { ...user, user_id: "mock-id-" + Math.random().toString(36).substring(2, 11) } };
+      throw error;
     }
   },
   getDistricts: async () => {
@@ -45,24 +48,27 @@ export const settingsService = {
       const res = await api.get(ENDPOINTS.SETTINGS.DISTRICTS);
       const data = res.data;
       return Array.isArray(data) ? data : (data?.districts || data?.data || []);
-    } catch {
-      return [];
+    } catch (error) {
+      if (import.meta.env.VITE_DEMO_MODE === 'true') return [];
+      throw error;
     }
   },
   getAlertThresholds: async () => {
     try {
       const res = await api.get(ENDPOINTS.SETTINGS.ALERT_THRESHOLDS);
       return res.data;
-    } catch {
-      return mockAlertThresholds;
+    } catch (error) {
+      if (import.meta.env.VITE_DEMO_MODE === 'true') return mockAlertThresholds;
+      throw error;
     }
   },
   updateAlertThresholds: async (thresholds: Record<string, unknown>) => {
     try {
       const res = await api.put(ENDPOINTS.SETTINGS.ALERT_THRESHOLDS, thresholds);
       return res.data;
-    } catch {
-      return { success: true, thresholds };
+    } catch (error) {
+      if (import.meta.env.VITE_DEMO_MODE === 'true') return { success: true, thresholds };
+      throw error;
     }
   },
   getDataSources: async () => {
@@ -75,16 +81,18 @@ export const settingsService = {
         { name: "Neo4j", type: "Graph DB", status: h?.neo4j === "healthy" ? "Active" : "Error", last_sync: "Live" },
         { name: "Gemini AI", type: "AI Engine", status: "Active", last_sync: "On-demand" },
       ];
-    } catch {
-      return mockDataSources;
+    } catch (error) {
+      if (import.meta.env.VITE_DEMO_MODE === 'true') return mockDataSources;
+      throw error;
     }
   },
   getAuditLogs: async () => {
     try {
       const res = await api.get(ENDPOINTS.SETTINGS.AUDIT_LOGS || '/settings/audit-logs');
       return res.data.data;
-    } catch {
-      return [];
+    } catch (error) {
+      if (import.meta.env.VITE_DEMO_MODE === 'true') return [];
+      throw error;
     }
   },
 };
@@ -101,13 +109,16 @@ export const reportService = {
         `${ENDPOINTS.REPORTS.GENERATE}?${new URLSearchParams(queryParams).toString()}`
       );
       return res.data;
-    } catch {
-      return {
-        report_id: `RPT_${Date.now()}`,
-        report_type: params.report_type,
-        status: "Ready",
-        generated_at: new Date().toISOString(),
-      };
+    } catch (error) {
+      if (import.meta.env.VITE_DEMO_MODE === 'true') {
+        return {
+          report_id: `RPT_${Date.now()}`,
+          report_type: params.report_type,
+          status: "Ready",
+          generated_at: new Date().toISOString(),
+        };
+      }
+      throw error;
     }
   },
   getSavedList: async () => {
@@ -115,8 +126,9 @@ export const reportService = {
       const res = await api.get(ENDPOINTS.REPORTS.SAVED_LIST);
       const data = res.data;
       return Array.isArray(data) ? data : (data?.reports || data?.data || mockSavedReports);
-    } catch {
-      return mockSavedReports;
+    } catch (error) {
+      if (import.meta.env.VITE_DEMO_MODE === 'true') return mockSavedReports;
+      throw error;
     }
   },
   download: async (id: string) => {

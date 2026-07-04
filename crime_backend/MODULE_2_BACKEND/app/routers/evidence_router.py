@@ -34,7 +34,7 @@ async def list_evidence(
     return {"success": True, "data": [
         {
             **item.to_dict(),
-            "file_url": f"/uploads/{os.path.basename(item.file_path)}"
+            "file_url": f"/api/evidence/download/{item.evidence_id}"
         } for item in items
     ]}
 
