@@ -126,7 +126,15 @@ export default function CrimeDatabase() {
                   {evidence.map(ev => (
                     <div key={ev.evidence_id} className="bg-slate-700/50 p-3 rounded-lg flex items-center justify-between text-sm">
                       <div>
-                        <a href={`http://localhost:8000${ev.file_url}`} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline break-all">{ev.file_name}</a>
+                        <button
+                          onClick={async () => {
+                            const { downloadAuthenticated } = await import("../utils/buildApiUrl");
+                            await downloadAuthenticated(`/evidence/download/${ev.evidence_id}`);
+                          }}
+                          className="text-blue-400 hover:underline break-all text-left"
+                        >
+                          {ev.file_name}
+                        </button>
                         <p className="text-xs text-slate-400 mt-1">Uploaded: {new Date(ev.uploaded_at).toLocaleString()}</p>
                       </div>
                     </div>

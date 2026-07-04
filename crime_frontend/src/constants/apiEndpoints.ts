@@ -1,4 +1,4 @@
-export const API_BASE_URL = "http://localhost:8000/api";
+export const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
 
 export const ENDPOINTS = {
   // Authentication
@@ -55,7 +55,6 @@ export const ENDPOINTS = {
     DETAIL: (id: string) => `/anomalies/detail/${id}`,
     UPDATE_STATUS: (id: string) => `/anomalies/update-status/${id}`,
   },
-  // Alerts
   // Alerts
   ALERTS: {
     LIST: "/alerts/active",

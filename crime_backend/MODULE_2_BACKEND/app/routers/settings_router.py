@@ -21,7 +21,10 @@ async def get_profile(
     return {"success": True, "data": data}
 
 @router.post("/datasources/{source_id}/sync")
-async def sync_datasource(source_id: str):
+async def sync_datasource(
+    source_id: str,
+    current_user=Depends(require_scrb_officer)
+):
     from app.services.settings_service import trigger_sync
     result = await trigger_sync(source_id)
     return {"success": True, "data": result}

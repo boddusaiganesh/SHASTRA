@@ -1,48 +1,35 @@
-import api from './api';
-import { mockNetworkNodes, mockNetworkEdges, mockAiNetworkSummary } from './mockData';
+import api from "./api";
 
 export const networkService = {
-  getGraphData: async (filters?: Record<string, unknown>) => {
+  getGraphData: async (searchQuery?: string, crimeType?: string, districtId?: string) => {
     try {
-      const res = await api.get('/network/graph', { params: filters });
-      const data = res.data;
+      const response = await api.get("/network/graph", {
+        params: { search_query: searchQuery, crime_type: crimeType, district_id: districtId },
+      });
+      const data = response.data;
+      if (!data || !data.nodes || data.nodes.length === 0) {
+        return { status: "no_data" };
+      }
       return {
-        nodes: Array.isArray(data?.nodes) ? data.nodes : mockNetworkNodes,
-        edges: Array.isArray(data?.edges) ? data.edges : mockNetworkEdges,
+        status: "ok",
+        nodes: data.nodes,
+        edges: data.edges || [],
+        network_density: data.network_density || 0,
+        key_players: data.key_players || []
       };
     } catch (error) {
-      console.warn("Using mock network data");
-      return { nodes: mockNetworkNodes, edges: mockNetworkEdges };
+      console.error("Error fetching network graph:", error);
+      return { status: "offline", error: "Failed to connect to the backend API." };
     }
   },
 
-  getAiSummary: async (networkId?: string) => {
+  getAiSummary: async () => {
     try {
-      const res = await api.get('/network/ai-summary', { params: { id: networkId } });
-      const data = res.data;
-      if (data) {
-        const summary = data.summary || data.summary_text || mockAiNetworkSummary.summary;
-        
-        const rawAssoc = data.suspicious_associations || data.suspicious_pairs || [];
-        const suspicious_associations = (Array.isArray(rawAssoc) ? rawAssoc : []).map((s: any) => ({
-          entities: Array.isArray(s.entities) ? s.entities : [s.offender_1 || "Node A", s.offender_2 || "Node B"],
-          reason: s.reason || s.connection_type || "Identified co-conspirator link",
-          severity: s.severity || (s.confidence === "SUSPECTED" ? "High" : "Medium"),
-        }));
-
-        const rawPriorities = data.investigation_priorities || data.recommended_actions || data.key_findings || [];
-        const investigation_priorities = Array.isArray(rawPriorities) ? rawPriorities : [];
-
-        return {
-          summary,
-          suspicious_associations: suspicious_associations.length > 0 ? suspicious_associations : mockAiNetworkSummary.suspicious_associations,
-          investigation_priorities: investigation_priorities.length > 0 ? investigation_priorities : mockAiNetworkSummary.investigation_priorities,
-        };
-      }
-      return mockAiNetworkSummary;
+      const response = await api.get("/network/ai-summary");
+      return response.data || null;
     } catch (error) {
-      console.warn("Using mock AI network summary");
-      return mockAiNetworkSummary;
+      console.error("Error fetching AI summary:", error);
+      return null;
     }
   },
 };

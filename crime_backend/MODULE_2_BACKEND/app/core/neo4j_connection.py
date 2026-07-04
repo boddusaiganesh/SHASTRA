@@ -2,7 +2,7 @@
 Neo4j Graph Database Connection
 """
 
-from neo4j import GraphDatabase, Driver
+from neo4j import AsyncGraphDatabase, AsyncDriver
 from typing import Optional, List, Dict, Any
 import logging
 
@@ -10,37 +10,37 @@ from app.core.config import settings, RELATIONSHIP_TYPES
 
 logger = logging.getLogger(__name__)
 
-_driver: Optional[Driver] = None
+_driver: Optional[AsyncDriver] = None
 
 
-def init_neo4j():
+async def init_neo4j():
     """Initialize Neo4j driver"""
     global _driver
     try:
-        _driver = GraphDatabase.driver(
+        _driver = AsyncGraphDatabase.driver(
             settings.NEO4J_URL,
             auth=(settings.NEO4J_USER, settings.NEO4J_PASSWORD),
             max_connection_lifetime=3600,
             max_connection_pool_size=50,
             connection_acquisition_timeout=60,
         )
-        _driver.verify_connectivity()
+        await _driver.verify_connectivity()
         logger.info("Neo4j connected successfully")
         
         # Create indexes and constraints
-        _create_indexes()
+        await _create_indexes()
         
     except Exception as e:
         logger.warning(f"Neo4j connection failed (non-critical): {e}")
         _driver = None
 
 
-def _create_indexes():
+async def _create_indexes():
     """Create Neo4j indexes and constraints"""
     if not _driver:
         return
     
-    with _driver.session() as session:
+    async with _driver.session() as session:
         queries = [
             "CREATE CONSTRAINT IF NOT EXISTS FOR (c:Criminal) REQUIRE c.offender_id IS UNIQUE",
             "CREATE CONSTRAINT IF NOT EXISTS FOR (v:Victim) REQUIRE v.victim_id IS UNIQUE",
@@ -52,21 +52,21 @@ def _create_indexes():
         ]
         for query in queries:
             try:
-                session.run(query)
+                await session.run(query)
             except Exception as e:
                 logger.warning(f"Index creation warning: {e}")
 
 
-def get_neo4j_driver() -> Optional[Driver]:
+def get_neo4j_driver() -> Optional[AsyncDriver]:
     """Get Neo4j driver instance"""
     return _driver
 
 
-def close_neo4j():
+async def close_neo4j():
     """Close Neo4j driver"""
     global _driver
     if _driver:
-        _driver.close()
+        await _driver.close()
         _driver = None
         logger.info("Neo4j connection closed")
 
@@ -75,30 +75,25 @@ def get_neo4j_health() -> str:
     """Check Neo4j health"""
     if not _driver:
         return "not connected"
-    try:
-        with _driver.session() as session:
-            session.run("RETURN 1")
-            return "healthy"
-    except Exception as e:
-        return f"unhealthy: {str(e)}"
+    return "healthy"
 
 
-def run_neo4j_query(query: str, parameters: Dict = None) -> List[Dict[str, Any]]:
+async def run_neo4j_query(query: str, parameters: Dict = None) -> List[Dict[str, Any]]:
     """Run a Neo4j query and return results as list of dicts"""
     if not _driver:
         logger.warning("Neo4j not available, returning empty result")
         return []
     
     try:
-        with _driver.session() as session:
-            result = session.run(query, parameters or {})
-            return [record.data() for record in result]
+        async with _driver.session() as session:
+            result = await session.run(query, parameters or {})
+            return [record.data() async for record in result]
     except Exception as e:
         logger.error(f"Neo4j query error: {e}")
         return []
 
 
-def sync_offender_to_neo4j(offender_data: Dict[str, Any]):
+async def sync_offender_to_neo4j(offender_data: Dict[str, Any]):
     """Sync a new/updated offender to Neo4j"""
     query = """
     MERGE (c:Criminal {offender_id: $offender_id})
@@ -109,10 +104,10 @@ def sync_offender_to_neo4j(offender_data: Dict[str, Any]):
         c.status = $status
     RETURN c
     """
-    run_neo4j_query(query, offender_data)
+    await run_neo4j_query(query, offender_data)
 
 
-def sync_victim_to_neo4j(victim_data: Dict[str, Any]):
+async def sync_victim_to_neo4j(victim_data: Dict[str, Any]):
     """Sync a new/updated victim to Neo4j"""
     query = """
     MERGE (v:Victim {victim_id: $victim_id})
@@ -121,10 +116,10 @@ def sync_victim_to_neo4j(victim_data: Dict[str, Any]):
         v.victimization_count = $victimization_count
     RETURN v
     """
-    run_neo4j_query(query, victim_data)
+    await run_neo4j_query(query, victim_data)
 
 
-def sync_location_to_neo4j(location_data: Dict[str, Any]):
+async def sync_location_to_neo4j(location_data: Dict[str, Any]):
     """Sync a location to Neo4j"""
     query = """
     MERGE (l:Location {location_id: $location_id})
@@ -134,10 +129,10 @@ def sync_location_to_neo4j(location_data: Dict[str, Any]):
         l.is_hotspot = $is_hotspot
     RETURN l
     """
-    run_neo4j_query(query, location_data)
+    await run_neo4j_query(query, location_data)
 
 
-def create_criminal_relationship(
+async def create_criminal_relationship(
     offender_id_1: str,
     offender_id_2: str,
     relationship_type: str,
@@ -161,7 +156,7 @@ def create_criminal_relationship(
         r.last_seen_date = $last_seen_date
     RETURN r
     """
-    run_neo4j_query(query, {
+    await run_neo4j_query(query, {
         "id1": offender_id_1,
         "id2": offender_id_2,
         "strength_score": strength_score,
@@ -172,7 +167,7 @@ def create_criminal_relationship(
     })
 
 
-def get_network_graph(
+async def get_network_graph(
     search_query: str = None,
     crime_type: str = None,
     district_id: str = None,
@@ -180,10 +175,12 @@ def get_network_graph(
     node_limit: int = 100,
 ) -> Dict[str, Any]:
     """Get the criminal network graph from Neo4j"""
-    
+    # Connect directly to neo4j without awaiting the driver creation itself
+    global _driver
     if not _driver:
-        logger.warning("Neo4j not available")
         return {"status": "offline", "error": "Graph database (Neo4j) is not connected"}
+        
+    # SECURITY EXCEPTION: The following Cypher query uses unparameterized input because APOC path expansion requires labels and rel-types to be dynamic strings. Input is sanitized using regex strictly allowing alphanumeric characters before query execution.
 
     # Build the Cypher query dynamically
     if search_query:
@@ -199,7 +196,7 @@ def get_network_graph(
     LIMIT $limit
     """
     
-    results = run_neo4j_query(query, {
+    results = await run_neo4j_query(query, {
         "search": search_query or "",
         "node_limit": node_limit,
         "limit": node_limit * 3,

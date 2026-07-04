@@ -1,6 +1,5 @@
 import api from "./api";
 import { ENDPOINTS } from "../constants/apiEndpoints";
-import { mockAuthResponse } from "./mockData";
 
 export interface LoginCredentials {
   username: string;
@@ -17,16 +16,9 @@ export interface AuthResponse {
 
 export const authService = {
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
-    try {
-      const res = await api.post(ENDPOINTS.AUTH.LOGIN, credentials);
-      return res.data;
-    } catch (error) {
-      console.warn("Backend DB offline, falling back to mock authentication.");
-      return {
-        ...mockAuthResponse,
-        user_name: credentials.username === "admin" ? "System Administrator" : credentials.username || mockAuthResponse.user_name,
-      };
-    }
+    // Let errors propagate — the Login page should show a real error message.
+    const res = await api.post(ENDPOINTS.AUTH.LOGIN, credentials);
+    return res.data;
   },
 
   logout: async (): Promise<void> => {

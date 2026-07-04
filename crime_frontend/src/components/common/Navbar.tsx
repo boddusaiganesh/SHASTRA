@@ -53,13 +53,9 @@ const Navbar: React.FC<Props> = ({ alertCount = 0 }) => {
       setIsSearching(true);
       setShowDropdown(true);
       try {
-        const res = await fetch(`http://localhost:8000/api/search/global?q=${searchQuery}`, {
-          headers: { "Authorization": `Bearer ${auth.auth_token}` }
-        });
-        if (res.ok) {
-          const json = await res.json();
-          setSearchResults(json.data);
-        }
+        const api = (await import("../../services/api")).default;
+        const res = await api.get("/search/global", { params: { q: searchQuery } });
+        setSearchResults(res.data);
       } catch (e) {
         console.error(e);
       }

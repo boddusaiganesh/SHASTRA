@@ -42,7 +42,8 @@ export const crimeService = {
       const res = await api.get(ENDPOINTS.DASHBOARD.SUMMARY);
       return res.data?.data || res.data;
     } catch (error) {
-      return mockDashboardSummary;
+      if (import.meta.env.VITE_DEMO_MODE === 'true') return mockDashboardSummary;
+      throw error;
     }
   },
   getRecentCrimes: async (limit = 10) => {
@@ -50,8 +51,9 @@ export const crimeService = {
       const res = await api.get(ENDPOINTS.DASHBOARD.RECENT_CRIMES, { params: { limit } });
       const data = res.data;
       return Array.isArray(data) ? data : (data?.crimes || data?.data || mockRecentCrimes);
-    } catch {
-      return mockRecentCrimes;
+    } catch (error) {
+      if (import.meta.env.VITE_DEMO_MODE === 'true') return mockRecentCrimes;
+      throw error;
     }
   },
   getRecentAlerts: async (limit = 8) => {
@@ -59,8 +61,9 @@ export const crimeService = {
       const res = await api.get(ENDPOINTS.DASHBOARD.RECENT_ALERTS, { params: { limit } });
       const data = res.data;
       return Array.isArray(data) ? data : (data?.alerts || data?.data || mockRecentAlerts);
-    } catch {
-      return mockRecentAlerts;
+    } catch (error) {
+      if (import.meta.env.VITE_DEMO_MODE === 'true') return mockRecentAlerts;
+      throw error;
     }
   },
   getCrimeTrends: async () => {
@@ -68,7 +71,8 @@ export const crimeService = {
       const res = await api.get(ENDPOINTS.DASHBOARD.CRIME_TRENDS);
       return res.data?.data || res.data;
     } catch (error) {
-      return { trends: mockCrimeTrends, byType: mockCrimeTypeBreakdown, byDistrict: mockDistrictCrimeCounts };
+      if (import.meta.env.VITE_DEMO_MODE === 'true') return { trends: mockCrimeTrends, byType: mockCrimeTypeBreakdown, byDistrict: mockDistrictCrimeCounts };
+      throw error;
     }
   },
   getMapData: async (filters?: Record<string, string>) => { 
@@ -77,7 +81,8 @@ export const crimeService = {
       const data = response.data;
       return Array.isArray(data) ? data : (data?.crimes || data?.data || mockMapCrimes);
     } catch (error) {
-      return mockMapCrimes;
+      if (import.meta.env.VITE_DEMO_MODE === 'true') return mockMapCrimes;
+      throw error;
     }
   },
   getCrimeDetail: async (id: string) => {
@@ -85,7 +90,8 @@ export const crimeService = {
       const response = await api.get(ENDPOINTS.CRIMES.DETAIL(id));
       return response.data?.data || response.data;
     } catch (error) {
-      return mockMapCrimes.find((c) => c.crime_id === id) || null;
+      if (import.meta.env.VITE_DEMO_MODE === 'true') return mockMapCrimes.find((c) => c.crime_id === id) || null;
+      throw error;
     }
   },
   update: async (id: string, payload: any) => {
@@ -125,10 +131,9 @@ export const crimeService = {
         ...data,
         hotspots: list.map(normalizeHotspot)
       };
-    } catch {
-      return {
-        hotspots: mockHotspotClusters.map(normalizeHotspot)
-      };
+    } catch (error) {
+      if (import.meta.env.VITE_DEMO_MODE === 'true') return { hotspots: mockHotspotClusters.map(normalizeHotspot) };
+      throw error;
     }
   },
   getTimePatterns: async (filters?: any) => {
@@ -154,8 +159,9 @@ export const crimeService = {
         return { byHour, byDay, byMonth };
       }
       return { byHour: mockTimePatternData, byDay: mockDayPatternData, byMonth: mockMonthPatternData };
-    } catch {
-      return { byHour: mockTimePatternData, byDay: mockDayPatternData, byMonth: mockMonthPatternData };
+    } catch (error) {
+      if (import.meta.env.VITE_DEMO_MODE === 'true') return { byHour: mockTimePatternData, byDay: mockDayPatternData, byMonth: mockMonthPatternData };
+      throw error;
     }
   },
   getTopHotspots: async (filters?: any) => {
@@ -164,8 +170,9 @@ export const crimeService = {
       const data = response.data?.data || response.data;
       const list = data?.hotspots || (Array.isArray(data) ? data : []);
       return list.map(normalizeHotspot);
-    } catch {
-      return mockHotspotClusters.map(normalizeHotspot);
+    } catch (error) {
+      if (import.meta.env.VITE_DEMO_MODE === 'true') return mockHotspotClusters.map(normalizeHotspot);
+      throw error;
     }
   },
   getDeploymentSuggestions: async (filters?: any) => {
@@ -190,8 +197,9 @@ export const crimeService = {
         ai_summary: data?.ai_overall_strategy || data?.ai_summary || "Maintain standard patrol schedules.",
         suggestions: suggestions,
       };
-    } catch {
-      return mockDeploymentSuggestions;
+    } catch (error) {
+      if (import.meta.env.VITE_DEMO_MODE === 'true') return mockDeploymentSuggestions;
+      throw error;
     }
   },
 };

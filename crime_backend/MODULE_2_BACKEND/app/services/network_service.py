@@ -31,7 +31,7 @@ async def get_network_graph_data(
         return cached
     
     # Try Neo4j first
-    graph_data = get_network_graph(
+    graph_data = await get_network_graph(
         search_query=search_query,
         crime_type=crime_type,
         district_id=district_id,

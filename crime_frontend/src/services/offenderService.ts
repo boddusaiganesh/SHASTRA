@@ -27,18 +27,24 @@ export const offenderService = {
       const res = await api.get(ENDPOINTS.OFFENDERS.SEARCH, { params: { query } });
       const list = res.data?.offenders || res.data?.data || res.data || [];
       return (Array.isArray(list) ? list : []).map(normalizeOffender).filter(Boolean);
-    } catch {
-      return mockOffenders.filter((o: any) => 
-        !query || o.offender_name?.toLowerCase().includes(query.toLowerCase())
-      ).map(normalizeOffender).filter(Boolean);
+    } catch (error) {
+      if (import.meta.env.VITE_DEMO_MODE === 'true') {
+        return mockOffenders.filter((o: any) => 
+          !query || o.offender_name?.toLowerCase().includes(query.toLowerCase())
+        ).map(normalizeOffender).filter(Boolean);
+      }
+      throw error;
     }
   },
   getProfile: async (id: string) => {
     try {
       const res = await api.get(ENDPOINTS.OFFENDERS.PROFILE(id));
       return normalizeOffender(res.data);
-    } catch {
-      return normalizeOffender(mockOffenders.find((o: any) => o.offender_id === id));
+    } catch (error) {
+      if (import.meta.env.VITE_DEMO_MODE === 'true') {
+        return normalizeOffender(mockOffenders.find((o: any) => o.offender_id === id));
+      }
+      throw error;
     }
   },
   getModusOperandi: async (id: string) => {

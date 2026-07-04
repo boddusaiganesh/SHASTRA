@@ -15,7 +15,8 @@ export const predictionService = {
       const res = await api.get(ENDPOINTS.PREDICTIONS.FORECAST, { params: filters });
       return res.data;
     } catch (error) {
-      return mockCrimeForecast;
+      if (import.meta.env.VITE_DEMO_MODE === 'true') return mockCrimeForecast;
+      throw error;
     }
   },
   getAnomalies: async (filters?: any) => {
@@ -24,47 +25,53 @@ export const predictionService = {
       const data = res.data;
       return Array.isArray(data) ? data : (data?.anomalies || []);
     } catch (error) {
-      return mockAnomalies;
+      if (import.meta.env.VITE_DEMO_MODE === 'true') return mockAnomalies;
+      throw error;
     }
   },
   getRiskMap: async () => {
     try {
       const res = await api.get(ENDPOINTS.PREDICTIONS.RISK_MAP);
       return res.data;
-    } catch {
-      return mockDistrictRiskScores;
+    } catch (error) {
+      if (import.meta.env.VITE_DEMO_MODE === 'true') return mockDistrictRiskScores;
+      throw error;
     }
   },
   getHighRiskAreas: async () => {
     try {
       const res = await api.get(ENDPOINTS.PREDICTIONS.HIGH_RISK_AREAS);
       return res.data;
-    } catch {
-      return mockHighRiskPredictions;
+    } catch (error) {
+      if (import.meta.env.VITE_DEMO_MODE === 'true') return mockHighRiskPredictions;
+      throw error;
     }
   },
   getForecast: async () => {
     try {
       const res = await api.get(ENDPOINTS.PREDICTIONS.FORECAST);
       return res.data;
-    } catch {
-      return mockCrimeForecast;
+    } catch (error) {
+      if (import.meta.env.VITE_DEMO_MODE === 'true') return mockCrimeForecast;
+      throw error;
     }
   },
   getEmergingTypologies: async () => {
     try {
       const res = await api.get(ENDPOINTS.PREDICTIONS.EMERGING_TYPOLOGIES);
       return res.data;
-    } catch {
-      return mockEmergingTypologies;
+    } catch (error) {
+      if (import.meta.env.VITE_DEMO_MODE === 'true') return mockEmergingTypologies;
+      throw error;
     }
   },
   getSocioeconomicData: async (filters?: any) => {
     try {
       const res = await api.get(ENDPOINTS.PREDICTIONS.SOCIOECONOMIC, { params: filters });
       return res.data;
-    } catch {
-      return mockSocioeconomicData;
+    } catch (error) {
+      if (import.meta.env.VITE_DEMO_MODE === 'true') return mockSocioeconomicData;
+      throw error;
     }
   },
 };
@@ -75,24 +82,27 @@ export const anomalyService = {
       const res = await api.get(ENDPOINTS.ANOMALIES.LIST);
       const data = res.data;
       return Array.isArray(data) ? data : (data?.anomalies || []);
-    } catch (e) {
-      return mockAnomalies;
+    } catch (error) {
+      if (import.meta.env.VITE_DEMO_MODE === 'true') return mockAnomalies;
+      throw error;
     }
   },
   getDetail: async (id: string) => {
     try {
       const res = await api.get(ENDPOINTS.ANOMALIES.DETAIL(id));
       return res.data;
-    } catch {
-      return mockAnomalies.find((a) => a.anomaly_id === id) || null;
+    } catch (error) {
+      if (import.meta.env.VITE_DEMO_MODE === 'true') return mockAnomalies.find((a) => a.anomaly_id === id) || null;
+      throw error;
     }
   },
   updateStatus: async (id: string, status: string) => {
     try {
       const res = await api.patch(ENDPOINTS.ANOMALIES.UPDATE_STATUS(id), { status });
       return res.data;
-    } catch {
-      return { success: true, anomaly_id: id, status };
+    } catch (error) {
+      if (import.meta.env.VITE_DEMO_MODE === 'true') return { success: true, anomaly_id: id, status };
+      throw error;
     }
   },
 };

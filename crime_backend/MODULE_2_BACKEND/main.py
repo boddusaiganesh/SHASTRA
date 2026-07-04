@@ -60,38 +60,13 @@ import os
 
 _db_ready = False
 
-import platform
 
-def start_local_postgres():
-    if os.environ.get("ENVIRONMENT", "local") == "development" and platform.system() == "Windows":
-        import subprocess
-        logger.info("Local development environment on Windows detected. Attempting to start PostgreSQL...")
-        try:
-            # Check if postgres is already running
-            subprocess.run(['pg_isready'], check=True, capture_output=True)
-            logger.info("PostgreSQL is already running.")
-        except subprocess.CalledProcessError:
-            try:
-                # Start postgres (adjust path as needed for local setup)
-                pg_ctl_path = r"D:\PostgreSQL_17\bin\pg_ctl.exe"
-                data_dir = r"D:\PostgreSQL_17\data"
-                if os.path.exists(pg_ctl_path) and os.path.exists(data_dir):
-                    subprocess.Popen([pg_ctl_path, "start", "-D", data_dir])
-                    logger.info("Started PostgreSQL service.")
-                else:
-                    logger.warning("Could not find PostgreSQL installation to auto-start.")
-            except Exception as e:
-                logger.error(f"Failed to start PostgreSQL: {e}")
-    else:
-        # Silently skip on production/containerized or non-Windows environments
-        pass
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown events"""
     global _db_ready
     print("🚀 Starting SHASTRA - Crime Intelligence Platform Backend...")
-    start_local_postgres()
     
     try:
         await init_db()
@@ -116,7 +91,7 @@ async def lifespan(app: FastAPI):
 
     
     try:
-        init_neo4j()
+        await init_neo4j()
         print("✅ Neo4j Graph Database connected")
     except Exception as e:
         print(f"⚠️  Neo4j unavailable: {e} — continuing in degraded mode")
@@ -135,7 +110,7 @@ async def lifespan(app: FastAPI):
     if _db_ready:
         shutdown_scheduler()
     await close_redis()
-    close_neo4j()
+    await close_neo4j()
 
 
 app = FastAPI(
@@ -157,26 +132,6 @@ app = FastAPI(
 
 from fastapi.responses import JSONResponse
 
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    origin = request.headers.get("origin", "")
-    headers = {}
-    # Apply CORS headers for 500 responses
-    headers["Access-Control-Allow-Origin"] = origin if origin else "*"
-    headers["Access-Control-Allow-Credentials"] = "true"
-    
-    logger.error(f"Unhandled server error: {exc}")
-    return JSONResponse(
-        status_code=500,
-        content={"detail": "Internal Server Error", "message": str(exc)},
-        headers=headers
-    )
-
-# Security and Rate Limiting
-limiter = Limiter(key_func=get_remote_address)
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-
 # CORS Middleware
 allowed_origins = []
 if settings.ENVIRONMENT == "production":
@@ -188,6 +143,26 @@ else:
         "http://localhost:5173",
         "http://127.0.0.1:5173",
     ]
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Unhandled server error on {request.url.path}: {exc}", exc_info=True)
+    origin = request.headers.get("origin", "")
+    headers = {}
+    if origin in allowed_origins:
+        headers["Access-Control-Allow-Origin"] = origin
+        headers["Access-Control-Allow-Credentials"] = "true"
+    
+    return JSONResponse(
+        status_code=500,
+        content={"success": False, "detail": "Internal Server Error"},
+        headers=headers
+    )
+
+# Security and Rate Limiting
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,
@@ -212,8 +187,6 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 # Static files for evidence uploads
 import os
 os.makedirs("app/uploads", exist_ok=True)
-app.mount("/uploads", StaticFiles(directory="app/uploads"), name="uploads")
-
 # Include routers
 app.include_router(auth_router.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(dashboard_router.router, prefix="/api/dashboard", tags=["Dashboard"])
@@ -254,7 +227,8 @@ async def health_check():
     }
 
 if __name__ == "__main__":
-    workers = 1 if settings.ENVIRONMENT == "development" else 4
+    import multiprocessing
+    workers = int(os.getenv("WORKERS", multiprocessing.cpu_count() * 2 + 1)) if settings.ENVIRONMENT != "development" else 1
     uvicorn.run(
         "main:app",
         host="0.0.0.0",

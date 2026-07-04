@@ -45,10 +45,11 @@ const HotspotAnalysis: React.FC = () => {
     return () => clearInterval(interval);
   }, [district, crimeType, dateFrom, dateTo]);
 
-  const handleExport = () => {
+  const handleExport = async () => {
     const queryParams = new URLSearchParams({ file_format: "csv" });
     if (district !== "All Districts") queryParams.append("district_id", district);
-    window.open(`http://localhost:8000/api/hotspots/clusters?${queryParams.toString()}`, "_blank");
+    const { downloadAuthenticated } = await import("../utils/buildApiUrl");
+    await downloadAuthenticated("/hotspots/clusters", Object.fromEntries(queryParams.entries()));
   };
 
   const selectClass = "bg-slate-800 border border-slate-600 text-slate-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500";

@@ -45,20 +45,36 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     if (isAuthenticated) {
       alertService.getAlerts().then((data) => dispatch(setAlerts(data)));
       
-      const wsUrl = import.meta.env.VITE_WS_URL || "ws://localhost:8000/api/alerts/ws";
-      const ws = new WebSocket(wsUrl);
-      ws.onmessage = (event) => {
-        try {
-          const msg = JSON.parse(event.data);
-          if (msg.type === "NEW_ALERT") {
-            dispatch(addAlert(msg.data));
-            addToast(msg.data);
+      let ws: WebSocket;
+      let retryDelay = 1000;
+      let closedByUs = false;
+
+      const connect = () => {
+        const token = localStorage.getItem("auth_token");
+        const base = import.meta.env.VITE_WS_URL || "ws://localhost:8000/api/alerts/ws";
+        ws = new WebSocket(`${base}?token=${encodeURIComponent(token || "")}`);
+
+        ws.onopen = () => { retryDelay = 1000; };
+        ws.onmessage = (event) => {
+          try {
+            const msg = JSON.parse(event.data);
+            if (msg.type === "NEW_ALERT") {
+              dispatch(addAlert(msg.data));
+              addToast(msg.data);
+            }
+          } catch (e) {
+            console.error("WS message parse error", e);
           }
-        } catch (e) {
-          console.error("WS error", e);
-        }
+        };
+        ws.onclose = () => {
+          if (closedByUs) return;
+          setTimeout(connect, retryDelay);
+          retryDelay = Math.min(retryDelay * 2, 30000);
+        };
       };
-      return () => ws.close();
+
+      connect();
+      return () => { closedByUs = true; ws?.close(); };
     }
   }, [isAuthenticated, dispatch]);
 

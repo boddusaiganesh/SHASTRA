@@ -3,7 +3,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 
 from app.core.database import get_db
-from app.core.security import get_current_user
+from app.core.security import get_current_user, decode_access_token
+from app.core.redis_connection import is_token_blacklisted
 from app.services.alert_service import (
     get_active_alerts,
     mark_alert_read,
@@ -40,7 +41,12 @@ async def dismiss(
     return {"success": True, "data": data}
 
 @router.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
+async def websocket_endpoint(websocket: WebSocket, token: str = Query(...)):
+    payload = decode_access_token(token)
+    if not payload or await is_token_blacklisted(token):
+        await websocket.close(code=1008)
+        return
+
     from app.core.websocket import manager
     await manager.connect(websocket)
     try:

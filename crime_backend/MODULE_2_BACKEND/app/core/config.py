@@ -31,7 +31,7 @@ class Settings(BaseSettings):
 
     # Redis
     REDIS_URL: str = "redis://localhost:6379"
-    REDIS_PASSWORD: Optional[str] = None
+    REDIS_PASSWORD: str
     CACHE_EXPIRY_SECONDS: int = 900
 
     # Gemini AI

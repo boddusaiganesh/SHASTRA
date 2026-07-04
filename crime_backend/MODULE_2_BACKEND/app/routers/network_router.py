@@ -1,12 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.utils.district_resolver import resolve_district_id
 from app.services.network_service import get_network_graph_data, get_node_detail, get_network_ai_summary
 
+limiter = Limiter(key_func=get_remote_address)
 router = APIRouter()
 
 @router.get("/graph")            
@@ -34,7 +37,9 @@ async def fetch_node_detail(
     return {"success": True, "data": data}
 
 @router.get("/ai-summary")
+@limiter.limit("5/minute")
 async def fetch_ai_summary(
+    request: Request,
     district_id: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),

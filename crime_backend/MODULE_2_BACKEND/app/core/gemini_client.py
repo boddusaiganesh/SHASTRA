@@ -63,7 +63,6 @@ async def init_gemini_models():
             m.name for m in models 
             if 'generateContent' in m.supported_generation_methods 
             and 'gemini' in m.name.lower()
-            and 'pro' not in m.name.lower()
         ]
         
         # Sort using the ranking heuristic
@@ -121,7 +120,7 @@ def get_gemini_model(model_name: str):
 
 def generate_prompt_hash(prompt: str) -> str:
     """Generate a hash of a prompt for cache key"""
-    return hashlib.md5(prompt.encode()).hexdigest()
+    return hashlib.sha256(prompt.encode()).hexdigest()
 
 
 async def call_gemini(prompt: str, use_cache: bool = True) -> Optional[str]:

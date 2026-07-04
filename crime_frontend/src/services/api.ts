@@ -28,17 +28,12 @@ api.interceptors.response.use(
   },
   (error) => {
     const token = localStorage.getItem("auth_token");
-    if (error.response && error.response.status === 401 && (!token || !token.startsWith("mock-"))) {
+    if (error.response?.status === 401) {
       localStorage.removeItem("auth_token");
       localStorage.removeItem("user_data");
       window.location.href = "/login";
     }
-    try {
-      (window as any).__using_mock_data = true;
-      window.dispatchEvent(new CustomEvent("mock-data-detected"));
-    } catch (e) {
-      // Ignore
-    }
+    // No mock-data fallback. Let the caller show a real error/toast.
     return Promise.reject(error);
   }
 );

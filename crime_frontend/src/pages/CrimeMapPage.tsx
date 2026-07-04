@@ -70,10 +70,11 @@ const CrimeMapPage: React.FC = () => {
     "Active Search": "bg-red-900/40 text-red-400",
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
     const queryParams = new URLSearchParams({ file_format: "csv" });
     if (filters.district !== "All Districts") queryParams.append("district_id", filters.district);
-    window.open(`http://localhost:8000/api/crimes/map-data?${queryParams.toString()}`, "_blank");
+    const { downloadAuthenticated } = await import("../utils/buildApiUrl");
+    await downloadAuthenticated("/crimes/map-data", Object.fromEntries(queryParams.entries()));
   };
 
   const handleViewCase = async (crime: Crime) => {
@@ -286,9 +287,15 @@ const CrimeMapPage: React.FC = () => {
                           <span className="text-xs font-medium text-slate-300 truncate">{ev.file_path.split('/').pop()}</span>
                           <span className="text-[10px] text-slate-500">{formatDateTime(ev.uploaded_at)}</span>
                         </div>
-                        <a href={`http://localhost:8000${ev.file_url}`} target="_blank" rel="noreferrer" className="text-xs text-blue-400 hover:underline">
+                        <button
+                          onClick={async () => {
+                            const { downloadAuthenticated } = await import("../utils/buildApiUrl");
+                            await downloadAuthenticated(`/evidence/download/${ev.evidence_id}`);
+                          }}
+                          className="text-xs text-blue-400 hover:underline text-left"
+                        >
                           View Attachment
-                        </a>
+                        </button>
                       </div>
                     ))}
                     {evidenceList.length === 0 && !uploading && (
