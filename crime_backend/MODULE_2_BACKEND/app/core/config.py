@@ -78,9 +78,13 @@ class Settings(BaseSettings):
     @classmethod
     def validate_jwt(cls, v):
         if v == "CHANGE_THIS_IN_PRODUCTION_64_CHARS_MIN":
-            logging.getLogger(__name__).warning(
-                "⚠️  JWT_SECRET_KEY is using default value. Set a secure key in .env before deploying."
-            )
+            env = os.environ.get("ENVIRONMENT", "development")
+            if env == "production":
+                raise ValueError(
+                    "JWT_SECRET_KEY must be set to a unique secret before running in production. "
+                    "Generate one with: python -c \"import secrets; print(secrets.token_hex(64))\""
+                )
+            logging.getLogger(__name__).warning("⚠️ JWT_SECRET_KEY is using the default dev value.")
         return v
 
 

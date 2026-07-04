@@ -143,6 +143,11 @@ async def create_criminal_relationship(
     last_seen_date: str = None,
 ):
     """Create a relationship between two criminals in Neo4j"""
+    
+    # SECURITY: relationship_type is interpolated directly into the Cypher query below
+    # because Neo4j doesn't support parameterizing relationship type names. This allow-list
+    # check is the only thing preventing Cypher injection here — do not remove it, and do not
+    # add any other caller that builds a relationship-type Cypher string without this check.
     if relationship_type not in RELATIONSHIP_TYPES:
         raise ValueError(f"Invalid relationship_type: {relationship_type}")
     query = f"""

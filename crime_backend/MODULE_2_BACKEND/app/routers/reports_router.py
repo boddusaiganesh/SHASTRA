@@ -1,6 +1,8 @@
-from fastapi import APIRouter, Depends, Query, HTTPException, Response
+from fastapi import APIRouter, Depends, Query, HTTPException, Response, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from app.core.database import get_db
 from app.core.security import get_current_user, require_role
@@ -10,10 +12,13 @@ from app.services.report_service import (
     get_report_by_id,
 )
 
+limiter = Limiter(key_func=get_remote_address)
 router = APIRouter()
 
 @router.post("/generate")
+@limiter.limit("5/minute")
 async def generate_report_endpoint(
+    request: Request,
     report_type: str = Query(...),
     report_name: Optional[str] = Query(None),
     district_id: Optional[str] = Query(None),
