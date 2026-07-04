@@ -49,7 +49,7 @@ const CrimeMap: React.FC<Props> = ({ crimes, viewMode, onCrimeSelect }) => {
               radius={getRadius()}
               fillColor={CRIME_TYPE_COLORS[crime.crime_type] || "#6366f1"}
               color={CRIME_TYPE_COLORS[crime.crime_type] || "#6366f1"}
-              weight={viewMode === "pins" ? 2 : 0}
+              weight={0}
               fillOpacity={getOpacity()}
               opacity={getOpacity()}
               className={crime.status === "Active Search" || crime.status === "Under Investigation" ? "red-zone-pulse" : ""}

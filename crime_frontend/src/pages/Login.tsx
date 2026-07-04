@@ -2,9 +2,7 @@ import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import {
-  Shield, Lock, User, AlertCircle, Eye, EyeOff, ChevronDown,
-} from 'lucide-react';
+import { Shield, Lock, User, Eye, EyeOff, AlertCircle } from "lucide-react";
 import { loginStart, loginSuccess, loginFailure } from '../store/authSlice';
 import { authService } from '../services/authService';
 import { RootState } from '../store/store';

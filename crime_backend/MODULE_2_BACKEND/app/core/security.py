@@ -138,7 +138,7 @@ async def get_current_user(
     }
 
 
-async def require_role(required_roles: list):
+def require_role(required_roles: list):
     """Create a dependency that requires specific roles"""
     async def role_checker(
         current_user: Dict[str, Any] = Depends(get_current_user),

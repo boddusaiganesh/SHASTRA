@@ -73,5 +73,6 @@ export const ENDPOINTS = {
     USERS_ADD: "/settings/users/add",
     DISTRICTS: "/settings/districts",
     ALERT_THRESHOLDS: "/settings/alert-thresholds",
+    AUDIT_LOGS: "/settings/audit-logs",
   },
 };

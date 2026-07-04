@@ -6,13 +6,13 @@ import google.generativeai as genai
 from typing import Optional
 import logging
 import hashlib
+import re
 
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-# Configure Gemini
-genai.configure(api_key=settings.GEMINI_API_KEY)
+# The client is configured dynamically per request to support multiple keys
 
 # System context for all Gemini requests
 SYSTEM_CONTEXT = """You are a highly specialized criminological intelligence analyst for the 
@@ -36,11 +36,70 @@ Guidelines:
 """
 
 
-def get_gemini_model():
+_available_models: list[str] = []
+_current_key_index = 0
+_current_model_index = 0
+
+def _rank_model(model_name: str) -> tuple:
+    """Helper to rank models: higher version first, pro over flash"""
+    match = re.search(r'(\d+\.\d+)', model_name)
+    version = float(match.group(1)) if match else 0.0
+    is_pro = 1 if 'pro' in model_name else 0
+    is_flash = 1 if 'flash' in model_name and not is_pro else 0
+    return (version, is_pro, is_flash, model_name)
+
+async def init_gemini_models():
+    """Discover, filter, and rank available Gemini models at startup"""
+    global _available_models
+    keys = settings.get_gemini_api_keys()
+    if not keys:
+        logger.warning("No Gemini API keys found for dynamic model discovery.")
+        return
+        
+    try:
+        genai.configure(api_key=keys[0])
+        models = genai.list_models()
+        valid_models = [m.name for m in models if 'generateContent' in m.supported_generation_methods and 'gemini' in m.name.lower()]
+        
+        # Sort using the ranking heuristic (highest version and 'pro' first)
+        valid_models.sort(key=_rank_model, reverse=True)
+        
+        # Store top 5 models
+        _available_models = valid_models[:5]
+        if _available_models:
+            logger.info(f"Successfully discovered and ranked {len(_available_models)} Gemini models: {_available_models}")
+        else:
+            logger.warning("No compatible Gemini models discovered. Will fallback to default model.")
+            
+    except Exception as e:
+        logger.error(f"Failed to fetch Gemini models at startup: {e}")
+
+def get_next_key_and_model() -> tuple[Optional[str], Optional[str]]:
+    """Get the next API key and Model using round-robin"""
+    global _current_key_index, _current_model_index
+    keys = settings.get_gemini_api_keys()
+    if not keys:
+        return None, None
+    
+    key = keys[_current_key_index % len(keys)]
+    _current_key_index += 1
+    
+    model_name = settings.GEMINI_MODEL
+    if _available_models:
+        model_name = _available_models[_current_model_index % len(_available_models)]
+        _current_model_index += 1
+        
+    if model_name.startswith('models/'):
+        model_name = model_name[7:]
+        
+    return key, model_name
+
+
+def get_gemini_model(model_name: str):
     """Get the configured Gemini model"""
     try:
         model = genai.GenerativeModel(
-            model_name=settings.GEMINI_MODEL,
+            model_name=model_name,
             generation_config={
                 "temperature": settings.GEMINI_TEMPERATURE,
                 "max_output_tokens": settings.GEMINI_MAX_TOKENS,
@@ -82,29 +141,49 @@ async def call_gemini(prompt: str, use_cache: bool = True) -> Optional[str]:
             logger.info("Returning cached Gemini response")
             return cached
     
-    # Call Gemini API
-    try:
-        model = get_gemini_model()
-        if not model:
-            return generate_fallback_response(prompt)
-        
-        response = model.generate_content(prompt)
-        
-        if response and response.text:
-            result = response.text
+    # Call Gemini API with retry logic
+    keys = settings.get_gemini_api_keys()
+    max_retries = min(len(keys) * max(1, len(_available_models)), 4) if keys else 1
+    
+    for attempt in range(max_retries):
+        model_name = "unknown"
+        try:
+            api_key, model_name = get_next_key_and_model()
+            if not api_key:
+                logger.error("No API key available for Gemini request.")
+                return generate_fallback_response(prompt)
+                
+            # Configure with the selected key
+            genai.configure(api_key=api_key)
             
-            # Cache the response
-            if use_cache:
-                await cache_gemini_response(prompt_hash, result)
+            logger.info(f"AI Request Attempt {attempt+1}: Using model '{model_name}'")
             
-            return result
-        else:
-            logger.warning("Gemini returned empty response")
-            return generate_fallback_response(prompt)
+            model = get_gemini_model(model_name)
+            if not model:
+                continue
             
-    except Exception as e:
-        logger.error(f"Gemini API error: {e}")
-        return generate_fallback_response(prompt)
+            response = await model.generate_content_async(prompt)
+            
+            if response and response.text:
+                result = response.text
+                
+                # Cache the response
+                if use_cache:
+                    await cache_gemini_response(prompt_hash, result)
+                
+                return result
+            else:
+                logger.warning(f"Gemini returned empty response on attempt {attempt + 1} with model {model_name}")
+                continue # Try next key/model
+                
+        except Exception as e:
+            logger.error(f"Gemini API error on attempt {attempt + 1} with model {model_name}: {e}")
+            if attempt == max_retries - 1:
+                return generate_fallback_response(prompt)
+            continue # Try next key/model
+            
+    logger.error("All Gemini API attempts failed. Using fallback.")
+    return generate_fallback_response(prompt)
 
 
 def generate_fallback_response(prompt: str) -> str:

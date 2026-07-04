@@ -73,15 +73,34 @@ async def seed_all_data(session: AsyncSession):
         session.add_all(stations)
         await session.flush()
         
-        # Seed 200 Crimes
-        for i in range(200):
-            d_choice = random.choice(district_ids)
-            s_choice = station_map[d_choice]
-            # Find the district's base lat/lon
-            d_obj = next(d for d in districts if d.district_id == d_choice)
+        # Seed 5000 Crimes with clusters
+        logger.info("Generating 5000 crimes...")
+        # High density districts for clustering (Bangalore Urban, Mysuru, Dakshina Kannada)
+        high_density_districts = ["KA-01", "KA-03", "KA-08"]
+        
+        for i in range(5000):
+            # 60% chance to be in a high density district
+            if random.random() < 0.6:
+                d_choice = random.choice(high_density_districts)
+            else:
+                d_choice = random.choice(district_ids)
+                
+            s_choice = station_map.get(d_choice) or station_map[district_ids[0]]
+            d_obj = next((d for d in districts if d.district_id == d_choice), districts[0])
             
-            # Spread across the past 90 days
-            base_date = date.today() - timedelta(days=random.randint(0, 90))
+            # Spread across the past 90 days, with 30% chance to be very recent
+            if random.random() < 0.3:
+                base_date = date.today() - timedelta(days=random.randint(0, 10))
+            else:
+                base_date = date.today() - timedelta(days=random.randint(0, 90))
+            
+            # Spatial clustering: 50% chance to be tightly clustered around headquarters
+            if random.random() < 0.5:
+                lat_offset = random.uniform(-0.02, 0.02)
+                lon_offset = random.uniform(-0.02, 0.02)
+            else:
+                lat_offset = random.uniform(-0.15, 0.15)
+                lon_offset = random.uniform(-0.15, 0.15)
             
             c = Crime(
                 crime_reference_no=f"CR-{base_date.year}-{i+1000}",
@@ -89,9 +108,9 @@ async def seed_all_data(session: AsyncSession):
                 date_of_occurrence=base_date,
                 district_id=d_choice,
                 police_station_id=s_choice,
-                latitude=d_obj.latitude + random.uniform(-0.05, 0.05),
-                longitude=d_obj.longitude + random.uniform(-0.05, 0.05),
-                address=f"Street {random.randint(1, 100)}, {d_obj.district_name}",
+                latitude=d_obj.latitude + lat_offset,
+                longitude=d_obj.longitude + lon_offset,
+                address=f"Sector {random.randint(1, 20)}, {d_obj.district_name}",
                 status=random.choice(CRIME_STATUS_VALUES)
             )
             session.add(c)

@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, UserPlus, FileText, User } from 'lucide-react';
 import { victimService } from '../services/victimService';
 import { useSelector } from 'react-redux';
-import { RootState } from '../store';
+import { RootState } from '../store/store';
 
 export default function VictimDatabase() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -10,8 +10,8 @@ export default function VictimDatabase() {
   const [loading, setLoading] = useState(false);
   const [selectedVictim, setSelectedVictim] = useState<any>(null);
   
-  const { user } = useSelector((state: RootState) => state.auth);
-  const isScrbOrInvestigator = user?.role === 'SCRB_OFFICER' || user?.role === 'INVESTIGATOR';
+  const { user_role } = useSelector((state: RootState) => state.auth);
+  const isScrbOrInvestigator = user_role === 'SCRB_OFFICER' || user_role === 'INVESTIGATOR';
 
   const handleSearch = async () => {
     setLoading(true);

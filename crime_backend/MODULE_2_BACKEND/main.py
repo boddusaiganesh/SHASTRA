@@ -53,6 +53,8 @@ logging.basicConfig(
     handlers=[logging.StreamHandler(sys.stdout)],
 )
 
+logger = logging.getLogger(__name__)
+
 import subprocess
 import os
 
@@ -71,8 +73,8 @@ def start_local_postgres():
         except subprocess.CalledProcessError:
             try:
                 # Start postgres (adjust path as needed for local setup)
-                pg_ctl_path = r"C:\Program Files\PostgreSQL\16\bin\pg_ctl.exe"
-                data_dir = r"C:\Program Files\PostgreSQL\16\data"
+                pg_ctl_path = r"D:\PostgreSQL_17\bin\pg_ctl.exe"
+                data_dir = r"D:\PostgreSQL_17\data"
                 if os.path.exists(pg_ctl_path) and os.path.exists(data_dir):
                     subprocess.Popen([pg_ctl_path, "start", "-D", data_dir])
                     logger.info("Started PostgreSQL service.")
@@ -100,9 +102,18 @@ async def lifespan(app: FastAPI):
     
     try:
         await init_redis()
-        print("✅ Redis Cache connected")
+        print("✅ Redis connected")
     except Exception as e:
-        print(f"⚠️  Redis unavailable: {e} — continuing without cache")
+        print(f"❌ Redis connection failed: {e}")
+        
+    try:
+        from app.core.gemini_client import init_gemini_models
+        await init_gemini_models()
+        print("✅ Gemini AI Models initialized")
+    except Exception as e:
+        print(f"❌ Gemini AI init failed: {e}")
+
+
     
     try:
         init_neo4j()
@@ -125,17 +136,7 @@ async def lifespan(app: FastAPI):
         shutdown_scheduler()
     await close_redis()
     close_neo4j()
-    print("✅ Shutdown complete")
 
-
-class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        response = await call_next(request)
-        response.headers["X-Content-Type-Options"] = "nosniff"
-        response.headers["X-Frame-Options"] = "DENY"
-        response.headers["X-XSS-Protection"] = "1; mode=block"
-        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        return response
 
 app = FastAPI(
     title="SHASTRA - Crime Intelligence Platform",
@@ -154,11 +155,27 @@ app = FastAPI(
     openapi_url="/openapi.json",
 )
 
+from fastapi.responses import JSONResponse
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    origin = request.headers.get("origin", "")
+    headers = {}
+    # Apply CORS headers for 500 responses
+    headers["Access-Control-Allow-Origin"] = origin if origin else "*"
+    headers["Access-Control-Allow-Credentials"] = "true"
+    
+    logger.error(f"Unhandled server error: {exc}")
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal Server Error", "message": str(exc)},
+        headers=headers
+    )
+
 # Security and Rate Limiting
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-app.add_middleware(SecurityHeadersMiddleware)
 
 # CORS Middleware
 allowed_origins = []

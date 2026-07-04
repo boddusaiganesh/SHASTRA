@@ -47,7 +47,7 @@ const SettingsPage: React.FC = () => {
       ...newUser,
       district_id: newUser.district || undefined
     };
-    const result = await settingsService.addUser(payload);
+    const result = await settingsService.addUser(payload as any);
     setUsers((prev) => [...prev, (result.data || result.user) as unknown as User]);
     setNewUser({ username: "", full_name: "", role: "INVESTIGATOR", password: "", district: "" });
   };

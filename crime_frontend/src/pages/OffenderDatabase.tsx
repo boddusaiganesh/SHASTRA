@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Users, Search, Shield, ChevronRight } from "lucide-react";
+import { Users, Search, Shield, ChevronRight, MapPin, AlertTriangle } from "lucide-react";
 import { offenderService } from "../services/offenderService";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 
@@ -94,7 +94,7 @@ const OffenderDatabase: React.FC = () => {
                   <span>·</span>
                   <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{o.district}</span>
                   <span>·</span>
-                  <span className="flex items-center gap-1"><AlertTriangle className="h-3 w-3 text-red-400" />{o.dominant_crime || o.crime_type || o.primary_crime_type}</span>
+                  <span className="flex items-center gap-1"><AlertTriangle className="h-3 w-3 text-red-400" />{(o as any).dominant_crime || (o as any).crime_type || o.primary_crime_type}</span>
                 </div>
               </div>
               <ChevronRight className="h-4 w-4 text-slate-600" />

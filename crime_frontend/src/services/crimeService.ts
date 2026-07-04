@@ -40,7 +40,7 @@ export const crimeService = {
   getDashboardSummary: async () => {
     try {
       const res = await api.get(ENDPOINTS.DASHBOARD.SUMMARY);
-      return res.data;
+      return res.data?.data || res.data;
     } catch (error) {
       return mockDashboardSummary;
     }
@@ -66,7 +66,7 @@ export const crimeService = {
   getCrimeTrends: async () => {
     try {
       const res = await api.get(ENDPOINTS.DASHBOARD.CRIME_TRENDS);
-      return res.data;
+      return res.data?.data || res.data;
     } catch (error) {
       return { trends: mockCrimeTrends, byType: mockCrimeTypeBreakdown, byDistrict: mockDistrictCrimeCounts };
     }
@@ -83,7 +83,7 @@ export const crimeService = {
   getCrimeDetail: async (id: string) => {
     try {
       const response = await api.get(ENDPOINTS.CRIMES.DETAIL(id));
-      return response.data;
+      return response.data?.data || response.data;
     } catch (error) {
       return mockMapCrimes.find((c) => c.crime_id === id) || null;
     }
@@ -119,7 +119,7 @@ export const crimeService = {
   getHotspotClusters: async (filters?: any) => {
     try {
       const response = await api.get(ENDPOINTS.HOTSPOTS.CLUSTERS, { params: filters });
-      const data = response.data;
+      const data = response.data?.data || response.data;
       const list = data?.hotspots || (Array.isArray(data) ? data : []);
       return {
         ...data,
@@ -134,7 +134,7 @@ export const crimeService = {
   getTimePatterns: async (filters?: any) => {
     try {
       const response = await api.get(ENDPOINTS.HOTSPOTS.TIME_PATTERNS, { params: filters });
-      const data = response.data;
+      const data = response.data?.data || response.data;
       if (data) {
         const rawHour = data.hourly_pattern || data.byHour || [];
         const byHour = (Array.isArray(rawHour) ? rawHour : []).map((h: any) => ({
@@ -161,7 +161,7 @@ export const crimeService = {
   getTopHotspots: async (filters?: any) => {
     try {
       const response = await api.get(ENDPOINTS.HOTSPOTS.TOP_LIST, { params: filters });
-      const data = response.data;
+      const data = response.data?.data || response.data;
       const list = data?.hotspots || (Array.isArray(data) ? data : []);
       return list.map(normalizeHotspot);
     } catch {
@@ -171,7 +171,7 @@ export const crimeService = {
   getDeploymentSuggestions: async (filters?: any) => {
     try {
       const response = await api.get(ENDPOINTS.HOTSPOTS.DEPLOYMENT_SUGGESTIONS, { params: filters });
-      const data = response.data;
+      const data = response.data?.data || response.data;
       
       const suggestions = (data?.suggestions || []).map((s: any) => {
         const rawPriority = s.priority_level || s.priority || "Medium";

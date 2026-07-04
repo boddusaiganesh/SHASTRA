@@ -100,7 +100,7 @@ const Dashboard: React.FC = () => {
         </div>
         <div className="flex items-center gap-3">
           <p className="text-xs text-slate-500">Last updated: {lastRefresh.toLocaleTimeString()}</p>
-          <button onClick={fetchData} className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-lg transition-colors">
+          <button onClick={() => fetchData()} className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-lg transition-colors">
             <RefreshCw className="h-3.5 w-3.5" />Refresh
           </button>
         </div>

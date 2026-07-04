@@ -82,7 +82,7 @@ const HotspotAnalysis: React.FC = () => {
           <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className={selectClass} />
           <span className="text-slate-500 text-xs self-center">to</span>
           <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className={selectClass} />
-          <button onClick={fetch} className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-500 transition-colors">Apply Filters</button>
+          <button onClick={() => fetch()} className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-500 transition-colors">Apply Filters</button>
           <button onClick={handleExport} className="px-4 py-2 bg-slate-700 text-white text-sm rounded-lg hover:bg-slate-600 transition-colors ml-auto flex items-center gap-1.5">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
             Export CSV

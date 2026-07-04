@@ -36,6 +36,7 @@ class Settings(BaseSettings):
 
     # Gemini AI
     GEMINI_API_KEY: str = ""
+    GEMINI_API_KEYS: str = ""
     GEMINI_MODEL: str = "gemini-1.5-pro"
     GEMINI_MAX_TOKENS: int = 2048
     GEMINI_TEMPERATURE: float = 0.3
@@ -62,6 +63,14 @@ class Settings(BaseSettings):
     RISK_MEDIUM_THRESHOLD: int = 40
     ANOMALY_SENSITIVITY: str = "MEDIUM"
     PREDICTION_CONFIDENCE_MIN: int = 60
+
+    def get_gemini_api_keys(self) -> list[str]:
+        keys = []
+        if self.GEMINI_API_KEYS:
+            keys.extend([k.strip() for k in self.GEMINI_API_KEYS.split(",") if k.strip()])
+        elif self.GEMINI_API_KEY:
+            keys.append(self.GEMINI_API_KEY)
+        return keys
 
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=True)
 
