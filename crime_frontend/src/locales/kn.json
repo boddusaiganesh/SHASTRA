@@ -1,0 +1,13 @@
+{
+  "navbar": {
+    "search": "ಅಪರಾಧಗಳು, ಅಪರಾಧಿಗಳನ್ನು ಹುಡುಕಿ...",
+    "language": "ಭಾಷೆ",
+    "english": "English",
+    "kannada": "ಕನ್ನಡ"
+  },
+  "sidebar": {
+    "dashboard": "ಡ್ಯಾಶ್‌ಬೋರ್ಡ್",
+    "crime_map": "ಅಪರಾಧ ನಕ್ಷೆ",
+    "hotspots": "ಹಾಟ್‌ಸ್ಪಾಟ್ ವಿಶ್ಲೇಷಣೆ"
+  }
+}

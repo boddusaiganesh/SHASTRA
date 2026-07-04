@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Body, status, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 
 from app.core.database import get_db
-from app.core.security import get_current_user
+from app.core.security import get_current_user, require_role
 from app.services.offender_service import (
     search_offenders,
     get_offender_profile,
@@ -57,4 +57,37 @@ async def modus_operandi(
 ):
     from app.services.offender_service import get_modus_operandi
     data = await get_modus_operandi(db, offender_id)
+    return {"success": True, "data": data}
+
+@router.post("", status_code=status.HTTP_201_CREATED)
+async def add_offender(
+    payload: dict = Body(...),
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(require_role(["SCRB_OFFICER", "DISTRICT_OFFICER", "INVESTIGATOR"])),
+):
+    from app.services.offender_service import create_offender
+    from app.utils.audit import log_action
+    
+    if current_user["role"] == "DISTRICT_OFFICER":
+        payload["district_id"] = current_user.get("district_id")
+    data = await create_offender(db, payload)
+    
+    await log_action(db, current_user["user_id"], "CREATE", "OFFENDER", data.get("offender_id"), payload)
+    return {"success": True, "data": data}
+
+@router.put("/{offender_id}")
+async def edit_offender(
+    offender_id: str,
+    payload: dict = Body(...),
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(require_role(["SCRB_OFFICER", "DISTRICT_OFFICER", "INVESTIGATOR"])),
+):
+    from app.services.offender_service import update_offender
+    from app.utils.audit import log_action
+    
+    data = await update_offender(db, offender_id, payload)
+    if not data:
+        raise HTTPException(status_code=404, detail="Offender not found")
+        
+    await log_action(db, current_user["user_id"], "UPDATE", "OFFENDER", offender_id, payload)
     return {"success": True, "data": data}

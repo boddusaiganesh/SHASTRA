@@ -20,10 +20,44 @@ async def get_profile(
         raise HTTPException(status_code=404, detail="User not found")
     return {"success": True, "data": data}
 
+@router.post("/datasources/{source_id}/sync")
+async def sync_datasource(source_id: str):
+    from app.services.settings_service import trigger_sync
+    result = await trigger_sync(source_id)
+    return {"success": True, "data": result}
+
+@router.get("/audit-logs")
+async def get_audit_logs(
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(require_scrb_officer)
+):
+    from sqlalchemy import select, desc
+    from app.models.database_models.audit_log_model import AuditLog
+    
+    result = await db.execute(
+        select(AuditLog).order_by(desc(AuditLog.timestamp)).limit(100)
+    )
+    logs = result.scalars().all()
+    
+    return {
+        "success": True,
+        "data": [
+            {
+                "log_id": str(log.log_id),
+                "user_id": str(log.user_id) if log.user_id else None,
+                "action": log.action,
+                "resource_id": log.resource_id,
+                "details": log.details,
+                "timestamp": log.timestamp.isoformat() if log.timestamp else None
+            }
+            for log in logs
+        ]
+    }
+
 @router.get("/users")
 async def list_users(
     db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_user)
+    current_user=Depends(require_scrb_officer)
 ):
     data = await get_all_users(db)
     return {"success": True, "data": data}

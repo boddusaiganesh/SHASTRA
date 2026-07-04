@@ -150,6 +150,15 @@ async def create_alert(
     
     logger.info(f"Alert created: {alert_type} - {severity} - {title}")
     
+    try:
+        from app.core.websocket import manager
+        await manager.broadcast({
+            "type": "NEW_ALERT",
+            "alert": alert.to_dict()
+        })
+    except Exception as e:
+        logger.error(f"Failed to broadcast alert: {e}")
+    
     return alert
 
 
@@ -202,6 +211,8 @@ async def detect_and_generate_alerts(db: AsyncSession):
         logger.warning(f"Failed to load SystemSettings, using default: {e}")
         crime_spike_threshold = settings.CRIME_SPIKE_THRESHOLD
 
+    generated = []
+    
     for district in districts:
         # Count crimes in last 24 hours
         recent_result = await db.execute(
@@ -227,32 +238,46 @@ async def detect_and_generate_alerts(db: AsyncSession):
         )
         baseline_total = baseline_result.scalar() or 0
         daily_average = baseline_total / 30
+        previous_count = (baseline_result.scalar() or 0) / 30
         
         # Check for spike
-        if daily_average > 0 and recent_count > 0:
-            spike_percentage = ((recent_count - daily_average) / daily_average) * 100
+        if recent_count > previous_count * (1 + crime_spike_threshold/100) and recent_count >= 3:
+            severity = "CRITICAL" if recent_count > previous_count * 2 else "HIGH"
             
-            if spike_percentage >= crime_spike_threshold:
-                severity = "CRITICAL" if spike_percentage >= 100 else "HIGH"
+            # Check for existing recent alert
+            recent = await db.execute(
+                select(Alert)
+                .where(Alert.district_id == district.district_id)
+                .where(Alert.title.ilike("%CRIME_SPIKE%"))
+                .where(Alert.created_at >= datetime.now(timezone.utc) - timedelta(hours=24))
+            )
+            if recent.scalars().first():
+                continue
                 
-                await create_alert(
-                    db=db,
-                    alert_type="CRIME_SPIKE",
-                    severity=severity,
-                    title=f"Crime Spike Alert - {district.district_name}",
-                    description=(
-                        f"Crime rate in {district.district_name} has spiked by "
-                        f"{spike_percentage:.1f}% in the last 24 hours "
-                        f"({recent_count} incidents vs daily average of {daily_average:.1f}). "
-                        f"Immediate attention required."
-                    ),
-                    district_id=district.district_id,
-                    related_entity_id=district.district_id,
-                    related_entity_type="DISTRICT",
-                    generated_by="SYSTEM",
-                )
+            new_alert = Alert(
+                title=f"Crime Spike - {district.district_name}",
+                severity=severity,
+                district_id=district.district_id,
+                description=f"Crime cases have increased by {int((recent_count - previous_count) / max(1, previous_count) * 100)}%. "
+                            f"Current count: {recent_count} vs Daily Average: {previous_count:.1f}.",
+                is_read=False,
+                expires_at=datetime.now(timezone.utc) + timedelta(hours=24)
+            )
+            db.add(new_alert)
+            generated.append(new_alert)
+            
+    await db.commit()
     
-    logger.info("Crime spike detection complete")
+    # Broadcast alerts
+    from app.core.websocket import manager
+    from app.services.notification_service import notify_high_priority_alert
+    
+    for alert in generated:
+        await manager.broadcast({"type": "NEW_ALERT", "data": alert.to_dict()})
+        if alert.severity in ["HIGH", "CRITICAL"]:
+            await notify_high_priority_alert(alert.to_dict(), ["district_officer@ksp.gov.in"])
+            
+    logger.info(f"Generated {len(generated)} automated alerts.")
 
 
 async def get_active_alerts(

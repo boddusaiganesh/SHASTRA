@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { Users, Bell, Database, Plus, Save } from "lucide-react";
+import { Users, Bell, Database, Plus, Save, ActivitySquare } from "lucide-react";
 import { settingsService } from "../services/alertService";
 import { KARNATAKA_DISTRICTS } from "../constants/districtsList";
 import LoadingSpinner from "../components/common/LoadingSpinner";
+import DataImport from "../components/settings/DataImport";
+import { UploadCloud } from "lucide-react";
 
 interface User { user_id: string; username: string; full_name: string; role: string; district?: string; is_active: boolean; }
 interface AlertThresholds { crime_spike_percent: number; anomaly_confidence: number; high_risk_score: number; }
@@ -12,6 +14,7 @@ const SettingsPage: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [thresholds, setThresholds] = useState<AlertThresholds | null>(null);
   const [dataSources, setDataSources] = useState<unknown[]>([]);
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saveMsg, setSaveMsg] = useState("");
   const [newUser, setNewUser] = useState({ username: "", full_name: "", role: "INVESTIGATOR", password: "", district: "" });
@@ -21,10 +24,12 @@ const SettingsPage: React.FC = () => {
       settingsService.getUsers(),
       settingsService.getAlertThresholds(),
       settingsService.getDataSources(),
-    ]).then(([u, t, d]: any[]) => {
+      settingsService.getAuditLogs(),
+    ]).then(([u, t, d, logs]: any[]) => {
       setUsers(Array.isArray(u) ? u : (u?.users || u?.data || []));
       setThresholds(t as unknown as AlertThresholds);
       setDataSources(Array.isArray(d) ? d : (d?.sources || d?.data || []));
+      setAuditLogs(Array.isArray(logs) ? logs : []);
       setLoading(false);
     });
   }, []);
@@ -64,6 +69,8 @@ const SettingsPage: React.FC = () => {
           { id: "users", label: "User Management", icon: Users },
           { id: "thresholds", label: "Alert Thresholds", icon: Bell },
           { id: "datasources", label: "Data Sources", icon: Database },
+          { id: "auditlogs", label: "Activity Log", icon: ActivitySquare },
+          { id: "import", label: "Import Data", icon: UploadCloud },
         ].map(({ id, label, icon: Icon }) => (
           <button key={id} onClick={() => setActiveTab(id)}
             className={`flex items-center gap-2 px-4 py-2 text-sm border-b-2 transition-colors -mb-px ${
@@ -156,6 +163,39 @@ const SettingsPage: React.FC = () => {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Import Tab */}
+      {activeTab === "import" && <DataImport />}
+
+      {/* Audit Logs Tab */}
+      {activeTab === "auditlogs" && (
+        <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-x-auto custom-scrollbar">
+          <h3 className="text-sm font-semibold text-white m-4">System Activity Log</h3>
+          <table className="w-full text-sm">
+            <thead><tr className="border-b border-slate-700/50">
+              {["Timestamp", "User ID", "Action", "Resource", "Resource ID"].map((h) => (
+                <th key={h} className="text-left py-3 px-4 text-xs text-slate-500">{h}</th>
+              ))}
+            </tr></thead>
+            <tbody>
+              {auditLogs.map((log) => (
+                <tr key={log.log_id} className="border-b border-slate-800/50 hover:bg-slate-800/30">
+                  <td className="py-3 px-4 text-slate-400 font-mono text-xs">{new Date(log.timestamp).toLocaleString()}</td>
+                  <td className="py-3 px-4 text-slate-300 text-xs">{log.user_id || 'System'}</td>
+                  <td className="py-3 px-4"><span className="text-xs bg-purple-900/40 text-purple-400 px-2 py-0.5 rounded-full">{log.action}</span></td>
+                  <td className="py-3 px-4 text-white text-xs">{log.resource_type}</td>
+                  <td className="py-3 px-4 text-slate-500 font-mono text-xs truncate max-w-[150px]">{log.resource_id}</td>
+                </tr>
+              ))}
+              {auditLogs.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="py-4 text-center text-slate-500 text-sm">No recent activity.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

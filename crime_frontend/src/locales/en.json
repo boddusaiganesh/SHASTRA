@@ -1,0 +1,13 @@
+{
+  "navbar": {
+    "search": "Search crimes, offenders...",
+    "language": "Language",
+    "english": "English",
+    "kannada": "ಕನ್ನಡ"
+  },
+  "sidebar": {
+    "dashboard": "Dashboard",
+    "crime_map": "Crime Map",
+    "hotspots": "Hotspot Analysis"
+  }
+}

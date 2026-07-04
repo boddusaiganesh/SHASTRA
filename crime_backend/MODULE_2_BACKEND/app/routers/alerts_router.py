@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 
@@ -38,3 +38,14 @@ async def dismiss(
 ):
     data = await dismiss_alert(db, alert_id)
     return {"success": True, "data": data}
+
+@router.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    from app.core.websocket import manager
+    await manager.connect(websocket)
+    try:
+        while True:
+            # Keep connection alive
+            data = await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)

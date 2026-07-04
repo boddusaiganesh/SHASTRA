@@ -169,3 +169,16 @@ def scope_district_filter(query, user, model_district_col):
         return query.where(model_district_col == user["district_id"])
     return query
 
+def scope_district_param(requested_district: Optional[str], user: Dict[str, Any]) -> Optional[str]:
+    """Ensure DISTRICT_OFFICER can only request their own district."""
+    if user["role"] == "DISTRICT_OFFICER":
+        user_district = user.get("district_id")
+        if requested_district and requested_district != user_district:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied. District officers can only access their own district data."
+            )
+        return user_district
+    return requested_district
+
+

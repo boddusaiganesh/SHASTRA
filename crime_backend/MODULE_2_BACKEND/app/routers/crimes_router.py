@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 from typing import List, Any, Optional
 import logging
 
 from app.core.database import get_db
-from app.core.security import get_current_user
+from app.core.security import get_current_user, scope_district_filter, require_role
 from app.models.database_models.crime_model import Crime, District, PoliceStation
 from app.models.response_models.crime_response import CreateCrimeRequest
 from app.services.crime_service import create_crime
@@ -15,7 +15,11 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 @router.get("/map-data")
-async def get_map_data(db: AsyncSession = Depends(get_db)):
+async def get_map_data(
+    file_format: str = Query("json", enum=["json", "csv"]),
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
     """
     Fetch all crime data mapped with district and police station names for the frontend map.
     """
@@ -26,6 +30,8 @@ async def get_map_data(db: AsyncSession = Depends(get_db)):
         ).join(
             PoliceStation, Crime.police_station_id == PoliceStation.station_id, isouter=True
         )
+        
+        stmt = scope_district_filter(stmt, current_user, Crime.district_id)
         
         result = await db.execute(stmt)
         rows = result.all()
@@ -46,6 +52,25 @@ async def get_map_data(db: AsyncSession = Depends(get_db)):
                 "suspect_id": None, # Future: Fetch from CrimeOffenderLink
             })
             
+        if file_format == "csv":
+            import csv
+            from io import StringIO
+            from fastapi.responses import StreamingResponse
+            
+            output = StringIO()
+            writer = csv.DictWriter(output, fieldnames=["crime_id", "crime_type", "date_time", "location", "district", "police_station", "status", "latitude", "longitude"])
+            writer.writeheader()
+            for row in formatted_data:
+                csv_row = {k: v for k, v in row.items() if k in writer.fieldnames}
+                writer.writerow(csv_row)
+                
+            output.seek(0)
+            return StreamingResponse(
+                iter([output.getvalue()]),
+                media_type="text/csv",
+                headers={"Content-Disposition": 'attachment; filename="crimes_export.csv"'}
+            )
+            
         return {"success": True, "data": formatted_data}
     except Exception as e:
         logger.error(f"Error fetching map data: {e}")
@@ -62,6 +87,7 @@ async def filter_crimes(
     current_user=Depends(get_current_user)
 ):
     query = select(Crime)
+    query = scope_district_filter(query, current_user, Crime.district_id)
     if district_id:
         query = query.where(Crime.district_id == district_id)
     if crime_type:
@@ -87,7 +113,9 @@ async def crime_detail(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid crime_id format")
         
-    result = await db.execute(select(Crime).where(Crime.crime_id == cid))
+    stmt = select(Crime).where(Crime.crime_id == cid)
+    stmt = scope_district_filter(stmt, current_user, Crime.district_id)
+    result = await db.execute(stmt)
     crime = result.scalar_one_or_none()
     if not crime:
         raise HTTPException(status_code=404, detail="Crime not found")
@@ -99,7 +127,7 @@ async def crime_detail(
 async def log_crime(
     crime_data: CreateCrimeRequest,
     db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_user)
+    current_user=Depends(require_role(["SCRB_OFFICER", "DISTRICT_OFFICER", "INVESTIGATOR"]))
 ):
     """
     Log a new crime record.
@@ -124,3 +152,58 @@ async def log_crime(
     except Exception as e:
         logger.error(f"Error creating crime: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
+
+@router.put("/{crime_id}")
+async def update_crime(
+    crime_id: str,
+    payload: dict = Body(...),
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(require_role(["SCRB_OFFICER", "DISTRICT_OFFICER", "INVESTIGATOR"])),
+):
+    from app.services.crime_service import update_crime_record
+    from app.utils.audit import log_action
+    
+    updated = await update_crime_record(db, crime_id, payload)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Crime not found")
+        
+    await log_action(db, current_user["user_id"], "UPDATE", "CRIME", crime_id, payload)
+    return {"success": True, "data": updated}
+
+@router.patch("/{crime_id}/status")
+async def update_crime_status(
+    crime_id: str,
+    status_value: str = Query(..., alias="status"),
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(require_role(["SCRB_OFFICER", "DISTRICT_OFFICER", "INVESTIGATOR"])),
+):
+    from app.services.crime_service import update_crime_record
+    from app.utils.audit import log_action
+    
+    valid = {"REPORTED", "UNDER_INVESTIGATION", "CLOSED", "SOLVED", "ARCHIVED"}
+    if status_value not in valid:
+        raise HTTPException(status_code=400, detail=f"status must be one of {valid}")
+    updated = await update_crime_record(db, crime_id, {"status": status_value})
+    if not updated:
+        raise HTTPException(status_code=404, detail="Crime not found")
+        
+    await log_action(db, current_user["user_id"], "UPDATE_STATUS", "CRIME", crime_id, {"status": status_value})
+    return {"success": True, "data": updated}
+
+@router.delete("/{crime_id}")
+async def delete_crime(
+    crime_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(require_role(["SCRB_OFFICER"])),
+):
+    if current_user["role"] != "SCRB_OFFICER":
+        raise HTTPException(status_code=403, detail="Only SCRB officers may delete crime records")
+    from app.services.crime_service import delete_crime_record
+    from app.utils.audit import log_action
+    
+    ok = await delete_crime_record(db, crime_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Crime not found")
+        
+    await log_action(db, current_user["user_id"], "DELETE", "CRIME", crime_id)
+    return {"success": True}

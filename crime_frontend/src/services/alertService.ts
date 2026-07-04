@@ -79,6 +79,14 @@ export const settingsService = {
       return mockDataSources;
     }
   },
+  getAuditLogs: async () => {
+    try {
+      const res = await api.get(ENDPOINTS.SETTINGS.AUDIT_LOGS || '/settings/audit-logs');
+      return res.data.data;
+    } catch {
+      return [];
+    }
+  },
 };
 
 export const reportService = {
@@ -113,10 +121,10 @@ export const reportService = {
   },
   download: async (id: string) => {
     try {
-      const res = await api.get(ENDPOINTS.REPORTS.DOWNLOAD(id));
+      const res = await api.get(ENDPOINTS.REPORTS.DOWNLOAD(id), { responseType: 'blob' });
       return res.data;
     } catch {
-      return { report_id: id, url: "#" };
+      return null;
     }
   },
 };

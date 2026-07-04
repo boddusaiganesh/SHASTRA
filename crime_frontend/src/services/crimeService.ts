@@ -88,6 +88,34 @@ export const crimeService = {
       return mockMapCrimes.find((c) => c.crime_id === id) || null;
     }
   },
+  update: async (id: string, payload: any) => {
+    const response = await api.put(`/crimes/${id}`, payload);
+    return response.data;
+  },
+  updateStatus: async (id: string, status: string) => {
+    const response = await api.patch(`/crimes/${id}/status`, null, { params: { status } });
+    return response.data;
+  },
+  remove: async (id: string) => {
+    const response = await api.delete(`/crimes/${id}`);
+    return response.data;
+  },
+  getEvidence: async (id: string) => {
+    try {
+      const response = await api.get(`/evidence/${id}`);
+      return response.data.data;
+    } catch {
+      return [];
+    }
+  },
+  uploadEvidence: async (id: string, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await api.post(`/evidence/${id}/upload`, formData, {
+      headers: { "Content-Type": "multipart/form-data" }
+    });
+    return response.data;
+  },
   getHotspotClusters: async (filters?: any) => {
     try {
       const response = await api.get(ENDPOINTS.HOTSPOTS.CLUSTERS, { params: filters });

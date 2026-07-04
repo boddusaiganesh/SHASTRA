@@ -250,3 +250,67 @@ async def get_report_by_id(db: AsyncSession, report_id: str) -> Optional[Dict[st
     # Add file_url if file exists in storage
     data["file_url"] = report.file_path or None
     return data
+
+def export_report_csv(report_data: dict) -> bytes:
+    import io
+    import csv
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Report Name", report_data.get("report_name")])
+    writer.writerow(["Report Type", report_data.get("report_type")])
+    writer.writerow(["Generated At", report_data.get("created_at")])
+    writer.writerow([])
+    
+    data = report_data.get("report_data", {})
+    for k, v in data.items():
+        if isinstance(v, (int, str, float)):
+            writer.writerow([k, v])
+        elif isinstance(v, list) and v and isinstance(v[0], dict):
+            writer.writerow([k])
+            keys = v[0].keys()
+            writer.writerow(list(keys))
+            for item in v:
+                writer.writerow([item.get(key) for key in keys])
+            writer.writerow([])
+    
+    return output.getvalue().encode('utf-8')
+
+def export_report_pdf(report_data: dict) -> bytes:
+    import io
+    try:
+        from reportlab.lib.pagesizes import letter
+        from reportlab.pdfgen import canvas
+    except ImportError:
+        return b"PDF Generation failed: reportlab not installed"
+        
+    packet = io.BytesIO()
+    c = canvas.Canvas(packet, pagesize=letter)
+    width, height = letter
+    
+    c.setFont("Helvetica-Bold", 16)
+    c.drawString(50, height - 50, f"Report: {report_data.get('report_name', 'Untitled')}")
+    
+    c.setFont("Helvetica", 12)
+    c.drawString(50, height - 70, f"Type: {report_data.get('report_type', 'N/A')}")
+    c.drawString(50, height - 90, f"Date: {report_data.get('created_at', 'N/A')}")
+    
+    y = height - 130
+    data = report_data.get("report_data", {})
+    
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(50, y, "Summary Metrics")
+    y -= 25
+    c.setFont("Helvetica", 12)
+    
+    for k, v in data.items():
+        if isinstance(v, (int, str, float)):
+            c.drawString(50, y, f"{str(k).replace('_', ' ').title()}: {v}")
+            y -= 20
+        if y < 50:
+            c.showPage()
+            c.setFont("Helvetica", 12)
+            y = height - 50
+            
+    c.save()
+    packet.seek(0)
+    return packet.read()

@@ -2,19 +2,22 @@ import React from "react";
 import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard, Map, Flame, Network, Users, Brain,
-  AlertOctagon, Bell, FileText, Settings, Shield, ChevronLeft, ChevronRight,
+  AlertOctagon, Bell, FileText, Settings, Shield, ChevronLeft, ChevronRight, PieChart, Database,
 } from "lucide-react";
 
 const navItems = [
   { path: "/",          label: "Dashboard",             icon: LayoutDashboard },
   { path: "/map",       label: "Crime Map",             icon: Map },
   { path: "/hotspots",  label: "Hotspot Analysis",      icon: Flame },
+  { path: "/crimes",    label: "Crime Database",        icon: Database },
   { path: "/network",   label: "Criminal Network",      icon: Network },
   { path: "/offenders", label: "Offender Profiles",     icon: Users },
+  { path: "/victims",   label: "Victim Database",       icon: Users },
   { path: "/predictions",label:"Predictive Intelligence",icon: Brain },
   { path: "/anomalies", label: "Anomaly Detection",     icon: AlertOctagon },
   { path: "/alerts",    label: "Alerts",                icon: Bell },
-  { path: "/reports",   label: "Reports",               icon: FileText },
+  { path: "/reports",   label: "Intelligence Reports",  icon: FileText },
+  { path: "/socioeconomic", label: "Socio-Economic",    icon: PieChart },
   { path: "/settings",  label: "Settings",              icon: Settings },
 ];
 

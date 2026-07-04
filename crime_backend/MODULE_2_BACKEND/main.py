@@ -6,6 +6,7 @@ Module 2 - FastAPI Backend - Main Entry Point
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 from contextlib import asynccontextmanager
 import uvicorn
@@ -38,6 +39,11 @@ from app.routers import (
     alerts_router,
     reports_router,
     settings_router,
+    victims_router,
+    import_router,
+    search_router,
+    evidence_router,
+    assistant_router,
 )
 
 # Setup logging
@@ -52,26 +58,31 @@ import os
 
 _db_ready = False
 
+import platform
+
 def start_local_postgres():
-    """Automatically start local PostgreSQL server if installed and not running"""
-    pg_ctl = r"D:\PostgreSQL_17\bin\pg_ctl.exe"
-    pg_data = r"D:\PostgreSQL_17\data"
-    if os.path.exists(pg_ctl) and os.path.exists(pg_data):
+    if os.environ.get("ENVIRONMENT", "local") == "development" and platform.system() == "Windows":
+        import subprocess
+        logger.info("Local development environment on Windows detected. Attempting to start PostgreSQL...")
         try:
-            res = subprocess.run([pg_ctl, "status", "-D", pg_data], capture_output=True, text=True)
-            if "no server running" in res.stdout or res.returncode != 0:
-                print("⏳ Local PostgreSQL not running. Auto-starting local server...")
-                subprocess.run(
-                    [pg_ctl, "start", "-D", pg_data, "-w", "-t", "5"],
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                    creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, "CREATE_NO_WINDOW") else 0
-                )
-                print("✅ Auto-started local PostgreSQL 17 server!")
-            else:
-                print("✅ Local PostgreSQL 17 server is already running.")
-        except Exception as e:
-            print(f"⚠️ Could not auto-start local PostgreSQL: {e}")
+            # Check if postgres is already running
+            subprocess.run(['pg_isready'], check=True, capture_output=True)
+            logger.info("PostgreSQL is already running.")
+        except subprocess.CalledProcessError:
+            try:
+                # Start postgres (adjust path as needed for local setup)
+                pg_ctl_path = r"C:\Program Files\PostgreSQL\16\bin\pg_ctl.exe"
+                data_dir = r"C:\Program Files\PostgreSQL\16\data"
+                if os.path.exists(pg_ctl_path) and os.path.exists(data_dir):
+                    subprocess.Popen([pg_ctl_path, "start", "-D", data_dir])
+                    logger.info("Started PostgreSQL service.")
+                else:
+                    logger.warning("Could not find PostgreSQL installation to auto-start.")
+            except Exception as e:
+                logger.error(f"Failed to start PostgreSQL: {e}")
+    else:
+        # Silently skip on production/containerized or non-Windows environments
+        pass
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -169,7 +180,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        return response
+
+app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+# Static files for evidence uploads
+import os
+os.makedirs("app/uploads", exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="app/uploads"), name="uploads")
 
 # Include routers
 app.include_router(auth_router.router, prefix="/api/auth", tags=["Authentication"])
@@ -183,6 +209,23 @@ app.include_router(anomalies_router.router, prefix="/api/anomalies", tags=["Anom
 app.include_router(alerts_router.router, prefix="/api/alerts", tags=["Alerts"])
 app.include_router(reports_router.router, prefix="/api/reports", tags=["Reports"])
 app.include_router(settings_router.router, prefix="/api/settings", tags=["Settings"])
+app.include_router(victims_router.router, prefix="/api/victims", tags=["Victims"])
+app.include_router(import_router.router, prefix="/api/import", tags=["Import"])
+app.include_router(search_router.router, prefix="/api/search", tags=["Search"])
+app.include_router(evidence_router.router, prefix="/api/evidence", tags=["Evidence"])
+app.include_router(assistant_router.router, prefix="/api/assistant", tags=["Assistant"])
+
+from fastapi import WebSocket, WebSocketDisconnect
+from app.core.websocket import manager
+
+@app.websocket("/ws/alerts")
+async def websocket_alerts(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
 
 @app.get("/", tags=["Health"])
 async def root():

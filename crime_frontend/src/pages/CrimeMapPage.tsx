@@ -5,6 +5,7 @@ import { MapPin, Info, X } from "lucide-react";
 import { RootState } from "../store/store";
 import { setMapCrimes, setFilters } from "../store/crimesSlice";
 import { crimeService } from "../services/crimeService";
+import { evidenceService } from "../services/evidenceService";
 import MapControls from "../components/maps/MapControls";
 import CrimeMap from "../components/maps/CrimeMap";
 import LoadingSpinner from "../components/common/LoadingSpinner";
@@ -23,7 +24,10 @@ const CrimeMapPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedCrime, setSelectedCrime] = useState<Crime | null>(null);
   const [showCaseModal, setShowCaseModal] = useState(false);
+  const [modalTab, setModalTab] = useState<"details" | "attachments">("details");
   const [caseDetail, setCaseDetail] = useState<Record<string, unknown> | null>(null);
+  const [evidenceList, setEvidenceList] = useState<any[]>([]);
+  const [uploading, setUploading] = useState(false);
   const [rightPanelData, setRightPanelData] = useState<{ total: number; byType: Record<string, number> }>({ total: 0, byType: {} });
 
   useEffect(() => {
@@ -67,26 +71,41 @@ const CrimeMapPage: React.FC = () => {
   };
 
   const handleExport = () => {
-    const csv = [
-      ["crime_id","crime_type","date_time","location","district","status","latitude","longitude"].join(","),
-      ...filteredCrimes.map((c) =>
-        [c.crime_id, c.crime_type, c.date_time, `"${c.location?.replace(/"/g, '""') || ''}"`, c.district, c.status, c.latitude, c.longitude].join(",")
-      ),
-    ].join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `crimes_export_${new Date().toISOString().split("T")[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const queryParams = new URLSearchParams({ file_format: "csv" });
+    if (filters.district !== "All Districts") queryParams.append("district_id", filters.district);
+    window.open(`http://localhost:8000/api/crimes/map-data?${queryParams.toString()}`, "_blank");
   };
 
   const handleViewCase = async (crime: Crime) => {
     setShowCaseModal(true);
+    setModalTab("details");
     setCaseDetail(null);
+    setEvidenceList([]);
+    
     const detail = await crimeService.getCrimeDetail(crime.crime_id);
     setCaseDetail(detail as Record<string, unknown>);
+    
+    try {
+      const evidence = await evidenceService.getEvidenceList(crime.crime_id);
+      setEvidenceList(evidence);
+    } catch (e) {
+      console.error("Failed to load evidence", e);
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !e.target.files.length || !selectedCrime) return;
+    setUploading(true);
+    try {
+      await evidenceService.uploadEvidence(selectedCrime.crime_id, e.target.files[0]);
+      const updated = await evidenceService.getEvidenceList(selectedCrime.crime_id);
+      setEvidenceList(updated);
+    } catch (err) {
+      console.error("Upload failed", err);
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
   };
 
   return (
@@ -214,21 +233,68 @@ const CrimeMapPage: React.FC = () => {
               <h2 className="text-xl font-bold text-white">Case File: {selectedCrime.crime_id}</h2>
               <button onClick={() => setShowCaseModal(false)} className="text-slate-400 hover:text-white"><X className="h-5 w-5" /></button>
             </div>
+            <div className="flex border-b border-slate-700 mb-4 gap-4">
+              <button 
+                onClick={() => setModalTab("details")}
+                className={`pb-2 text-sm font-medium ${modalTab === "details" ? "text-blue-400 border-b-2 border-blue-400" : "text-slate-400 hover:text-slate-300"}`}
+              >
+                Case Details
+              </button>
+              <button 
+                onClick={() => setModalTab("attachments")}
+                className={`pb-2 text-sm font-medium ${modalTab === "attachments" ? "text-blue-400 border-b-2 border-blue-400" : "text-slate-400 hover:text-slate-300"}`}
+              >
+                Attachments ({evidenceList.length})
+              </button>
+            </div>
+            
             <div className="space-y-4">
-              {caseDetail ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm max-h-[70vh] overflow-y-auto custom-scrollbar pr-2">
-                  {Object.entries(caseDetail)
-                    .filter(([k]) => !["latitude","longitude"].includes(k))
-                    .map(([k, v]) => (
-                      <div key={k} className="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50">
-                        <span className="block text-xs text-slate-400 capitalize mb-1">{k.replace(/_/g," ")}</span>
-                        <span className="block text-slate-200 font-medium break-words">{String(v ?? "—")}</span>
+              {modalTab === "details" ? (
+                caseDetail ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm max-h-[60vh] overflow-y-auto custom-scrollbar pr-2">
+                    {Object.entries(caseDetail)
+                      .filter(([k]) => !["latitude","longitude"].includes(k))
+                      .map(([k, v]) => (
+                        <div key={k} className="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50">
+                          <span className="block text-xs text-slate-400 capitalize mb-1">{k.replace(/_/g," ")}</span>
+                          <span className="block text-slate-200 font-medium break-words">{String(v ?? "—")}</span>
+                        </div>
+                      ))}
+                  </div>
+                ) : (
+                  <div className="flex justify-center py-8">
+                    <div className="h-8 w-8 rounded-full border-2 border-blue-400/30 border-t-blue-400 animate-spin" />
+                  </div>
+                )
+              ) : (
+                <div className="max-h-[60vh] overflow-y-auto custom-scrollbar pr-2">
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Upload New Evidence</label>
+                    <input 
+                      type="file" 
+                      onChange={handleFileUpload}
+                      disabled={uploading}
+                      className="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-900/40 file:text-blue-400 hover:file:bg-blue-900/60 transition-colors"
+                    />
+                    {uploading && <span className="text-xs text-blue-400 mt-2 block">Uploading...</span>}
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    {evidenceList.map(ev => (
+                      <div key={ev.evidence_id} className="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50 flex flex-col gap-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs font-medium text-slate-300 truncate">{ev.file_path.split('/').pop()}</span>
+                          <span className="text-[10px] text-slate-500">{formatDateTime(ev.uploaded_at)}</span>
+                        </div>
+                        <a href={`http://localhost:8000${ev.file_url}`} target="_blank" rel="noreferrer" className="text-xs text-blue-400 hover:underline">
+                          View Attachment
+                        </a>
                       </div>
                     ))}
-                </div>
-              ) : (
-                <div className="flex justify-center py-8">
-                  <div className="h-8 w-8 rounded-full border-2 border-blue-400/30 border-t-blue-400 animate-spin" />
+                    {evidenceList.length === 0 && !uploading && (
+                      <p className="text-sm text-slate-500 col-span-2 text-center py-4">No attachments found for this case.</p>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

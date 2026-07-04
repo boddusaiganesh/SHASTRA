@@ -312,3 +312,34 @@ async def _get_station_map(db: AsyncSession) -> Dict[str, str]:
     result = await db.execute(select(PoliceStation))
     stations = result.scalars().all()
     return {s.station_id: s.station_name for s in stations}
+
+
+async def update_crime_record(db: AsyncSession, crime_id: str, payload: dict):
+    try:
+        cid = uuid.UUID(crime_id)
+    except ValueError:
+        return None
+    result = await db.execute(select(Crime).where(Crime.crime_id == cid))
+    crime = result.scalar_one_or_none()
+    if not crime:
+        return None
+    for k, v in payload.items():
+        if hasattr(crime, k):
+            setattr(crime, k, v)
+    await db.commit()
+    await db.refresh(crime)
+    return crime.to_dict()
+
+
+async def delete_crime_record(db: AsyncSession, crime_id: str) -> bool:
+    try:
+        cid = uuid.UUID(crime_id)
+    except ValueError:
+        return False
+    result = await db.execute(select(Crime).where(Crime.crime_id == cid))
+    crime = result.scalar_one_or_none()
+    if not crime:
+        return False
+    await db.delete(crime)
+    await db.commit()
+    return True

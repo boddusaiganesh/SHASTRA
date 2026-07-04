@@ -331,3 +331,49 @@ async def get_recidivism_risk(db: AsyncSession, offender_id: str) -> Optional[Di
         "risk_factors": risk.get("factors", []),
         "model_used": "Risk Scoring Engine",
     }
+
+
+async def create_offender(db: AsyncSession, payload: dict):
+    valid_keys = [c.name for c in Offender.__table__.columns if c.name != "offender_id"]
+    data = {k: v for k, v in payload.items() if k in valid_keys}
+    if "date_of_birth" in data and isinstance(data["date_of_birth"], str):
+        from datetime import datetime
+        try:
+            data["date_of_birth"] = datetime.strptime(data["date_of_birth"].split("T")[0], "%Y-%m-%d").date()
+        except ValueError:
+            pass
+    if "last_offense_date" in data and isinstance(data["last_offense_date"], str):
+        from datetime import datetime
+        try:
+            data["last_offense_date"] = datetime.strptime(data["last_offense_date"].split("T")[0], "%Y-%m-%d").date()
+        except ValueError:
+            pass
+            
+    offender = Offender(offender_id=uuid.uuid4(), **data)
+    db.add(offender)
+    await db.commit()
+    await db.refresh(offender)
+    return offender.to_dict()
+
+async def update_offender(db: AsyncSession, offender_id: str, payload: dict):
+    try:
+        oid = uuid.UUID(offender_id)
+    except ValueError:
+        return None
+    result = await db.execute(select(Offender).where(Offender.offender_id == oid))
+    offender = result.scalar_one_or_none()
+    if not offender:
+        return None
+        
+    for k, v in payload.items():
+        if hasattr(offender, k) and k != "offender_id":
+            if (k == "date_of_birth" or k == "last_offense_date") and isinstance(v, str):
+                from datetime import datetime
+                try:
+                    v = datetime.strptime(v.split("T")[0], "%Y-%m-%d").date()
+                except ValueError:
+                    pass
+            setattr(offender, k, v)
+    await db.commit()
+    await db.refresh(offender)
+    return offender.to_dict()

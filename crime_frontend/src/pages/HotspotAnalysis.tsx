@@ -45,6 +45,12 @@ const HotspotAnalysis: React.FC = () => {
     return () => clearInterval(interval);
   }, [district, crimeType, dateFrom, dateTo]);
 
+  const handleExport = () => {
+    const queryParams = new URLSearchParams({ file_format: "csv" });
+    if (district !== "All Districts") queryParams.append("district_id", district);
+    window.open(`http://localhost:8000/api/hotspots/clusters?${queryParams.toString()}`, "_blank");
+  };
+
   const selectClass = "bg-slate-800 border border-slate-600 text-slate-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500";
 
   if (loading) return <div className="flex-1 flex items-center justify-center"><LoadingSpinner size="lg" text="Analyzing hotspots..." /></div>;
@@ -77,6 +83,10 @@ const HotspotAnalysis: React.FC = () => {
           <span className="text-slate-500 text-xs self-center">to</span>
           <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className={selectClass} />
           <button onClick={fetch} className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-500 transition-colors">Apply Filters</button>
+          <button onClick={handleExport} className="px-4 py-2 bg-slate-700 text-white text-sm rounded-lg hover:bg-slate-600 transition-colors ml-auto flex items-center gap-1.5">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+            Export CSV
+          </button>
         </div>
       </div>
 
