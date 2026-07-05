@@ -48,15 +48,21 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNo
             community: n.community_id || 0,
           },
         })),
-        ...edges.map((e, i) => ({
-          data: {
-            id: `e${i}`,
-            source: e.source || e.source_node_id || "",
-            target: e.target || e.target_node_id || "",
-            label: e.relationship_type,
-            strength: e.strength_score,
-          },
-        })),
+        ...edges
+          .filter((e) => {
+            const s = e.source || e.source_node_id || "";
+            const t = e.target || e.target_node_id || "";
+            return nodes.some(n => n.node_id === s) && nodes.some(n => n.node_id === t);
+          })
+          .map((e, i) => ({
+            data: {
+              id: `e${i}`,
+              source: e.source || e.source_node_id || "",
+              target: e.target || e.target_node_id || "",
+              label: e.relationship_type,
+              strength: e.strength_score,
+            },
+          })),
       ],
       style: [
         {
