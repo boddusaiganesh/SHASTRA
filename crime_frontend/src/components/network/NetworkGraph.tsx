@@ -1,6 +1,9 @@
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef, useImperativeHandle, forwardRef } from "react";
 import cytoscape from "cytoscape";
+import fcose from "cytoscape-fcose";
 import { NODE_COLORS } from "../../constants/colorCodes";
+
+cytoscape.use(fcose);
 
 interface NetworkNode {
   node_id: string; node_type: string; label: string; risk_score: number; crime_count: number; profile_data: Record<string, unknown>;
@@ -19,7 +22,12 @@ interface Props {
   highlightPath?: string[];
 }
 
-const NetworkGraph: React.FC<Props> = ({ nodes, edges, onNodeSelect, onNodeExpand, onNodeCompare, selectedNodeId, highlightPath }) => {
+export interface NetworkGraphHandle {
+  focusOnNode: (nodeId: string) => void;
+  clearFocus: () => void;
+}
+
+const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNodeSelect, onNodeExpand, onNodeCompare, selectedNodeId, highlightPath }, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<cytoscape.Core | null>(null);
 
@@ -103,7 +111,8 @@ const NetworkGraph: React.FC<Props> = ({ nodes, edges, onNodeSelect, onNodeExpan
           style: { "opacity": 0.2 },
         },
       ],
-      layout: { name: "cose", animate: true, randomize: true, nodeRepulsion: () => 8000, idealEdgeLength: () => 100 },
+      // @ts-ignore - fcose specific options not in BaseLayoutOptions
+      layout: { name: "fcose", quality: "proof", animate: true, nodeSeparation: 75, idealEdgeLength: 100 },
       wheelSensitivity: 0.3,
     });
 
@@ -129,6 +138,35 @@ const NetworkGraph: React.FC<Props> = ({ nodes, edges, onNodeSelect, onNodeExpan
     return () => cy.destroy();
   }, [nodes, edges]);
 
+  useImperativeHandle(ref, () => ({
+    focusOnNode: (nodeId: string) => {
+      const cy = cyRef.current;
+      if (!cy) return;
+      const node = cy.getElementById(nodeId);
+      if (node.empty()) return;
+      
+      const neighborhood = node.closedNeighborhood();
+      cy.elements().addClass("dimmed");
+      neighborhood.removeClass("dimmed");
+
+      cy.animate({
+        fit: { eles: neighborhood, padding: 60 },
+        duration: 500,
+        easing: "ease-in-out-cubic",
+      });
+    },
+    clearFocus: () => {
+      const cy = cyRef.current;
+      if (!cy) return;
+      cy.elements().removeClass("dimmed");
+      cy.animate({
+        fit: { eles: cy.elements(), padding: 50 },
+        duration: 500,
+        easing: "ease-in-out-cubic",
+      });
+    }
+  }));
+
   useEffect(() => {
     if (!cyRef.current) return;
     if (selectedNodeId) {
@@ -146,6 +184,6 @@ const NetworkGraph: React.FC<Props> = ({ nodes, edges, onNodeSelect, onNodeExpan
   }, [highlightPath]);
 
   return <div ref={containerRef} className="h-full w-full" style={{ background: "#0f172a" }} />;
-};
+});
 
 export default NetworkGraph;

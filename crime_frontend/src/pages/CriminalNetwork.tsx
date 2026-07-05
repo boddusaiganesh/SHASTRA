@@ -1,10 +1,11 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import { motion } from "framer-motion";
-import { Play, Pause, FastForward, SkipBack, Info, Network, AlertTriangle, Search, Filter, ShieldAlert, Zap, Layers, RefreshCw, ChevronRight, Users, MapPin, Building, Brain } from "lucide-react";
+import { Network, AlertTriangle, Search, ChevronRight, Users, MapPin, Building, Brain, ChevronLeft, Grid } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import ReactMarkdown from 'react-markdown';
 import { networkService } from "../services/networkService";
-import NetworkGraph from "../components/network/NetworkGraph";
+import NetworkGraph, { NetworkGraphHandle } from "../components/network/NetworkGraph";
+import ConnectivityMatrix from "../components/network/ConnectivityMatrix";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import { NODE_COLORS } from "../constants/colorCodes";
 
@@ -14,6 +15,7 @@ interface NetworkNode {
   ai_analysis?: string; timeline?: any[];
 }
 interface NetworkEdge {
+  edge_id?: string;
   source_node_id: string; target_node_id: string; relationship_type: string; strength_score: number;
 }
 
@@ -37,6 +39,7 @@ const CriminalNetwork: React.FC = () => {
   const [selectedNode, setSelectedNode] = useState<NetworkNode | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [nodeTypeFilter, setNodeTypeFilter] = useState("all");
+  const [showIsolated, setShowIsolated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<"ok" | "offline" | "no_data">("ok");
   const [errorMessage, setErrorMessage] = useState("");
@@ -44,6 +47,12 @@ const CriminalNetwork: React.FC = () => {
   const [compareNode2, setCompareNode2] = useState<NetworkNode | null>(null);
   const [highlightPath, setHighlightPath] = useState<string[]>([]);
   const navigate = useNavigate();
+
+  // New states for Ego-Network Navigation and Grid View
+  const [viewMode, setViewMode] = useState<"graph" | "matrix">("graph");
+  const [navHistory, setNavHistory] = useState<NetworkNode[]>([]);
+  const [navIndex, setNavIndex] = useState(-1);
+  const graphRef = useRef<NetworkGraphHandle>(null);
 
   useEffect(() => {
     const fetch = async () => {
@@ -86,12 +95,53 @@ const CriminalNetwork: React.FC = () => {
     return () => clearTimeout(handle);
   }, [searchQuery]);
 
-  const handleNodeSelect = async (node: NetworkNode) => {
+  const navigateToNode = async (node: NetworkNode, fromHistory = false) => {
+    setViewMode("graph");
+    
+    if (!fromHistory) {
+      const truncated = navHistory.slice(0, navIndex + 1);
+      setNavHistory([...truncated, node]);
+      setNavIndex(truncated.length);
+    }
+    
     setSelectedNode(node);
+    
     const detail = await networkService.getNodeDetail(node.node_id);
     if (detail) {
       setSelectedNode(prev => prev && prev.node_id === node.node_id ? { ...prev, ...detail } : prev);
     }
+    
+    const alreadyLoaded = edges.some(e => e.source_node_id === node.node_id || e.target_node_id === node.node_id);
+    if (!alreadyLoaded) {
+      await handleNodeExpand(node);
+    }
+    
+    setTimeout(() => {
+      graphRef.current?.focusOnNode(node.node_id);
+    }, 100);
+  };
+
+  const goBack = () => {
+    if (navIndex <= 0) return;
+    setNavIndex(navIndex - 1);
+    navigateToNode(navHistory[navIndex - 1], true);
+  };
+  
+  const goForward = () => {
+    if (navIndex >= navHistory.length - 1) return;
+    setNavIndex(navIndex + 1);
+    navigateToNode(navHistory[navIndex + 1], true);
+  };
+
+  const clearNavigation = () => {
+    setNavHistory([]);
+    setNavIndex(-1);
+    setSelectedNode(null);
+    graphRef.current?.clearFocus();
+  };
+
+  const handleNodeSelect = async (node: NetworkNode) => {
+    navigateToNode(node);
   };
 
   const handleNodeCompare = async (node: NetworkNode) => {
@@ -113,33 +163,25 @@ const CriminalNetwork: React.FC = () => {
 
   const handleNodeExpand = async (node: NetworkNode) => {
     const res = await networkService.expandNode(node.node_id);
-    if (res && Array.isArray(res)) {
+    if (res && res.nodes && res.edges) {
       const newNodes = [...nodes];
       const newEdges = [...edges];
       let added = false;
-      res.forEach((record: any) => {
-        const connectedNode = record.connected;
-        if (connectedNode && !newNodes.find(n => n.node_id === (connectedNode.offender_id || connectedNode.id))) {
-          newNodes.push({
-            node_id: connectedNode.offender_id || connectedNode.id,
-            node_type: record.labels ? record.labels[0].toLowerCase() : "criminal",
-            label: connectedNode.name || connectedNode.full_name || connectedNode.first_name,
-            risk_score: connectedNode.risk_score || 0,
-            crime_count: connectedNode.total_crimes || 0,
-            profile_data: connectedNode
-          });
-          added = true;
-        }
-        if (record.r && !newEdges.find(e => (e.source_node_id === node.node_id && e.target_node_id === (connectedNode.offender_id || connectedNode.id)))) {
-          newEdges.push({
-            source_node_id: node.node_id,
-            target_node_id: connectedNode.offender_id || connectedNode.id,
-            relationship_type: record.rel_type || "KNOWS",
-            strength_score: 50
-          });
+      
+      res.nodes.forEach((n: any) => {
+        if (!newNodes.find(existing => existing.node_id === n.node_id)) {
+          newNodes.push(n);
           added = true;
         }
       });
+      
+      res.edges.forEach((e: any) => {
+        if (!newEdges.find(existing => existing.edge_id === e.edge_id)) {
+          newEdges.push(e);
+          added = true;
+        }
+      });
+      
       if (added) {
         setNodes(newNodes);
         setEdges(newEdges);
@@ -148,12 +190,19 @@ const CriminalNetwork: React.FC = () => {
   };
 
   const filteredNodes = useMemo(() => {
-    return nodes.filter((n) => {
+    let result = nodes.filter((n) => {
       if (nodeTypeFilter !== "all" && n.node_type !== nodeTypeFilter) return false;
       if (searchQuery && !n.label.toLowerCase().includes(searchQuery.toLowerCase())) return false;
       return true;
     });
-  }, [nodes, nodeTypeFilter, searchQuery]);
+    
+    if (!showIsolated && edges.length > 0) {
+      const connectedNodeIds = new Set(edges.flatMap(e => [e.source_node_id, e.target_node_id]));
+      result = result.filter(n => connectedNodeIds.has(n.node_id));
+    }
+    
+    return result;
+  }, [nodes, edges, nodeTypeFilter, searchQuery, showIsolated]);
 
   const nodeTypeCounts = nodes.reduce((acc, n) => { acc[n.node_type] = (acc[n.node_type] || 0) + 1; return acc; }, {} as Record<string, number>);
 
@@ -176,6 +225,70 @@ const CriminalNetwork: React.FC = () => {
                 {type}: {count}
               </span>
             ))}
+          </div>
+        </div>
+        
+        {/* Navigation Toolbar */}
+        <div className="flex items-center gap-4 mb-3 pb-3 border-b border-slate-700/50">
+          <div className="flex items-center gap-1 bg-slate-800 p-1 rounded-lg">
+            <button
+              onClick={() => setViewMode("graph")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                viewMode === "graph" ? "bg-blue-600 text-white" : "text-slate-400 hover:text-white"
+              }`}
+            >
+              <Network className="h-3.5 w-3.5" /> Graph
+            </button>
+            <button
+              onClick={() => setViewMode("matrix")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                viewMode === "matrix" ? "bg-blue-600 text-white" : "text-slate-400 hover:text-white"
+              }`}
+            >
+              <Grid className="h-3.5 w-3.5" /> Matrix
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2 border-l border-slate-700 pl-4">
+            <button 
+              onClick={goBack} 
+              disabled={navIndex <= 0} 
+              className={`p-1.5 rounded-lg transition-colors ${navIndex <= 0 ? "text-slate-600 cursor-not-allowed" : "text-slate-300 hover:bg-slate-700 hover:text-white"}`}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button 
+              onClick={goForward} 
+              disabled={navIndex >= navHistory.length - 1} 
+              className={`p-1.5 rounded-lg transition-colors ${navIndex >= navHistory.length - 1 ? "text-slate-600 cursor-not-allowed" : "text-slate-300 hover:bg-slate-700 hover:text-white"}`}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+            
+            <div className="flex items-center gap-1 text-xs text-slate-400 ml-2">
+              {navHistory.length === 0 ? (
+                <span>No selection history</span>
+              ) : (
+                navHistory.slice(Math.max(0, navIndex - 3), navIndex + 1).map((n, i, arr) => (
+                  <React.Fragment key={`${n.node_id}-${i}`}>
+                    {i > 0 && <ChevronRight className="h-3 w-3 mx-1" />}
+                    <button 
+                      onClick={() => { 
+                        const targetIdx = Math.max(0, navIndex - 3) + i;
+                        setNavIndex(targetIdx); 
+                        navigateToNode(n, true); 
+                      }}
+                      className={`hover:text-white hover:underline ${i === arr.length - 1 ? "text-blue-400 font-bold" : ""}`}
+                    >
+                      {n.label}
+                    </button>
+                  </React.Fragment>
+                ))
+              )}
+              {navHistory.length > 0 && (
+                <button onClick={clearNavigation} className="ml-3 text-[10px] uppercase tracking-wider text-slate-500 hover:text-red-400">Clear</button>
+              )}
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -201,6 +314,16 @@ const CriminalNetwork: React.FC = () => {
                 {label}
               </button>
             ))}
+          </div>
+          <div className="flex items-center gap-1.5 ml-3 pl-3 border-l border-slate-700">
+            <button
+              onClick={() => setShowIsolated(!showIsolated)}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+                showIsolated ? "bg-slate-700 text-white" : "bg-slate-800 text-slate-400 hover:text-white"
+              }`}
+            >
+              {showIsolated ? "Hide Isolated" : "Show Isolated"}
+            </button>
           </div>
           <div className="ml-auto flex items-center gap-3">
             {[["criminal", "Criminals"], ["victim", "Victims"], ["location", "Locations"], ["organization", "Organizations"]].map(([type, label]) => (
@@ -230,15 +353,28 @@ const CriminalNetwork: React.FC = () => {
             </div>
           ) : (
             <>
-              <NetworkGraph 
-                nodes={filteredNodes} 
-                edges={edges} 
-                onNodeSelect={handleNodeSelect} 
-                onNodeCompare={handleNodeCompare}
-                onNodeExpand={handleNodeExpand}
-                selectedNodeId={selectedNode?.node_id} 
-                highlightPath={highlightPath}
-              />
+              {viewMode === "graph" ? (
+                <NetworkGraph 
+                  ref={graphRef}
+                  nodes={filteredNodes} 
+                  edges={edges} 
+                  onNodeSelect={handleNodeSelect} 
+                  onNodeCompare={handleNodeCompare}
+                  onNodeExpand={handleNodeExpand}
+                  selectedNodeId={selectedNode?.node_id} 
+                  highlightPath={highlightPath}
+                />
+              ) : (
+                <ConnectivityMatrix 
+                  nodes={filteredNodes}
+                  edges={edges}
+                  onCellClick={(nodeA, nodeB) => {
+                    const targetNode = filteredNodes.find(n => n.node_id === nodeB) || filteredNodes.find(n => n.node_id === nodeA);
+                    if (targetNode) navigateToNode(targetNode);
+                  }}
+                />
+              )}
+              
               <div className="absolute bottom-4 left-4 bg-slate-900/90 backdrop-blur border border-slate-700/50 rounded-lg p-2">
                 <p className="text-xs text-slate-400">Click to explore • Double-click to expand • Shift-click to compare • Scroll to zoom</p>
               </div>

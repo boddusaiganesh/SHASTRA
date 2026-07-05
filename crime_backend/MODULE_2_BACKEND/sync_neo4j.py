@@ -6,12 +6,15 @@ from app.core.neo4j_connection import (
     init_neo4j, 
     close_neo4j, 
     sync_offender_to_neo4j, 
-    sync_victim_to_neo4j, 
-    create_criminal_relationship
+    sync_victim_to_neo4j,
+    sync_location_to_neo4j,
+    create_criminal_relationship,
+    create_victim_offender_relationship
 )
 from app.models.database_models.offender_model import Offender
 from app.models.database_models.victim_model import Victim
-from app.models.database_models.crime_model import CrimeOffenderLink
+from app.models.database_models.crime_model import CrimeOffenderLink, CrimeVictimLink, District
+from collections import defaultdict
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -80,6 +83,64 @@ async def sync():
                         
         logger.info(f"Created {links_created} criminal network links based on shared crimes.")
         
+        logger.info("Syncing locations and discovering OPERATES_IN networks...")
+        result = await session.execute(select(District))
+        districts = result.scalars().all()
+        for d in districts:
+            await sync_location_to_neo4j({
+                "location_id": str(d.district_id),
+                "name": d.district_name,
+                "location_type": "DISTRICT",
+                "risk_score": 50,
+                "is_hotspot": False
+            })
+            
+        district_groups = defaultdict(list)
+        for o in offenders:
+            if o.district_id:
+                district_groups[o.district_id].append(str(o.offender_id))
+        
+        for district_id, offender_ids in district_groups.items():
+            # Link criminal to location
+            for oid in offender_ids:
+                query = """
+                MATCH (c:Criminal {offender_id: $offender_id})
+                MATCH (l:Location {location_id: $location_id})
+                MERGE (c)-[r:OPERATES_IN]->(l)
+                SET r.confidence_level = 'CONFIRMED'
+                """
+                from app.core.neo4j_connection import run_neo4j_query
+                await run_neo4j_query(query, {"offender_id": oid, "location_id": str(district_id)})
+                
+            # Inter-criminal links within district
+            if len(offender_ids) > 1:
+                for i in range(len(offender_ids)):
+                    for j in range(i + 1, min(i + 4, len(offender_ids))):  # cap fan-out
+                        await create_criminal_relationship(
+                            offender_id_1=offender_ids[i],
+                            offender_id_2=offender_ids[j],
+                            relationship_type="OPERATES_IN",
+                            strength_score=40.0,
+                            confidence_level="SUSPECTED",
+                        )
+
+        logger.info("Discovering victim-offender connections...")
+        result = await session.execute(select(CrimeVictimLink))
+        victim_links = result.scalars().all()
+        crime_to_victims = defaultdict(list)
+        for vl in victim_links:
+            crime_to_victims[str(vl.crime_id)].append(str(vl.victim_id))
+
+        victims_linked = 0
+        for crime_id, offender_ids in crimes.items():
+            for victim_id in crime_to_victims.get(crime_id, []):
+                for offender_id in offender_ids:
+                    await create_victim_offender_relationship(
+                        offender_id, victim_id, crime_id
+                    )
+                    victims_linked += 1
+        logger.info(f"Created {victims_linked} victim-offender links.")
+
     await close_neo4j()
     logger.info("Sync fully complete!")
 

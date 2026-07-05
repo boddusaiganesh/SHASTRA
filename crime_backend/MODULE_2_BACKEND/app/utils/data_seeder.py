@@ -166,9 +166,20 @@ async def seed_all_data(session: AsyncSession):
         await session.flush()
 
         logger.info("Linking offenders and victims to crimes...")
+        NUM_GANGS = 12
+        gang_of = {}
         for o in offenders_list:
-            for _ in range(random.randint(1, 5)):
-                c = random.choice(crimes_list)
+            gang_of[o.offender_id] = random.randint(0, NUM_GANGS - 1)
+
+        gang_shared_crime = {g: random.sample(crimes_list, k=15) for g in range(NUM_GANGS)}
+
+        for o in offenders_list:
+            gang = gang_of[o.offender_id]
+            for _ in range(random.randint(2, 6)):
+                if random.random() < 0.8:
+                    c = random.choice(gang_shared_crime[gang])
+                else:
+                    c = random.choice(crimes_list)
                 session.add(CrimeOffenderLink(
                     crime_id=c.crime_id,
                     offender_id=o.offender_id,
@@ -190,3 +201,13 @@ async def seed_all_data(session: AsyncSession):
         await session.rollback()
         logger.error(f"Error seeding data: {e}")
         raise
+
+if __name__ == "__main__":
+    import asyncio
+    from app.core.database import AsyncSessionLocal
+    
+    async def run_seeder():
+        async with AsyncSessionLocal() as session:
+            await seed_all_data(session)
+            
+    asyncio.run(run_seeder())

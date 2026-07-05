@@ -76,13 +76,59 @@ async def expand_node(
     current_user=Depends(get_current_user),
 ):
     """Return only the immediate neighbors of one node — for incremental graph expansion."""
-    from app.core.neo4j_connection import run_neo4j_query
+    from app.core.neo4j_connection import run_neo4j_query, normalize_node
+    
     query = """
     MATCH (n)-[r]-(connected)
-    WHERE n.offender_id = $id OR n.victim_id = $id OR n.location_id = $id OR n.org_id = $id
-    RETURN connected, labels(connected) AS labels, type(r) AS rel_type, r
+    WHERE n.offender_id = $id OR n.victim_id = $id OR n.location_id = $id OR n.org_id = $id OR elementId(n) = $id
+    RETURN n, elementId(n) AS n_eid, labels(n) AS labels_n,
+           connected, elementId(connected) AS connected_eid, labels(connected) AS labels_connected,
+           type(r) AS rel_type, properties(r) AS r_props
     LIMIT 25
     """
     results = await run_neo4j_query(query, {"id": node_id})
-    return {"success": True, "data": results}
+    
+    nodes_map = {}
+    edges = []
+    
+    for record in results:
+        # Source node
+        node = record["n"]
+        n_eid = record["n_eid"]
+        labels_n = record["labels_n"]
+        norm_n = normalize_node(node, labels_n, n_eid)
+        src_id = norm_n["node_id"]
+        
+        if src_id not in nodes_map:
+            nodes_map[src_id] = norm_n
+            
+        # Connected node
+        connected = record["connected"]
+        conn_eid = record["connected_eid"]
+        labels_conn = record["labels_connected"]
+        norm_conn = normalize_node(connected, labels_conn, conn_eid)
+        norm_conn["size"] = 15
+        tgt_id = norm_conn["node_id"]
+        
+        if tgt_id not in nodes_map:
+            nodes_map[tgt_id] = norm_conn
+            
+        # Edge
+        rel_props = record["r_props"] or {}
+        edges.append({
+            "edge_id": f"{src_id}_{tgt_id}",
+            "source_node_id": src_id,
+            "target_node_id": tgt_id,
+            "relationship_type": record["rel_type"],
+            "strength_score": rel_props.get("strength_score", 50),
+            "confidence_level": rel_props.get("confidence_level", "SUSPECTED"),
+            "crime_count": len(rel_props.get("crime_ids", []))
+        })
+        
+    data = {
+        "nodes": list(nodes_map.values()),
+        "edges": edges
+    }
+    
+    return {"success": True, "data": data}
 

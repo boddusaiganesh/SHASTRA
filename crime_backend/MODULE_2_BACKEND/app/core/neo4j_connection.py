@@ -191,6 +191,42 @@ async def create_criminal_relationship(
     })
 
 
+async def create_victim_offender_relationship(offender_id: str, victim_id: str, crime_id: str):
+    """Create a relationship between a victim and a criminal."""
+    query = """
+    MATCH (c:Criminal {offender_id: $offender_id})
+    MATCH (v:Victim {victim_id: $victim_id})
+    MERGE (c)-[r:VICTIMIZED_AT]->(v)
+    SET r.crime_id = $crime_id, r.confidence_level = 'CONFIRMED'
+    """
+    await run_neo4j_query(query, {"offender_id": offender_id, "victim_id": victim_id, "crime_id": crime_id})
+
+
+def normalize_node(raw_node: dict, labels: list[str], eid: str = None) -> dict:
+    if "Victim" in labels or raw_node.get("victim_id"):
+        node_type, color = "victim", "#3b82f6"
+    elif "Location" in labels or raw_node.get("location_id"):
+        node_type, color = "location", "#22c55e"
+    elif "Organization" in labels or raw_node.get("org_id"):
+        node_type, color = "organization", "#a855f7"
+    else:
+        node_type, color = "criminal", "#ef4444"
+
+    node_id = (raw_node.get("offender_id") or raw_node.get("victim_id")
+               or raw_node.get("location_id") or raw_node.get("org_id")
+               or eid)
+    return {
+        "node_id": node_id, 
+        "node_type": node_type, 
+        "color": color,
+        "label": raw_node.get("name", "Unknown"),
+        "risk_score": raw_node.get("risk_score", 0),
+        "crime_count": raw_node.get("crime_count", 0),
+        "size": 20 + (raw_node.get("crime_count", 0) * 2),
+        "profile_data": dict(raw_node),
+    }
+
+
 async def get_network_graph(
     search_query: str = None,
     crime_type: str = None,
@@ -228,10 +264,17 @@ async def get_network_graph(
     
     query = f"""
     {match_clause}
-    WITH n ORDER BY n.risk_score DESC LIMIT $node_limit
-    OPTIONAL MATCH (n)-[r]-(connected)
-    RETURN n, labels(n) AS labels_n, properties(r) AS r_props, type(r) AS type_r, connected, labels(connected) AS labels_connected
-    LIMIT $limit
+    OPTIONAL MATCH (n)-[r]-()
+    WITH n, count(r) AS degree
+    ORDER BY degree DESC, n.risk_score DESC
+    LIMIT $node_limit
+    CALL {{
+      WITH n
+      OPTIONAL MATCH (n)-[r]-(connected)
+      RETURN r, connected
+      LIMIT 25
+    }}
+    RETURN n, elementId(n) AS n_eid, labels(n) AS labels_n, properties(r) AS r_props, type(r) AS type_r, connected, elementId(connected) AS connected_eid, labels(connected) AS labels_connected
     """
     
     results = await run_neo4j_query(query, params)
@@ -244,84 +287,30 @@ async def get_network_graph(
         # Process main node
         if record.get("n"):
             node = record["n"]
-            node_id = (
-                node.get("offender_id") or
-                node.get("victim_id") or
-                node.get("location_id") or
-                node.get("org_id", str(id(node)))
-            )
+            labels_n = record.get("labels_n") or []
+            eid = record.get("n_eid")
+            normalized = normalize_node(node, labels_n, eid)
+            node_id = normalized["node_id"]
             
             if node_id not in nodes_map:
-                # Determine node type from available labels or keys
-                labels_n = record.get("labels_n") or []
-                if "Victim" in labels_n or node.get("victim_id"):
-                    node_type = "victim"
-                    color = "#3b82f6"
-                elif "Location" in labels_n or node.get("location_id"):
-                    node_type = "location"
-                    color = "#22c55e"
-                elif "Organization" in labels_n or node.get("org_id"):
-                    node_type = "organization"
-                    color = "#a855f7"
-                else:
-                    node_type = "criminal"
-                    color = "#ef4444"
-                
-                nodes_map[node_id] = {
-                    "node_id": node_id,
-                    "node_type": node_type,
-                    "label": node.get("name", "Unknown"),
-                    "risk_score": node.get("risk_score", 0),
-                    "crime_count": node.get("crime_count", 0),
-                    "size": 20 + (node.get("crime_count", 0) * 2),
-                    "color": color,
-                    "profile_data": dict(node),
-                }
+                nodes_map[node_id] = normalized
         
         # Process relationship
         if record.get("type_r") and record.get("connected"):
             rel = record.get("r_props") or {}
             connected = record["connected"]
             
-            source_id = (
-                record["n"].get("offender_id") or
-                record["n"].get("victim_id") or
-                record["n"].get("location_id") or
-                record["n"].get("org_id") or
-                str(id(record["n"]))
-            )
-            target_id = (
-                connected.get("offender_id") or
-                connected.get("victim_id") or
-                connected.get("location_id") or
-                str(id(connected))
-            )
+            source_id = node_id
+            
+            labels_conn = record.get("labels_connected") or []
+            conn_eid = record.get("connected_eid")
+            normalized_conn = normalize_node(connected, labels_conn, conn_eid)
+            target_id = normalized_conn["node_id"]
             
             # Add connected node
             if target_id not in nodes_map:
-                labels_conn = record.get("labels_connected") or []
-                if "Victim" in labels_conn or connected.get("victim_id"):
-                    conn_type = "victim"
-                    conn_color = "#3b82f6"
-                elif "Location" in labels_conn or connected.get("location_id"):
-                    conn_type = "location"
-                    conn_color = "#22c55e"
-                elif "Organization" in labels_conn or connected.get("org_id"):
-                    conn_type = "organization"
-                    conn_color = "#a855f7"
-                else:
-                    conn_type = "criminal"
-                    conn_color = "#f97316"
-                nodes_map[target_id] = {
-                    "node_id": target_id,
-                    "node_type": conn_type,
-                    "label": connected.get("name", "Unknown"),
-                    "risk_score": connected.get("risk_score", 0),
-                    "crime_count": connected.get("crime_count", 0),
-                    "size": 15,
-                    "color": conn_color,
-                    "profile_data": dict(connected),
-                }
+                normalized_conn["size"] = 15
+                nodes_map[target_id] = normalized_conn
             
             edges.append({
                 "edge_id": f"{source_id}_{target_id}",
