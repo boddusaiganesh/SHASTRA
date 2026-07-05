@@ -32,6 +32,40 @@ export const KARNATAKA_DISTRICTS = [
   "Yadgir",
 ];
 
+export const KARNATAKA_DISTRICTS_WITH_CODES = [
+  { district_id: "KA-01", district_name: "Bangalore Urban" },
+  { district_id: "KA-02", district_name: "Bangalore Rural" },
+  { district_id: "KA-03", district_name: "Mysuru" },
+  { district_id: "KA-04", district_name: "Tumakuru" },
+  { district_id: "KA-05", district_name: "Kolar" },
+  { district_id: "KA-06", district_name: "Chikkaballapur" },
+  { district_id: "KA-07", district_name: "Ramanagara" },
+  { district_id: "KA-08", district_name: "Mandya" },
+  { district_id: "KA-09", district_name: "Chamarajanagar" },
+  { district_id: "KA-10", district_name: "Hassan" },
+  { district_id: "KA-11", district_name: "Chikkamagaluru" },
+  { district_id: "KA-12", district_name: "Kodagu" },
+  { district_id: "KA-13", district_name: "Dakshina Kannada" },
+  { district_id: "KA-14", district_name: "Udupi" },
+  { district_id: "KA-15", district_name: "Uttara Kannada" },
+  { district_id: "KA-16", district_name: "Shivamogga" },
+  { district_id: "KA-17", district_name: "Davanagere" },
+  { district_id: "KA-18", district_name: "Chitradurga" },
+  { district_id: "KA-19", district_name: "Ballari" },
+  { district_id: "KA-20", district_name: "Koppal" },
+  { district_id: "KA-21", district_name: "Raichur" },
+  { district_id: "KA-22", district_name: "Kalaburagi" },
+  { district_id: "KA-23", district_name: "Yadgir" },
+  { district_id: "KA-24", district_name: "Bidar" },
+  { district_id: "KA-25", district_name: "Vijayapura" },
+  { district_id: "KA-26", district_name: "Bagalkot" },
+  { district_id: "KA-27", district_name: "Belagavi" },
+  { district_id: "KA-28", district_name: "Dharwad" },
+  { district_id: "KA-29", district_name: "Gadag" },
+  { district_id: "KA-30", district_name: "Haveri" }
+];
+
+
 export const DISTRICT_COORDINATES: Record<string, [number, number]> = {
   Bagalkot: [16.18, 75.69],
   Ballari: [15.14, 76.92],

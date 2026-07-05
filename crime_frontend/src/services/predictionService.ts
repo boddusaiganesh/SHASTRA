@@ -1,3 +1,4 @@
+import { flagMockDataUsed } from '../utils/mockDataFlag';
 import api from './api';
 import { ENDPOINTS } from '../constants/apiEndpoints';
 import {
@@ -15,7 +16,7 @@ export const predictionService = {
       const res = await api.get(ENDPOINTS.PREDICTIONS.FORECAST, { params: filters });
       return res.data;
     } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') return mockCrimeForecast;
+      if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockCrimeForecast; }
       throw error;
     }
   },
@@ -25,7 +26,7 @@ export const predictionService = {
       const data = res.data;
       return Array.isArray(data) ? data : (data?.anomalies || []);
     } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') return mockAnomalies;
+      if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockAnomalies; }
       throw error;
     }
   },
@@ -34,7 +35,7 @@ export const predictionService = {
       const res = await api.get(ENDPOINTS.PREDICTIONS.RISK_MAP);
       return res.data;
     } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') return mockDistrictRiskScores;
+      if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockDistrictRiskScores; }
       throw error;
     }
   },
@@ -43,7 +44,7 @@ export const predictionService = {
       const res = await api.get(ENDPOINTS.PREDICTIONS.HIGH_RISK_AREAS);
       return res.data;
     } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') return mockHighRiskPredictions;
+      if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockHighRiskPredictions; }
       throw error;
     }
   },
@@ -52,7 +53,7 @@ export const predictionService = {
       const res = await api.get(ENDPOINTS.PREDICTIONS.FORECAST);
       return res.data;
     } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') return mockCrimeForecast;
+      if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockCrimeForecast; }
       throw error;
     }
   },
@@ -61,7 +62,7 @@ export const predictionService = {
       const res = await api.get(ENDPOINTS.PREDICTIONS.EMERGING_TYPOLOGIES);
       return res.data;
     } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') return mockEmergingTypologies;
+      if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockEmergingTypologies; }
       throw error;
     }
   },
@@ -70,7 +71,7 @@ export const predictionService = {
       const res = await api.get(ENDPOINTS.PREDICTIONS.SOCIOECONOMIC, { params: filters });
       return res.data;
     } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') return mockSocioeconomicData;
+      if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockSocioeconomicData; }
       throw error;
     }
   },
@@ -83,7 +84,7 @@ export const anomalyService = {
       const data = res.data;
       return Array.isArray(data) ? data : (data?.anomalies || []);
     } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') return mockAnomalies;
+      if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockAnomalies; }
       throw error;
     }
   },
@@ -92,7 +93,7 @@ export const anomalyService = {
       const res = await api.get(ENDPOINTS.ANOMALIES.DETAIL(id));
       return res.data;
     } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') return mockAnomalies.find((a) => a.anomaly_id === id) || null;
+      if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockAnomalies.find((a) => a.anomaly_id === id) || null; }
       throw error;
     }
   },
@@ -101,7 +102,7 @@ export const anomalyService = {
       const res = await api.patch(ENDPOINTS.ANOMALIES.UPDATE_STATUS(id), { status });
       return res.data;
     } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') return { success: true, anomaly_id: id, status };
+      if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return { success: true, anomaly_id: id, status }; }
       throw error;
     }
   },

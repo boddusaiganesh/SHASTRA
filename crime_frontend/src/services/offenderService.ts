@@ -1,3 +1,4 @@
+import { flagMockDataUsed } from '../utils/mockDataFlag';
 import api from "./api";
 import { ENDPOINTS } from "../constants/apiEndpoints";
 import { mockOffenders } from "./mockData";
@@ -29,6 +30,7 @@ export const offenderService = {
       return (Array.isArray(list) ? list : []).map(normalizeOffender).filter(Boolean);
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') {
+      flagMockDataUsed();
         return mockOffenders.filter((o: any) => 
           !query || o.offender_name?.toLowerCase().includes(query.toLowerCase())
         ).map(normalizeOffender).filter(Boolean);
@@ -42,6 +44,7 @@ export const offenderService = {
       return normalizeOffender(res.data);
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') {
+      flagMockDataUsed();
         return normalizeOffender(mockOffenders.find((o: any) => o.offender_id === id));
       }
       throw error;

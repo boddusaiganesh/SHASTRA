@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Users, Bell, Database, Plus, Save, ActivitySquare } from "lucide-react";
 import { settingsService } from "../services/alertService";
-import { KARNATAKA_DISTRICTS } from "../constants/districtsList";
+import { KARNATAKA_DISTRICTS_WITH_CODES } from "../constants/districtsList";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import DataImport from "../components/settings/DataImport";
 import { UploadCloud } from "lucide-react";
@@ -95,7 +95,7 @@ const SettingsPage: React.FC = () => {
               </select>
               <select value={newUser.district} onChange={(e) => setNewUser({ ...newUser, district: e.target.value })} className={inputCls}>
                 <option value="">State-Wide</option>
-                {KARNATAKA_DISTRICTS.map((d) => <option key={d} value={d}>{d}</option>)}
+                {KARNATAKA_DISTRICTS_WITH_CODES.map((d) => <option key={d.district_id} value={d.district_id}>{d.district_name}</option>)}
               </select>
               <input type="password" placeholder="Password" value={newUser.password} onChange={(e) => setNewUser({ ...newUser, password: e.target.value })} className={inputCls} />
             </div>

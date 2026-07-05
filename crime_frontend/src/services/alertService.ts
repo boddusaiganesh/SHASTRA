@@ -1,3 +1,4 @@
+import { flagMockDataUsed } from '../utils/mockDataFlag';
 import api from "./api";
 import { ENDPOINTS } from "../constants/apiEndpoints";
 import { mockRecentAlerts, mockUsers, mockDataSources, mockAlertThresholds, mockSavedReports } from "./mockData";
@@ -9,7 +10,7 @@ export const alertService = {
       const data = res.data;
       return Array.isArray(data) ? data : (data?.alerts || data?.data || mockRecentAlerts);
     } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') return mockRecentAlerts;
+      if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockRecentAlerts; }
       throw error;
     }
   },
@@ -30,7 +31,7 @@ export const settingsService = {
       const data = res.data;
       return Array.isArray(data) ? data : (data?.users || data?.data || mockUsers);
     } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') return mockUsers;
+      if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockUsers; }
       throw error;
     }
   },
@@ -39,7 +40,7 @@ export const settingsService = {
       const res = await api.post(ENDPOINTS.SETTINGS.USERS_ADD, user);
       return { data: res.data };
     } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') return { user: { ...user, user_id: "mock-id-" + Math.random().toString(36).substring(2, 11) } };
+      if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return { user: { ...user, user_id: "mock-id-" + Math.random().toString(36).substring(2, 11) } }; }
       throw error;
     }
   },
@@ -49,7 +50,7 @@ export const settingsService = {
       const data = res.data;
       return Array.isArray(data) ? data : (data?.districts || data?.data || []);
     } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') return [];
+      if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return []; }
       throw error;
     }
   },
@@ -58,7 +59,7 @@ export const settingsService = {
       const res = await api.get(ENDPOINTS.SETTINGS.ALERT_THRESHOLDS);
       return res.data;
     } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') return mockAlertThresholds;
+      if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockAlertThresholds; }
       throw error;
     }
   },
@@ -67,7 +68,7 @@ export const settingsService = {
       const res = await api.put(ENDPOINTS.SETTINGS.ALERT_THRESHOLDS, thresholds);
       return res.data;
     } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') return { success: true, thresholds };
+      if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return { success: true, thresholds }; }
       throw error;
     }
   },
@@ -82,7 +83,7 @@ export const settingsService = {
         { name: "Gemini AI", type: "AI Engine", status: "Active", last_sync: "On-demand" },
       ];
     } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') return mockDataSources;
+      if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockDataSources; }
       throw error;
     }
   },
@@ -91,7 +92,7 @@ export const settingsService = {
       const res = await api.get(ENDPOINTS.SETTINGS.AUDIT_LOGS || '/settings/audit-logs');
       return res.data || [];
     } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') return [];
+      if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return []; }
       throw error;
     }
   },
@@ -111,6 +112,7 @@ export const reportService = {
       return res.data;
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') {
+      flagMockDataUsed();
         return {
           report_id: `RPT_${Date.now()}`,
           report_type: params.report_type,
@@ -127,7 +129,7 @@ export const reportService = {
       const data = res.data;
       return Array.isArray(data) ? data : (data?.reports || data?.data || mockSavedReports);
     } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') return mockSavedReports;
+      if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockSavedReports; }
       throw error;
     }
   },
