@@ -14,7 +14,7 @@ interface NetworkNode {
   ai_analysis?: string; timeline?: any[];
 }
 interface NetworkEdge {
-  source: string; target: string; relationship_type: string; strength_score: number;
+  source_node_id: string; target_node_id: string; relationship_type: string; strength_score: number;
 }
 
 const nodeTypeIcons: Record<string, React.FC<{ className?: string }>> = {
@@ -27,7 +27,13 @@ const nodeTypeIcons: Record<string, React.FC<{ className?: string }>> = {
 const CriminalNetwork: React.FC = () => {
   const [nodes, setNodes] = useState<NetworkNode[]>([]);
   const [edges, setEdges] = useState<NetworkEdge[]>([]);
-  const [aiSummary, setAiSummary] = useState<{ summary: string; suspicious_associations: { entities: string[]; reason: string; severity: string }[]; investigation_priorities: string[] } | null>(null);
+  const [aiSummary, setAiSummary] = useState<{
+    summary_text: string;
+    key_findings: string[];
+    suspicious_pairs: { offender_1: string; offender_2: string; connection_type: string; confidence: string }[];
+    recommended_actions: string[];
+    network_stats: { total_criminals: number; high_risk_count: number; active_count: number; network_density: number };
+  } | null>(null);
   const [selectedNode, setSelectedNode] = useState<NetworkNode | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [nodeTypeFilter, setNodeTypeFilter] = useState("all");
@@ -68,6 +74,17 @@ const CriminalNetwork: React.FC = () => {
     };
     fetch();
   }, []);
+
+  useEffect(() => {
+    const handle = setTimeout(async () => {
+      const g = await networkService.getGraphData(searchQuery || undefined);
+      if (g && g.status !== "offline" && g.status !== "no_data") {
+        setNodes(g.nodes);
+        setEdges(g.edges);
+      }
+    }, 400);
+    return () => clearTimeout(handle);
+  }, [searchQuery]);
 
   const handleNodeSelect = async (node: NetworkNode) => {
     setSelectedNode(node);
@@ -113,10 +130,10 @@ const CriminalNetwork: React.FC = () => {
           });
           added = true;
         }
-        if (record.r && !newEdges.find(e => (e.source === node.node_id && e.target === (connectedNode.offender_id || connectedNode.id)))) {
+        if (record.r && !newEdges.find(e => (e.source_node_id === node.node_id && e.target_node_id === (connectedNode.offender_id || connectedNode.id)))) {
           newEdges.push({
-            source: node.node_id,
-            target: connectedNode.offender_id || connectedNode.id,
+            source_node_id: node.node_id,
+            target_node_id: connectedNode.offender_id || connectedNode.id,
             relationship_type: record.rel_type || "KNOWS",
             strength_score: 50
           });
@@ -308,10 +325,10 @@ const CriminalNetwork: React.FC = () => {
               )}
               
               <div className="mt-3">
-                <p className="text-xs text-slate-400 mb-2">Connected Edges ({edges.filter(e => e.source === selectedNode.node_id || e.target === selectedNode.node_id).length})</p>
+                <p className="text-xs text-slate-400 mb-2">Connected Edges ({edges.filter(e => e.source_node_id === selectedNode.node_id || e.target_node_id === selectedNode.node_id).length})</p>
                 <div className="space-y-1">
-                  {edges.filter(e => e.source === selectedNode.node_id || e.target === selectedNode.node_id).map((e, i) => {
-                    const otherId = e.source === selectedNode.node_id ? e.target : e.source;
+                  {edges.filter(e => e.source_node_id === selectedNode.node_id || e.target_node_id === selectedNode.node_id).map((e, i) => {
+                    const otherId = e.source_node_id === selectedNode.node_id ? e.target_node_id : e.source_node_id;
                     const otherNode = nodes.find(n => n.node_id === otherId);
                     return (
                       <div key={i} className="flex items-center justify-between text-xs p-2 bg-slate-800/50 rounded">
@@ -353,7 +370,7 @@ const CriminalNetwork: React.FC = () => {
                     p: ({node, ...props}) => <p className="mb-2 last:mb-0" {...props} />
                   }}
                 >
-                  {aiSummary.summary}
+                  {aiSummary.summary_text}
                 </ReactMarkdown>
               </div>
 
@@ -361,24 +378,19 @@ const CriminalNetwork: React.FC = () => {
                 <AlertTriangle className="h-3 w-3" />Suspicious Associations
               </h4>
               <div className="space-y-2 mb-3">
-                {(Array.isArray(aiSummary?.suspicious_associations) ? aiSummary.suspicious_associations : []).map((s, i) => (
+                {(Array.isArray(aiSummary?.suspicious_pairs) ? aiSummary.suspicious_pairs : []).map((s, i) => (
                   <div key={i} className="p-2 bg-orange-950/20 border border-orange-500/20 rounded-lg">
-                    <div className="flex items-center gap-1 mb-1">
-                      <span className={`text-xs font-bold ${s.severity === "Critical" ? "text-red-400" : "text-orange-400"}`}>{s.severity}</span>
-                    </div>
-                    <p className="text-xs text-slate-300">{s.reason}</p>
-                    <div className="flex gap-1 mt-1">
-                      {(Array.isArray(s?.entities) ? s.entities : []).map((e) => <span key={e} className="text-xs text-slate-500 font-mono">{e}</span>)}
-                    </div>
+                    <p className="text-xs text-slate-300">{s.offender_1} ↔ {s.offender_2} ({s.connection_type})</p>
+                    <span className="text-xs text-slate-500">{s.confidence}</span>
                   </div>
                 ))}
               </div>
 
               <h4 className="text-xs font-semibold text-green-400 mb-2 flex items-center gap-1">
-                <ChevronRight className="h-3 w-3" />Investigation Priorities
+                <ChevronRight className="h-3 w-3" />Recommended Actions
               </h4>
               <div className="space-y-1">
-                {(Array.isArray(aiSummary?.investigation_priorities) ? aiSummary.investigation_priorities : []).map((p, i) => (
+                {(Array.isArray(aiSummary?.recommended_actions) ? aiSummary.recommended_actions : []).map((p, i) => (
                   <div key={i} className="flex items-start gap-2 text-xs text-slate-300">
                     <span className="text-green-400 font-bold mt-0.5">{i + 1}.</span>
                     <span>{p}</span>

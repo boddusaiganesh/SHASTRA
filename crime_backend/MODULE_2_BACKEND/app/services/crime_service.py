@@ -314,18 +314,31 @@ async def _get_station_map(db: AsyncSession) -> Dict[str, str]:
     return {s.station_id: s.station_name for s in stations}
 
 
-async def update_crime_record(db: AsyncSession, crime_id: str, payload: dict):
+ALLOWED_UPDATE_FIELDS = {
+    "crime_type", "status", "severity", "description", "address", "landmark",
+    "latitude", "longitude", "date_of_occurrence", "modus_operandi", "evidence_notes",
+    "crime_sub_type", "time_of_occurrence", "weapons_used", "property_stolen",
+    "property_value", "fir_number"
+}
+
+async def update_crime_record(db: AsyncSession, crime_id: str, payload: dict, current_user: dict):
     try:
         cid = uuid.UUID(crime_id)
     except ValueError:
         return None
+    
     result = await db.execute(select(Crime).where(Crime.crime_id == cid))
     crime = result.scalar_one_or_none()
     if not crime:
         return None
+        
+    if current_user["role"] == "DISTRICT_OFFICER" and crime.district_id != current_user.get("district_id"):
+        raise PermissionError("District officers can only update crimes in their own district.")
+        
     for k, v in payload.items():
-        if hasattr(crime, k):
+        if k in ALLOWED_UPDATE_FIELDS and hasattr(crime, k):
             setattr(crime, k, v)
+            
     await db.commit()
     await db.refresh(crime)
     return crime.to_dict()

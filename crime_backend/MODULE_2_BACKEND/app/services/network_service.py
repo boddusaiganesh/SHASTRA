@@ -94,9 +94,12 @@ async def get_network_graph_data(
         node_limit=node_limit,
     )
     
-    # If Neo4j is offline, return the status explicitly
+    # NEW: fall back to Postgres instead of just reporting "offline"
     if graph_data.get("status") == "offline":
-        return graph_data
+        graph_data = await build_network_from_postgres(
+            db, search_query=search_query, district_id=district_id, node_limit=node_limit, crime_type=crime_type
+        )
+        graph_data["source"] = "postgres_fallback"
     
     # If Neo4j is available but there is no data
     if not graph_data.get("nodes"):
@@ -123,6 +126,7 @@ async def build_network_from_postgres(
     search_query: Optional[str] = None,
     district_id: Optional[str] = None,
     node_limit: int = 100,
+    crime_type: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Build network graph from PostgreSQL data when Neo4j is unavailable"""
     from app.models.database_models.crime_model import CrimeOffenderLink, Crime
@@ -137,6 +141,8 @@ async def build_network_from_postgres(
             (Offender.first_name.ilike(f"%{search_query}%")) |
             (Offender.last_name.ilike(f"%{search_query}%"))
         )
+    if crime_type:
+        query = query.join(CrimeOffenderLink).join(Crime).where(Crime.crime_type == crime_type)
     
     result = await db.execute(query)
     offenders = result.scalars().all()
@@ -263,8 +269,8 @@ async def get_node_detail(
             "ai_analysis": ai_analysis,
         }
         
-    except (ValueError, Exception) as e:
-        logger.error(f"Error getting node detail: {e}")
+    except Exception as e:
+        logger.error(f"Error getting node detail: {e}", exc_info=True)
         return None
 
 

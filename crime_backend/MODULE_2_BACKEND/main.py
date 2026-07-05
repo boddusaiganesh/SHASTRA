@@ -6,7 +6,6 @@ Module 2 - FastAPI Backend - Main Entry Point
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.middleware.gzip import GZipMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from contextlib import asynccontextmanager
 import uvicorn

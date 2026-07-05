@@ -163,7 +163,11 @@ async def update_crime(
     from app.services.crime_service import update_crime_record
     from app.utils.audit import log_action
     
-    updated = await update_crime_record(db, crime_id, payload)
+    try:
+        updated = await update_crime_record(db, crime_id, payload, current_user)
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+        
     if not updated:
         raise HTTPException(status_code=404, detail="Crime not found")
         
@@ -184,7 +188,12 @@ async def update_crime_status(
     
     if status_value not in CRIME_STATUS_VALUES:
         raise HTTPException(status_code=400, detail=f"status must be one of {CRIME_STATUS_VALUES}")
-    updated = await update_crime_record(db, crime_id, {"status": status_value})
+        
+    try:
+        updated = await update_crime_record(db, crime_id, {"status": status_value}, current_user)
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+        
     if not updated:
         raise HTTPException(status_code=404, detail="Crime not found")
         

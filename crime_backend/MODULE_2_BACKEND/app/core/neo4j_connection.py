@@ -98,9 +98,11 @@ async def run_neo4j_query(query: str, parameters: Dict = None) -> List[Dict[str,
 async def find_shortest_path(node_id_1: str, node_id_2: str, max_hops: int = 5) -> dict:
     """Find the shortest relationship path between two entities in the graph."""
     query = f"""
-    MATCH (a {{offender_id: $id1}}), (b {{offender_id: $id2}})
+    MATCH (a), (b)
+    WHERE (a.offender_id = $id1 OR a.victim_id = $id1 OR a.location_id = $id1 OR a.org_id = $id1)
+    AND   (b.offender_id = $id2 OR b.victim_id = $id2 OR b.location_id = $id2 OR b.org_id = $id2)
     MATCH path = shortestPath((a)-[*..{max_hops}]-(b))
-    RETURN [n IN nodes(path) | {{id: coalesce(n.offender_id, n.victim_id, n.location_id), name: n.name}}] AS path_nodes,
+    RETURN [n IN nodes(path) | {{id: coalesce(n.offender_id, n.victim_id, n.location_id, n.org_id), name: n.name}}] AS path_nodes,
            [r IN relationships(path) | type(r)] AS path_rels
     LIMIT 1
     """
@@ -205,10 +207,24 @@ async def get_network_graph(
     # SECURITY EXCEPTION: The following Cypher query uses unparameterized input because APOC path expansion requires labels and rel-types to be dynamic strings. Input is sanitized using regex strictly allowing alphanumeric characters before query execution.
 
     # Build the Cypher query dynamically
+    where_clauses = []
+    params = {"node_limit": node_limit, "limit": node_limit * 3}
+
     if search_query:
-        match_clause = "MATCH (n) WHERE n.name CONTAINS $search OR n.offender_id = $search"
-    else:
-        match_clause = "MATCH (n:Criminal)"
+        where_clauses.append("(n.name CONTAINS $search OR n.offender_id = $search)")
+        params["search"] = search_query
+
+    if district_id:
+        where_clauses.append("n.district_id = $district_id")
+        params["district_id"] = district_id
+
+    if crime_type:
+        where_clauses.append("$crime_type IN n.crime_types")
+        params["crime_type"] = crime_type
+
+    match_clause = "MATCH (n:Criminal)"
+    if where_clauses:
+        match_clause += " WHERE " + " AND ".join(where_clauses)
     
     query = f"""
     {match_clause}
@@ -218,11 +234,7 @@ async def get_network_graph(
     LIMIT $limit
     """
     
-    results = await run_neo4j_query(query, {
-        "search": search_query or "",
-        "node_limit": node_limit,
-        "limit": node_limit * 3,
-    })
+    results = await run_neo4j_query(query, params)
     
     # Process results into nodes and edges
     nodes_map = {}
@@ -274,6 +286,8 @@ async def get_network_graph(
             source_id = (
                 record["n"].get("offender_id") or
                 record["n"].get("victim_id") or
+                record["n"].get("location_id") or
+                record["n"].get("org_id") or
                 str(id(record["n"]))
             )
             target_id = (

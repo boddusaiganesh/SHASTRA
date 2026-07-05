@@ -5,7 +5,7 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 from app.core.database import get_db
-from app.core.security import get_current_user
+from app.core.security import get_current_user, scope_district_param
 from app.utils.district_resolver import resolve_district_id
 from app.services.network_service import get_network_graph_data, get_node_detail, get_network_ai_summary
 
@@ -24,6 +24,7 @@ async def fetch_network_graph(
     current_user=Depends(get_current_user),
 ):
     resolved_id = await resolve_district_id(db, district_id)
+    resolved_id = scope_district_param(resolved_id, current_user)
     data = await get_network_graph_data(db, search_query, crime_type, resolved_id)
     return {"success": True, "data": data}
 
@@ -49,6 +50,7 @@ async def fetch_ai_summary(
     current_user=Depends(get_current_user),
 ):
     resolved_id = await resolve_district_id(db, district_id)
+    resolved_id = scope_district_param(resolved_id, current_user)
     data = await get_network_ai_summary(db, resolved_id)
     return {"success": True, "data": data}
 
@@ -76,7 +78,8 @@ async def expand_node(
     """Return only the immediate neighbors of one node — for incremental graph expansion."""
     from app.core.neo4j_connection import run_neo4j_query
     query = """
-    MATCH (n {offender_id: $id})-[r]-(connected)
+    MATCH (n)-[r]-(connected)
+    WHERE n.offender_id = $id OR n.victim_id = $id OR n.location_id = $id OR n.org_id = $id
     RETURN connected, labels(connected) AS labels, type(r) AS rel_type, r
     LIMIT 25
     """
