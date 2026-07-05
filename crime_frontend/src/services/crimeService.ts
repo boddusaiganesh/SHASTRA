@@ -109,7 +109,7 @@ export const crimeService = {
   getEvidence: async (id: string) => {
     try {
       const response = await api.get(`/evidence/${id}`);
-      return response.data.data;
+      return response.data || [];
     } catch {
       return [];
     }

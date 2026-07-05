@@ -30,8 +30,8 @@ export default function Login() {
       const response = await authService.login({ username, password });
       dispatch(loginSuccess({ ...response, isAuthenticated: true, isLoading: false, error: null }));
       navigate('/');
-    } catch (err: unknown) {
-      dispatch(loginFailure((err as Error).message || 'Login failed'));
+    } catch (err: any) {
+      dispatch(loginFailure(err?.response?.data?.detail || err.message || 'Login failed'));
     }
   };
 

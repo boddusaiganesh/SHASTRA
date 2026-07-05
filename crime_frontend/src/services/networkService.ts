@@ -17,7 +17,7 @@ export const networkService = {
       const response = await api.get(ENDPOINTS.NETWORK.GRAPH_DATA, {
         params: { search_query: searchQuery, crime_type: crimeType, district_id: districtId },
       });
-      return response.data?.data || response.data || null;
+      return response.data || null;
     } catch (error: any) {
       console.error("Error fetching network graph:", error);
       return { status: "offline", error: error.response?.data?.detail || "Failed to connect to the backend API." };
@@ -29,7 +29,7 @@ export const networkService = {
       const response = await api.get(ENDPOINTS.NETWORK.SHORTEST_PATH, {
         params: { node_a: nodeA, node_b: nodeB },
       });
-      return response.data?.data || null;
+      return response.data || null;
     } catch (error) {
       console.error("Error fetching shortest path:", error);
       return null;
@@ -39,7 +39,7 @@ export const networkService = {
   expandNode: async (nodeId: string) => {
     try {
       const response = await api.get(ENDPOINTS.NETWORK.EXPAND(nodeId));
-      return response.data?.data || null;
+      return response.data || null;
     } catch (error) {
       console.error("Error expanding node:", error);
       return null;

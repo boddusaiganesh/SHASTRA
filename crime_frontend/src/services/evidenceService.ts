@@ -3,7 +3,7 @@ import api from './api';
 export const evidenceService = {
   getEvidenceList: async (crimeId: string) => {
     const res = await api.get(`/evidence/${crimeId}`);
-    return res.data.data;
+    return res.data || [];
   },
   
   uploadEvidence: async (crimeId: string, file: File) => {

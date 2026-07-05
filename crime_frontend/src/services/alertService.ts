@@ -89,7 +89,7 @@ export const settingsService = {
   getAuditLogs: async () => {
     try {
       const res = await api.get(ENDPOINTS.SETTINGS.AUDIT_LOGS || '/settings/audit-logs');
-      return res.data.data;
+      return res.data || [];
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') return [];
       throw error;

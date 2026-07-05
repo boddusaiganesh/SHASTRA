@@ -137,7 +137,7 @@ from fastapi.responses import JSONResponse
 # CORS Middleware
 allowed_origins = []
 if settings.ENVIRONMENT == "production":
-    allowed_origins = [settings.FRONTEND_URL]
+    allowed_origins = [o.strip() for o in settings.FRONTEND_URL.split(",") if o.strip()]
 else:
     allowed_origins = [
         settings.FRONTEND_URL,

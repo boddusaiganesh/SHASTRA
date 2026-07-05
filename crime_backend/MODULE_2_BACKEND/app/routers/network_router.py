@@ -12,8 +12,7 @@ from app.services.network_service import get_network_graph_data, get_node_detail
 limiter = Limiter(key_func=get_remote_address)
 router = APIRouter()
 
-@router.get("/graph")            
-@router.get("/graph-data")
+@router.get("/graph-data", response_model=None)
 @limiter.limit("30/minute")
 async def fetch_network_graph(
     request: Request,
