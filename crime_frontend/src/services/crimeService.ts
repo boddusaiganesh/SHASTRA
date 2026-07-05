@@ -1,5 +1,6 @@
 import api from './api';
 import { ENDPOINTS } from '../constants/apiEndpoints';
+import { evidenceService } from "./evidenceService";
 import {
   mockMapCrimes,
   mockDashboardSummary,
@@ -106,22 +107,8 @@ export const crimeService = {
     const response = await api.delete(`/crimes/${id}`);
     return response.data;
   },
-  getEvidence: async (id: string) => {
-    try {
-      const response = await api.get(`/evidence/${id}`);
-      return response.data || [];
-    } catch {
-      return [];
-    }
-  },
-  uploadEvidence: async (id: string, file: File) => {
-    const formData = new FormData();
-    formData.append("file", file);
-    const response = await api.post(`/evidence/${id}/upload`, formData, {
-      headers: { "Content-Type": "multipart/form-data" }
-    });
-    return response.data;
-  },
+  getEvidence: evidenceService.getEvidenceList,
+  uploadEvidence: evidenceService.uploadEvidence,
   getHotspotClusters: async (filters?: any) => {
     try {
       const response = await api.get(ENDPOINTS.HOTSPOTS.CLUSTERS, { params: filters });

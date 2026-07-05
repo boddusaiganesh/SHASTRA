@@ -28,8 +28,8 @@ export default function AIChatWidget() {
 
     try {
       const res = await api.post('/assistant/ask', { question: userMsg.text });
-      const answer = res.data?.data?.answer || 'Sorry, no response available.';
-      const isFallback = res.data?.data?.is_fallback || false;
+      const answer = res.data?.answer || 'Sorry, no response available.';
+      const isFallback = res.data?.is_fallback || false;
       setMessages(prev => [...prev, { id: Date.now().toString(), type: 'assistant', text: answer, isFallback }]);
     } catch (err) {
       setMessages(prev => [...prev, { id: Date.now().toString(), type: 'assistant', text: 'Error connecting to the intelligence network.' }]);

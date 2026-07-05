@@ -11,6 +11,20 @@ export default function VictimDatabase() {
   const [error, setError] = useState<string | null>(null);
   const [selectedVictim, setSelectedVictim] = useState<any>(null);
   
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [newVictim, setNewVictim] = useState({ first_name: "", last_name: "", age: "", gender: "", phone_number: "", district_id: "" });
+  
+  const handleRegisterVictim = async () => {
+    try {
+      await victimService.register(newVictim);
+      setShowRegisterModal(false);
+      setNewVictim({ first_name: "", last_name: "", age: "", gender: "", phone_number: "", district_id: "" });
+      handleSearch();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+  
   const { user_role } = useSelector((state: RootState) => state.auth);
   const isScrbOrInvestigator = user_role === 'SCRB_OFFICER' || user_role === 'INVESTIGATOR';
 
@@ -50,7 +64,7 @@ export default function VictimDatabase() {
             Victim Database
           </h1>
           {isScrbOrInvestigator && (
-            <button className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors">
+            <button onClick={() => setShowRegisterModal(true)} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors">
               <UserPlus className="h-4 w-4" />
               Register Victim
             </button>
@@ -184,6 +198,31 @@ export default function VictimDatabase() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {showRegisterModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-xl w-full max-w-md space-y-4">
+            <h2 className="text-lg font-bold text-white mb-2">Register Victim</h2>
+            <div className="grid grid-cols-2 gap-4">
+              <input type="text" placeholder="First Name" value={newVictim.first_name} onChange={(e) => setNewVictim({...newVictim, first_name: e.target.value})} className="col-span-1 px-3 py-2 bg-slate-800 text-white rounded border border-slate-700 focus:border-emerald-500 outline-none" />
+              <input type="text" placeholder="Last Name" value={newVictim.last_name} onChange={(e) => setNewVictim({...newVictim, last_name: e.target.value})} className="col-span-1 px-3 py-2 bg-slate-800 text-white rounded border border-slate-700 focus:border-emerald-500 outline-none" />
+              <input type="number" placeholder="Age" value={newVictim.age} onChange={(e) => setNewVictim({...newVictim, age: e.target.value})} className="col-span-1 px-3 py-2 bg-slate-800 text-white rounded border border-slate-700 focus:border-emerald-500 outline-none" />
+              <select value={newVictim.gender} onChange={(e) => setNewVictim({...newVictim, gender: e.target.value})} className="col-span-1 px-3 py-2 bg-slate-800 text-white rounded border border-slate-700 focus:border-emerald-500 outline-none">
+                <option value="">Gender...</option>
+                <option value="M">Male</option>
+                <option value="F">Female</option>
+                <option value="O">Other</option>
+              </select>
+              <input type="text" placeholder="Phone Number" value={newVictim.phone_number} onChange={(e) => setNewVictim({...newVictim, phone_number: e.target.value})} className="col-span-2 px-3 py-2 bg-slate-800 text-white rounded border border-slate-700 focus:border-emerald-500 outline-none" />
+              <input type="text" placeholder="District ID (e.g. KA-01)" value={newVictim.district_id} onChange={(e) => setNewVictim({...newVictim, district_id: e.target.value})} className="col-span-2 px-3 py-2 bg-slate-800 text-white rounded border border-slate-700 focus:border-emerald-500 outline-none" />
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
+              <button onClick={() => setShowRegisterModal(false)} className="px-4 py-2 bg-slate-700 text-white rounded hover:bg-slate-600 transition-colors">Cancel</button>
+              <button onClick={handleRegisterVictim} className="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-500 transition-colors">Save</button>
+            </div>
           </div>
         </div>
       )}

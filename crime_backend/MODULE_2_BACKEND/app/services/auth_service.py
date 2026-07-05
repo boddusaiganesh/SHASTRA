@@ -11,6 +11,7 @@ import logging
 from app.models.database_models.user_model import User
 from app.core.security import verify_password, hash_password, create_access_token
 from app.core.config import settings
+from app.utils.district_resolver import resolve_district_id
 
 logger = logging.getLogger(__name__)
 
@@ -108,13 +109,17 @@ async def create_user(db: AsyncSession, user_data: Dict[str, Any]) -> Dict[str, 
     # Determine default permissions based on role
     permissions = get_default_permissions(user_data["role"])
     
+    resolved_district = None
+    if user_data.get("district_id"):
+        resolved_district = await resolve_district_id(db, user_data.get("district_id"))
+
     # Create user
     new_user = User(
         username=user_data["username"],
         password_hash=password_hash,
         full_name=user_data["full_name"],
         role=user_data["role"],
-        district_id=user_data.get("district_id"),
+        district_id=resolved_district,
         police_station_id=user_data.get("police_station_id"),
         email=user_data.get("email"),
         phone=user_data.get("phone"),

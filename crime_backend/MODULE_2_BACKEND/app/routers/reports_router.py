@@ -11,6 +11,7 @@ from app.services.report_service import (
     get_saved_reports,
     get_report_by_id,
 )
+from app.utils.district_resolver import resolve_district_id
 
 limiter = Limiter(key_func=get_remote_address)
 router = APIRouter()
@@ -28,11 +29,12 @@ async def generate_report_endpoint(
     current_user=Depends(require_role(["SCRB_OFFICER", "INVESTIGATOR", "DISTRICT_OFFICER"]))
 ):
     from datetime import datetime
+    resolved_district_id = await resolve_district_id(db, district_id)
     name = report_name or f"{report_type}_{datetime.now().strftime('%Y%m%d_%H%M')}"
     data = await generate_report(
         db, report_type, name,
         date_from=date_from, date_to=date_to,
-        district_id=district_id, user_id=current_user["user_id"],
+        district_id=resolved_district_id, user_id=current_user["user_id"],
     )
     return {"success": True, "data": data}
 

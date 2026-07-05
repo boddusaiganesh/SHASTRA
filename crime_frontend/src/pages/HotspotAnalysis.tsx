@@ -24,7 +24,7 @@ const HotspotAnalysis: React.FC = () => {
   const fetch = async (silent = false) => {
     if (!silent) setLoading(true);
     const params: any = {};
-    if (district !== "All Districts") params.district = district;
+    if (district !== "All Districts") params.district_id = district;
     if (crimeType !== "All") params.crime_type = crimeType;
     if (dateFrom) params.date_from = dateFrom;
     if (dateTo) params.date_to = dateTo;

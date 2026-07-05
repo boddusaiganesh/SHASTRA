@@ -28,7 +28,7 @@ const PredictiveAnalytics: React.FC = () => {
       setRiskAreas(Array.isArray(r) ? r : ((r as any)?.areas || []));
       setTypologies(Array.isArray(t) ? t : ((t as any)?.typologies || []));
       setRiskMapData(Array.isArray(rm) ? rm : ((rm as any)?.districts || []));
-      setSocioData(Array.isArray(s) ? s : ((s as any)?.indicators || []));
+      setSocioData(Array.isArray((s as any)?.overlay_data) ? (s as any).overlay_data : []);
       setLoading(false);
     };
     load();
@@ -126,10 +126,10 @@ const PredictiveAnalytics: React.FC = () => {
           <h2 className="text-sm font-semibold text-white">Socioeconomic Correlations</h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {(socioData as { district: string; unemployment_rate: number; population_density: number; urbanization: number; poverty_index: number }[]).slice(0, 6).map((sd, i) => (
+          {(socioData as { district_name: string; unemployment_rate: number; population_density: number; urbanization_rate: number; poverty_index: number }[]).slice(0, 6).map((sd, i) => (
             <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
               className="bg-slate-900/60 border border-slate-700/50 rounded-lg p-3">
-              <p className="text-sm font-medium text-white mb-2">{sd.district}</p>
+              <p className="text-sm font-medium text-white mb-2">{sd.district_name}</p>
               <div className="space-y-1">
                 <div className="flex justify-between text-xs">
                   <span className="text-slate-400">Unemployment</span>

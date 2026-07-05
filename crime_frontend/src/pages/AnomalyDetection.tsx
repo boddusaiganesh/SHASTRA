@@ -14,10 +14,15 @@ interface Anomaly {
 }
 
 const severityColors: Record<string, string> = {
-  Critical: "bg-red-900/30 border-red-500/40 text-red-400",
-  High: "bg-orange-900/30 border-orange-500/40 text-orange-400",
-  Medium: "bg-yellow-900/30 border-yellow-500/40 text-yellow-400",
-  Low: "bg-blue-900/30 border-blue-500/40 text-blue-400",
+  CRITICAL: "bg-red-900/30 border-red-500/40 text-red-400",
+  HIGH: "bg-orange-900/30 border-orange-500/40 text-orange-400",
+  MEDIUM: "bg-yellow-900/30 border-yellow-500/40 text-yellow-400",
+  LOW: "bg-blue-900/30 border-blue-500/40 text-blue-400",
+};
+
+const STATUS_FILTERS = ["All", "NEW", "UNDER_REVIEW", "RESOLVED", "FALSE_POSITIVE"];
+const STATUS_LABELS: Record<string, string> = {
+  NEW: "New", UNDER_REVIEW: "Investigating", RESOLVED: "Resolved", FALSE_POSITIVE: "False Positive",
 };
 
 const AnomalyDetection: React.FC = () => {
@@ -60,12 +65,12 @@ const AnomalyDetection: React.FC = () => {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {["Critical", "High", "Medium", "Low"].map((sev) => {
+        {["CRITICAL", "HIGH", "MEDIUM", "LOW"].map((sev) => {
           const count = safeAnomalies.filter((a) => a.severity === sev).length;
           return (
             <div key={sev} className={`rounded-xl border p-4 ${severityColors[sev]}`}>
               <p className="text-2xl font-bold text-white">{count}</p>
-              <p className="text-xs mt-1">{sev} Severity</p>
+              <p className="text-xs mt-1">{sev.charAt(0) + sev.slice(1).toLowerCase()} Severity</p>
             </div>
           );
         })}
@@ -73,10 +78,10 @@ const AnomalyDetection: React.FC = () => {
 
       {/* Filter */}
       <div className="flex gap-2">
-        {["All", "Active", "Investigating", "Resolved"].map((s) => (
+        {STATUS_FILTERS.map((s) => (
           <button key={s} onClick={() => setStatusFilter(s)}
             className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${statusFilter === s ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}>
-            {s}
+            {s === "All" ? "All" : STATUS_LABELS[s]}
           </button>
         ))}
       </div>
@@ -108,13 +113,13 @@ const AnomalyDetection: React.FC = () => {
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
-                <span className={`text-xs px-2 py-1 rounded-full ${a.status === "Resolved" ? "bg-green-900/40 text-green-400" : a.status === "Investigating" ? "bg-blue-900/40 text-blue-400" : "bg-orange-900/40 text-orange-400"}`}>
-                  {a.status}
+                <span className={`text-xs px-2 py-1 rounded-full ${a.status === "RESOLVED" ? "bg-green-900/40 text-green-400" : a.status === "UNDER_REVIEW" ? "bg-blue-900/40 text-blue-400" : "bg-orange-900/40 text-orange-400"}`}>
+                  {STATUS_LABELS[a.status] || a.status}
                 </span>
-                {a.status !== "Resolved" && (
-                  <button onClick={() => handleUpdateStatus(a.anomaly_id, a.status === "Active" ? "Investigating" : "Resolved")}
+                {a.status !== "RESOLVED" && a.status !== "FALSE_POSITIVE" && (
+                  <button onClick={() => handleUpdateStatus(a.anomaly_id, a.status === "NEW" ? "UNDER_REVIEW" : "RESOLVED")}
                     className="flex items-center gap-1 px-3 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs rounded-lg transition-colors">
-                    {a.status === "Active" ? <><Eye className="h-3 w-3" /> Investigate</> : <><CheckCircle className="h-3 w-3" /> Resolve</>}
+                    {a.status === "NEW" ? <><Eye className="h-3 w-3" /> Investigate</> : <><CheckCircle className="h-3 w-3" /> Resolve</>}
                   </button>
                 )}
               </div>

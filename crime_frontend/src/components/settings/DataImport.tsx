@@ -35,7 +35,7 @@ export default function DataImport() {
           'Content-Type': 'multipart/form-data'
         }
       });
-      setResult(response.data.data);
+      setResult(response.data);
     } catch (err: any) {
       setError(err.response?.data?.detail || err.message || "An error occurred during upload.");
     } finally {

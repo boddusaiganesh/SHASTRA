@@ -10,11 +10,16 @@ interface Crime {
 interface Props { crimes: Crime[]; compact?: boolean; onStatusChange?: (id: string, status: string) => void; onDelete?: (id: string) => void; onAttachments?: (id: string) => void; }
 
 const statusColor: Record<string, string> = {
-  "Under Investigation": "bg-yellow-900/40 text-yellow-400",
-  "FIR Filed": "bg-blue-900/40 text-blue-400",
-  "Arrested": "bg-green-900/40 text-green-400",
-  "Solved": "bg-green-900/60 text-green-300",
-  "Active Search": "bg-red-900/40 text-red-400",
+  REPORTED: "bg-slate-600/40 text-slate-300",
+  UNDER_INVESTIGATION: "bg-yellow-900/40 text-yellow-400",
+  SOLVED: "bg-green-900/60 text-green-300",
+  CLOSED: "bg-blue-900/40 text-blue-400",
+  ARCHIVED: "bg-slate-700/40 text-slate-500",
+};
+
+const statusLabel: Record<string, string> = {
+  REPORTED: "Reported", UNDER_INVESTIGATION: "Under Investigation", SOLVED: "Solved",
+  CLOSED: "Closed", ARCHIVED: "Archived",
 };
 
 const CrimesTable: React.FC<Props> = ({ crimes, compact, onStatusChange, onDelete, onAttachments }) => (
@@ -45,7 +50,7 @@ const CrimesTable: React.FC<Props> = ({ crimes, compact, onStatusChange, onDelet
             <td className="py-2 px-3 text-xs text-slate-400">{c.district}</td>
             <td className="py-2 px-3 text-xs text-slate-400">{formatDateTime(c.date_time)}</td>
             <td className="py-2 px-3">
-              <span className={`text-xs px-2 py-0.5 rounded-full ${statusColor[c.status] || "bg-slate-700 text-slate-400"}`}>{c.status}</span>
+              <span className={`text-xs px-2 py-0.5 rounded-full ${statusColor[c.status] || "bg-slate-700 text-slate-400"}`}>{statusLabel[c.status] || c.status}</span>
             </td>
             {!compact && (
               <td className="py-2 px-3 text-right space-x-2">

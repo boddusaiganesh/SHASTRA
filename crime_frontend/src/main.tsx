@@ -5,11 +5,13 @@ import { store } from "./store/store";
 import "./i18n";
 import "./index.css";
 import App from "./App";
-
+import ErrorBoundary from "./components/common/ErrorBoundary";
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <Provider store={store}>
-      <App />
-    </Provider>
+    <ErrorBoundary>
+      <Provider store={store}>
+        <App />
+      </Provider>
+    </ErrorBoundary>
   </StrictMode>
 );
