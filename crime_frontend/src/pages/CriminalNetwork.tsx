@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Play, Pause, FastForward, SkipBack, Info, Network, AlertTriangle, Search, Filter, ShieldAlert, Zap, Layers, RefreshCw, ChevronRight, Users, MapPin, Building, Brain } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -147,11 +147,13 @@ const CriminalNetwork: React.FC = () => {
     }
   };
 
-  const filteredNodes = nodes.filter((n) => {
-    if (nodeTypeFilter !== "all" && n.node_type !== nodeTypeFilter) return false;
-    if (searchQuery && !n.label.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    return true;
-  });
+  const filteredNodes = useMemo(() => {
+    return nodes.filter((n) => {
+      if (nodeTypeFilter !== "all" && n.node_type !== nodeTypeFilter) return false;
+      if (searchQuery && !n.label.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      return true;
+    });
+  }, [nodes, nodeTypeFilter, searchQuery]);
 
   const nodeTypeCounts = nodes.reduce((acc, n) => { acc[n.node_type] = (acc[n.node_type] || 0) + 1; return acc; }, {} as Record<string, number>);
 

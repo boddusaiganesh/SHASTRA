@@ -228,7 +228,7 @@ async def get_network_graph(
     
     query = f"""
     {match_clause}
-    WITH n LIMIT $node_limit
+    WITH n ORDER BY n.risk_score DESC LIMIT $node_limit
     OPTIONAL MATCH (n)-[r]-(connected)
     RETURN n, labels(n) AS labels_n, properties(r) AS r_props, type(r) AS type_r, connected, labels(connected) AS labels_connected
     LIMIT $limit
