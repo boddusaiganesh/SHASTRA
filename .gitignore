@@ -60,6 +60,7 @@ venv.bak/
 .postgres-data/
 .neo4j-data/
 .redis-data/
+local_data/
 *.model
 *.pb
 *.h5

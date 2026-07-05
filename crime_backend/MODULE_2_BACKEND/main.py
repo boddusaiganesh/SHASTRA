@@ -69,9 +69,11 @@ async def lifespan(app: FastAPI):
     print("🚀 Starting SHASTRA - Crime Intelligence Platform Backend...")
     
     try:
-        await init_db()
-        _db_ready = True
-        print("✅ PostgreSQL Database connected and tables created")
+        if await init_db():
+            _db_ready = True
+            print("✅ PostgreSQL Database connected and tables created")
+        else:
+            print("⚠️  Database not available — continuing in degraded mode")
     except Exception as e:
         print(f"⚠️  Database not available: {e} — continuing in degraded mode")
     
@@ -91,8 +93,10 @@ async def lifespan(app: FastAPI):
 
     
     try:
-        await init_neo4j()
-        print("✅ Neo4j Graph Database connected")
+        if await init_neo4j():
+            print("✅ Neo4j Graph Database connected")
+        else:
+            print("⚠️  Neo4j unavailable — continuing in degraded mode")
     except Exception as e:
         print(f"⚠️  Neo4j unavailable: {e} — continuing in degraded mode")
     
@@ -141,6 +145,8 @@ else:
         "http://localhost:3000",
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "http://localhost",
+        "http://127.0.0.1",
     ]
 
 @app.exception_handler(Exception)

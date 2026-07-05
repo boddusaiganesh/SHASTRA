@@ -58,8 +58,10 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    ports:
+      - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./local_data/postgres:/var/lib/postgresql/data
     networks:
       - crime_intelligence_network
 
@@ -75,8 +77,11 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    ports:
+      - "7474:7474"
+      - "7687:7687"
     volumes:
-      - neo4j_data:/data
+      - ./local_data/neo4j:/data
     networks:
       - crime_intelligence_network
 
@@ -91,8 +96,10 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    ports:
+      - "6379:6379"
     volumes:
-      - redis_data:/data
+      - ./local_data/redis:/data
     networks:
       - crime_intelligence_network
 
@@ -109,10 +116,7 @@ services:
     networks:
       - crime_intelligence_network
 
-volumes:
-  postgres_data:
-  neo4j_data:
-  redis_data:
+
 
 networks:
   crime_intelligence_network:

@@ -24,7 +24,7 @@ const getHotspotColor = (intensity: number) => {
 
 const HotspotMap: React.FC<Props> = ({ hotspots }) => (
   <MapContainer center={karnatakaCenter} zoom={7} className="h-full w-full">
-    <TileLayer url={`https://api.maptiler.com/maps/basic-v2/256/{z}/{x}/{y}.png?key=${import.meta.env.VITE_MAPTILER_KEY || 'DEMO_KEY'}`} attribution='&copy; MapTiler &copy; OpenStreetMap contributors' />
+    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OpenStreetMap contributors' />
     <FitBounds />
     {hotspots.map((h) => (
       <CircleMarker

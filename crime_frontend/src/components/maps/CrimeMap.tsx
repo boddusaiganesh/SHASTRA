@@ -35,8 +35,8 @@ const CrimeMap: React.FC<Props> = ({ crimes, viewMode, onCrimeSelect }) => {
       style={{ background: "#0f172a" }}
     >
       <TileLayer
-        url={`https://api.maptiler.com/maps/basic-v2/256/{z}/{x}/{y}.png?key=${import.meta.env.VITE_MAPTILER_KEY || 'DEMO_KEY'}`}
-        attribution='&copy; MapTiler &copy; OpenStreetMap contributors'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution='&copy; OpenStreetMap contributors'
         className="map-tiles"
       />
       <FitBounds />

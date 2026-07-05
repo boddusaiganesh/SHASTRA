@@ -65,22 +65,27 @@ The platform is divided into a robust, decoupled architecture:
 
 ## Getting Started
 
-### 1. Run the Backend API
+The platform is fully dockerized for easy deployment. It includes PostgreSQL (Relational Data), Neo4j (Graph Data), Redis (Caching), a FastAPI Backend, an ML Scheduler, and a Vite/React Frontend.
+
+### 1. Start the Platform
+Ensure you have Docker and Docker Compose installed.
 ```bash
 cd crime_backend/MODULE_2_BACKEND
-python -m venv venv
-source venv/bin/activate  # (or venv\Scripts\activate on Windows)
-pip install -r requirements.txt
-python main.py
+docker compose up -d --build
 ```
+*The Frontend will be available at `http://localhost`*
 *The API will be available at `http://localhost:8000`*
 
-### 2. Run the Frontend Dashboard
+### 2. Seed the Database
+Once the containers are running, you must seed the initial mock data (Crimes, Offenders, Victims) into PostgreSQL and Neo4j so that the dashboards populate correctly.
 ```bash
-cd crime_frontend
-npm install
-npm run dev
+docker compose exec backend python -m app.utils.data_seeder
+docker compose exec backend python sync_neo4j.py
 ```
-*The Dashboard will be available at `http://localhost:5173`*
 
-*(Note: If local databases are not running, the frontend and API will gracefully fall back to utilizing sophisticated mock intelligence data to ensure continuous operation during development and testing).*
+### 3. Generate Machine Learning Insights (Optional)
+The ML scheduler runs automatically every few hours, but you can manually force an immediate scan to populate the **Anomaly Detection** and **Alerts** pages:
+```bash
+docker compose exec backend python -c "import asyncio; from app.scheduler.scheduled_tasks import run_anomaly_detection; asyncio.run(run_anomaly_detection())"
+docker compose exec backend python -c "import asyncio; from app.scheduler.scheduled_tasks import run_alert_detection; asyncio.run(run_alert_detection())"
+```

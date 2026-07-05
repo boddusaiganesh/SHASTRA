@@ -9,6 +9,7 @@ from app.models.database_models.alert_model import Alert
 from app.models.database_models.anomaly_model import Anomaly
 from app.models.database_models.report_model import Report
 from app.models.database_models.system_settings_model import SystemSettings
+from app.models.database_models.audit_log_model import AuditLog
 
 __all__ = [
     "User",
@@ -27,4 +28,5 @@ __all__ = [
     "Anomaly",
     "Report",
     "SystemSettings",
+    "AuditLog",
 ]

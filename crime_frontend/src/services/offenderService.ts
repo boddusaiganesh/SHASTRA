@@ -69,6 +69,8 @@ export const offenderService = {
         };
       }
       return null;
+    } catch {
+      return null;
     }
   },
   getRisk: async (id: string) => {

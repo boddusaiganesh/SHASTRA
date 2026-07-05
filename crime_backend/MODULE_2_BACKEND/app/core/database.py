@@ -84,10 +84,12 @@ async def init_db():
         
         # Seed initial data
         await seed_initial_data()
+        return True
         
     except Exception as e:
         logger.error(f"Database initialization error: {e}")
         # Don't raise - allow app to start even if DB is not ready in dev mode
+        return False
 
 
 async def seed_initial_data():

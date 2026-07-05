@@ -238,7 +238,7 @@ async def detect_and_generate_alerts(db: AsyncSession):
         )
         baseline_total = baseline_result.scalar() or 0
         daily_average = baseline_total / 30
-        previous_count = (baseline_result.scalar() or 0) / 30
+        previous_count = baseline_total / 30
         
         # Check for spike
         if recent_count > previous_count * (1 + crime_spike_threshold/100) and recent_count >= 3:
@@ -255,6 +255,7 @@ async def detect_and_generate_alerts(db: AsyncSession):
                 continue
                 
             new_alert = Alert(
+                alert_type="CRIME_SPIKE",
                 title=f"Crime Spike - {district.district_name}",
                 severity=severity,
                 district_id=district.district_id,

@@ -29,10 +29,12 @@ async def init_neo4j():
         
         # Create indexes and constraints
         await _create_indexes()
+        return True
         
     except Exception as e:
         logger.warning(f"Neo4j connection failed (non-critical): {e}")
         _driver = None
+        return False
 
 
 async def _create_indexes():
@@ -212,7 +214,7 @@ async def get_network_graph(
     {match_clause}
     WITH n LIMIT $node_limit
     OPTIONAL MATCH (n)-[r]-(connected)
-    RETURN n, labels(n) AS labels_n, r, type(r) AS type_r, connected, labels(connected) AS labels_connected
+    RETURN n, labels(n) AS labels_n, properties(r) AS r_props, type(r) AS type_r, connected, labels(connected) AS labels_connected
     LIMIT $limit
     """
     
@@ -265,8 +267,8 @@ async def get_network_graph(
                 }
         
         # Process relationship
-        if record.get("r") and record.get("connected"):
-            rel = record["r"]
+        if record.get("type_r") and record.get("connected"):
+            rel = record.get("r_props") or {}
             connected = record["connected"]
             
             source_id = (
