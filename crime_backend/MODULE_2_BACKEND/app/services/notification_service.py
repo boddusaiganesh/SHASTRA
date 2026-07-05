@@ -8,23 +8,29 @@ async def notify_high_priority_alert(alert: Dict[str, Any], recipients: List[str
     Stub — wire to SMTP/SendGrid/Twilio when credentials are available.
     """
     logger.info(f"[NOTIFY] Would send alert '{alert.get('title')}' to {recipients}")
+    if not recipients:
+        return
+        
+    import smtplib
+    from email.message import EmailMessage
+    from app.core.config import settings
     
-    # Example SMTP implementation:
-    # import smtplib
-    # from email.message import EmailMessage
-    # from app.core.config import settings
-    #
-    # msg = EmailMessage()
-    # msg["Subject"] = f"SHASTRA Alert: {alert['title']}"
-    # msg["From"] = settings.SMTP_FROM
-    # msg["To"] = ", ".join(recipients)
-    # msg.set_content(alert.get("description", ""))
-    #
-    # try:
-    #     with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as s:
-    #         s.starttls()
-    #         s.login(settings.SMTP_USER, settings.SMTP_PASS)
-    #         s.send_message(msg)
-    #         logger.info("Email notification sent successfully")
-    # except Exception as e:
-    #     logger.error(f"Failed to send email notification: {e}")
+    msg = EmailMessage()
+    msg["Subject"] = f"SHASTRA Alert: {alert.get('title')}"
+    msg["From"] = getattr(settings, 'SMTP_FROM', 'noreply@shastra.gov.in')
+    msg["To"] = ", ".join(recipients)
+    msg.set_content(alert.get("description", ""))
+    
+    smtp_host = getattr(settings, 'SMTP_HOST', None)
+    if not smtp_host:
+        logger.warning(f"SMTP_HOST not set, skipping real email to {recipients}")
+        return
+        
+    try:
+        with smtplib.SMTP(settings.SMTP_HOST, getattr(settings, 'SMTP_PORT', 587)) as s:
+            s.starttls()
+            s.login(settings.SMTP_USER, settings.SMTP_PASS)
+            s.send_message(msg)
+        logger.info(f"Alert email sent to {recipients}")
+    except Exception as e:
+        logger.error(f"Failed to send alert email: {e}")

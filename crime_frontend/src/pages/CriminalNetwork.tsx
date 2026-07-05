@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Play, Pause, FastForward, SkipBack, Info, Network, AlertTriangle, Search, Filter, ShieldAlert, Zap, Layers, RefreshCw, ChevronRight, Users, MapPin, Building, Brain } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import ReactMarkdown from 'react-markdown';
 import { networkService } from "../services/networkService";
 import NetworkGraph from "../components/network/NetworkGraph";
@@ -10,6 +11,7 @@ import { NODE_COLORS } from "../constants/colorCodes";
 interface NetworkNode {
   node_id: string; node_type: string; label: string; risk_score: number;
   crime_count: number; profile_data: Record<string, unknown>;
+  ai_analysis?: string; timeline?: any[];
 }
 interface NetworkEdge {
   source: string; target: string; relationship_type: string; strength_score: number;
@@ -32,6 +34,10 @@ const CriminalNetwork: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<"ok" | "offline" | "no_data">("ok");
   const [errorMessage, setErrorMessage] = useState("");
+  const [compareNode1, setCompareNode1] = useState<NetworkNode | null>(null);
+  const [compareNode2, setCompareNode2] = useState<NetworkNode | null>(null);
+  const [highlightPath, setHighlightPath] = useState<string[]>([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetch = async () => {
@@ -62,6 +68,67 @@ const CriminalNetwork: React.FC = () => {
     };
     fetch();
   }, []);
+
+  const handleNodeSelect = async (node: NetworkNode) => {
+    setSelectedNode(node);
+    const detail = await networkService.getNodeDetail(node.node_id);
+    if (detail) {
+      setSelectedNode(prev => prev && prev.node_id === node.node_id ? { ...prev, ...detail } : prev);
+    }
+  };
+
+  const handleNodeCompare = async (node: NetworkNode) => {
+    if (!compareNode1) {
+      setCompareNode1(node);
+    } else if (!compareNode2) {
+      setCompareNode2(node);
+      const res = await networkService.getShortestPath(compareNode1.node_id, node.node_id);
+      if (res && res.found) {
+        const pathIds = res.path_nodes.map((n: any) => n.id);
+        setHighlightPath(pathIds);
+      }
+    } else {
+      setCompareNode1(node);
+      setCompareNode2(null);
+      setHighlightPath([]);
+    }
+  };
+
+  const handleNodeExpand = async (node: NetworkNode) => {
+    const res = await networkService.expandNode(node.node_id);
+    if (res && Array.isArray(res)) {
+      const newNodes = [...nodes];
+      const newEdges = [...edges];
+      let added = false;
+      res.forEach((record: any) => {
+        const connectedNode = record.connected;
+        if (connectedNode && !newNodes.find(n => n.node_id === (connectedNode.offender_id || connectedNode.id))) {
+          newNodes.push({
+            node_id: connectedNode.offender_id || connectedNode.id,
+            node_type: record.labels ? record.labels[0].toLowerCase() : "criminal",
+            label: connectedNode.name || connectedNode.full_name || connectedNode.first_name,
+            risk_score: connectedNode.risk_score || 0,
+            crime_count: connectedNode.total_crimes || 0,
+            profile_data: connectedNode
+          });
+          added = true;
+        }
+        if (record.r && !newEdges.find(e => (e.source === node.node_id && e.target === (connectedNode.offender_id || connectedNode.id)))) {
+          newEdges.push({
+            source: node.node_id,
+            target: connectedNode.offender_id || connectedNode.id,
+            relationship_type: record.rel_type || "KNOWS",
+            strength_score: 50
+          });
+          added = true;
+        }
+      });
+      if (added) {
+        setNodes(newNodes);
+        setEdges(newEdges);
+      }
+    }
+  };
 
   const filteredNodes = nodes.filter((n) => {
     if (nodeTypeFilter !== "all" && n.node_type !== nodeTypeFilter) return false;
@@ -144,10 +211,37 @@ const CriminalNetwork: React.FC = () => {
             </div>
           ) : (
             <>
-              <NetworkGraph nodes={filteredNodes} edges={edges} onNodeSelect={setSelectedNode} selectedNodeId={selectedNode?.node_id} />
+              <NetworkGraph 
+                nodes={filteredNodes} 
+                edges={edges} 
+                onNodeSelect={handleNodeSelect} 
+                onNodeCompare={handleNodeCompare}
+                onNodeExpand={handleNodeExpand}
+                selectedNodeId={selectedNode?.node_id} 
+                highlightPath={highlightPath}
+              />
               <div className="absolute bottom-4 left-4 bg-slate-900/90 backdrop-blur border border-slate-700/50 rounded-lg p-2">
-                <p className="text-xs text-slate-400">Click nodes to explore • Drag to rearrange • Scroll to zoom</p>
+                <p className="text-xs text-slate-400">Click to explore • Double-click to expand • Shift-click to compare • Scroll to zoom</p>
               </div>
+              {(compareNode1 || compareNode2) && (
+                <div className="absolute top-4 left-4 right-4 flex items-center justify-between bg-slate-900/90 backdrop-blur border border-slate-700/50 rounded-lg p-3">
+                  <div className="flex items-center gap-4">
+                    <div className="text-xs">
+                      <span className="text-slate-400">Node A:</span> <span className="text-white font-bold">{compareNode1?.label || "Select..."}</span>
+                    </div>
+                    <div className="text-xs text-slate-500">↔</div>
+                    <div className="text-xs">
+                      <span className="text-slate-400">Node B:</span> <span className="text-white font-bold">{compareNode2?.label || "Select..."}</span>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => { setCompareNode1(null); setCompareNode2(null); setHighlightPath([]); }}
+                    className="text-xs px-2 py-1 bg-red-900/40 text-red-400 rounded-lg"
+                  >
+                    Clear Comparison
+                  </button>
+                </div>
+              )}
             </>
           )}
         </div>
@@ -191,6 +285,28 @@ const CriminalNetwork: React.FC = () => {
                   </div>
                 ))}
               </div>
+              
+              {selectedNode.ai_analysis && (
+                <div className="mt-4 p-3 bg-blue-950/30 border border-blue-500/20 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Brain className="h-4 w-4 text-blue-400" />
+                    <h3 className="text-sm font-semibold text-white">AI Profile Analysis</h3>
+                  </div>
+                  <div className="text-xs text-blue-200 leading-relaxed">
+                    <ReactMarkdown>{selectedNode.ai_analysis}</ReactMarkdown>
+                  </div>
+                </div>
+              )}
+              
+              {selectedNode.node_type === "criminal" && (
+                <button
+                  onClick={() => navigate(`/offenders?offender_id=${selectedNode.node_id}`)}
+                  className="mt-3 w-full text-xs px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium"
+                >
+                  Open Full Offender Record →
+                </button>
+              )}
+              
               <div className="mt-3">
                 <p className="text-xs text-slate-400 mb-2">Connected Edges ({edges.filter(e => e.source === selectedNode.node_id || e.target === selectedNode.node_id).length})</p>
                 <div className="space-y-1">

@@ -16,12 +16,18 @@ logger = logging.getLogger(__name__)
 async def seed_all_data(session: AsyncSession):
     """Seed initial data for testing the application."""
     try:
-        # Seed a dummy user so the database isn't empty
+        import os
+        
+        seed_password = getattr(settings, 'SEED_ADMIN_PASSWORD', None) or os.getenv("SEED_ADMIN_PASSWORD")
+        if getattr(settings, 'ENVIRONMENT', 'development') == "production" and not seed_password:
+            raise RuntimeError("SEED_ADMIN_PASSWORD must be set before seeding in production")
+        seed_password = seed_password or "Admin@1234"  # dev-only fallback
+        
         admin_user = User(
             user_id=uuid.uuid4(),
             username="admin",
             email="admin@ksp.gov.in",
-            password_hash=hash_password("Admin@1234"),
+            password_hash=hash_password(seed_password),
             full_name="System Administrator",
             role="SCRB_OFFICER",
             is_active=True,
@@ -33,6 +39,7 @@ async def seed_all_data(session: AsyncSession):
             ]
         )
         session.add(admin_user)
+        logger.warning("Admin user seeded. Please remember to change the default password!")
         
         from app.core.config import KARNATAKA_DISTRICTS, CRIME_TYPES, CRIME_STATUS_VALUES
         from datetime import timedelta

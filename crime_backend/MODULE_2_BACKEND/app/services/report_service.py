@@ -279,38 +279,116 @@ def export_report_pdf(report_data: dict) -> bytes:
     import io
     try:
         from reportlab.lib.pagesizes import letter
-        from reportlab.pdfgen import canvas
+        from reportlab.lib import colors
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
     except ImportError:
         return b"PDF Generation failed: reportlab not installed"
         
     packet = io.BytesIO()
-    c = canvas.Canvas(packet, pagesize=letter)
-    width, height = letter
+    doc = SimpleDocTemplate(
+        packet,
+        pagesize=letter,
+        rightMargin=40,
+        leftMargin=40,
+        topMargin=60,
+        bottomMargin=40,
+        title=report_data.get("report_name", "SHASTRA Report")
+    )
     
-    c.setFont("Helvetica-Bold", 16)
-    c.drawString(50, height - 50, f"Report: {report_data.get('report_name', 'Untitled')}")
+    styles = getSampleStyleSheet()
+    title_style = styles["Title"]
+    h1_style = styles["Heading1"]
+    h2_style = styles["Heading2"]
+    normal_style = styles["Normal"]
     
-    c.setFont("Helvetica", 12)
-    c.drawString(50, height - 70, f"Type: {report_data.get('report_type', 'N/A')}")
-    c.drawString(50, height - 90, f"Date: {report_data.get('created_at', 'N/A')}")
+    # Custom narrative style
+    narrative_style = ParagraphStyle(
+        'Narrative',
+        parent=styles['Normal'],
+        fontName='Helvetica',
+        fontSize=11,
+        leading=14,
+        textColor=colors.darkslategray,
+        spaceAfter=12
+    )
     
-    y = height - 130
+    story = []
+    
+    # Official Header
+    story.append(Paragraph("KARNATAKA STATE POLICE", title_style))
+    story.append(Paragraph("CRIME INTELLIGENCE & ANALYTICAL PLATFORM (SHASTRA)", h2_style))
+    story.append(Spacer(1, 20))
+    
+    # Report Info
+    story.append(Paragraph(f"Report: {report_data.get('report_name', 'Untitled')}", h1_style))
+    story.append(Paragraph(f"Type: {report_data.get('report_type', 'N/A')}", normal_style))
+    story.append(Paragraph(f"Date: {report_data.get('created_at', 'N/A')}", normal_style))
+    story.append(Spacer(1, 20))
+    
+    # AI Narrative (if present)
+    ai_narrative = report_data.get("ai_narrative")
+    if ai_narrative:
+        story.append(Paragraph("Executive Summary (AI Generated)", h2_style))
+        # Narrative might have multiple paragraphs separated by newlines
+        for p in ai_narrative.split("\n"):
+            if p.strip():
+                story.append(Paragraph(p.strip(), narrative_style))
+        story.append(Spacer(1, 20))
+    
+    # Data Tables
     data = report_data.get("report_data", {})
-    
-    c.setFont("Helvetica-Bold", 14)
-    c.drawString(50, y, "Summary Metrics")
-    y -= 25
-    c.setFont("Helvetica", 12)
-    
-    for k, v in data.items():
-        if isinstance(v, (int, str, float)):
-            c.drawString(50, y, f"{str(k).replace('_', ' ').title()}: {v}")
-            y -= 20
-        if y < 50:
-            c.showPage()
-            c.setFont("Helvetica", 12)
-            y = height - 50
+    if data:
+        story.append(Paragraph("Detailed Metrics", h2_style))
+        
+        # We'll split data into simple key-values and lists of dicts
+        simple_data = []
+        complex_data = {}
+        
+        for k, v in data.items():
+            if isinstance(v, (int, float, str)):
+                simple_data.append([k.replace('_', ' ').title(), str(v)])
+            elif isinstance(v, list) and len(v) > 0 and isinstance(v[0], dict):
+                complex_data[k] = v
+        
+        # Render Simple Data Table
+        if simple_data:
+            t = Table(simple_data, colWidths=[200, 300])
+            t.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
+                ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+                ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+                ('TOPPADDING', (0, 0), (-1, -1), 8),
+                ('GRID', (0, 0), (-1, -1), 1, colors.grey)
+            ]))
+            story.append(t)
+            story.append(Spacer(1, 20))
             
-    c.save()
+        # Render Complex Data Tables
+        for k, items in complex_data.items():
+            story.append(Paragraph(k.replace('_', ' ').title(), h2_style))
+            headers = [key.replace('_', ' ').title() for key in items[0].keys()]
+            table_data = [headers]
+            for item in items:
+                table_data.append([str(val) for val in item.values()])
+                
+            t2 = Table(table_data)
+            t2.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 12),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.aliceblue),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black)
+            ]))
+            story.append(t2)
+            story.append(Spacer(1, 20))
+            
+    doc.build(story)
     packet.seek(0)
     return packet.read()

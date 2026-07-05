@@ -6,6 +6,7 @@ from slowapi.util import get_remote_address
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.core.gemini_client import call_gemini
+from app.services.dashboard_service import get_dashboard_summary
 
 limiter = Limiter(key_func=get_remote_address)
 router = APIRouter()
@@ -18,10 +19,20 @@ async def ask_assistant(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    # In a full implementation, you would fetch real-time summary data here
-    # to ground the LLM in the current state of the database.
-    # We use a mocked context representing the summary for now.
-    context = "Karnataka state crime records indicate an overall decrease in property crimes but a slight uptick in cyber crimes in urban districts."
+    # Fetch real-time summary data to ground the LLM in the current state of the database.
+    summary_data = await get_dashboard_summary(db)
+    
+    context = (
+        f"Karnataka state crime records: "
+        f"Total crimes this month: {summary_data.get('total_crimes_month')} "
+        f"({summary_data.get('crimes_change_percentage')}% change). "
+        f"Active hotspots: {summary_data.get('active_hotspots_count')}. "
+        f"High risk areas: {summary_data.get('high_risk_areas_count')}. "
+        f"Repeat offenders tracked: {summary_data.get('repeat_offenders_count')}. "
+        f"Solve rate: {summary_data.get('solve_rate_percentage')}%. "
+        f"Most common crime: {summary_data.get('most_common_crime_type')}. "
+        f"Most affected district: {summary_data.get('most_affected_district')}."
+    )
     
     prompt = f"""You are a crime-intelligence assistant for Karnataka State Police.
 Use ONLY the following current statistics to answer. If the answer isn't in the data, say so.

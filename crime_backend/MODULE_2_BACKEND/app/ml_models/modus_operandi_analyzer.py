@@ -398,3 +398,46 @@ def _empty_mo_analysis() -> Dict[str, Any]:
         "escalation_trend": "INSUFFICIENT_DATA",
         "behavioral_signatures": [],
     }
+
+def calculate_mo_similarity(mo_a: Dict[str, Any], mo_b: Dict[str, Any]) -> float:
+    """Calculate a similarity score (0.0 to 1.0) between two Modus Operandi profiles"""
+    if not mo_a.get("total_crimes_analyzed") or not mo_b.get("total_crimes_analyzed"):
+        return 0.0
+        
+    score = 0.0
+    weights = {
+        "crime_type": 0.4,
+        "time": 0.2,
+        "weapon": 0.2,
+        "location": 0.1,
+        "accomplice": 0.1
+    }
+    
+    # 1. Crime Type Similarity
+    a_types = {t.get("crime_type") for t in mo_a.get("preferred_crime_types", []) if isinstance(t, dict)}
+    b_types = {t.get("crime_type") for t in mo_b.get("preferred_crime_types", []) if isinstance(t, dict)}
+    if a_types and b_types and len(a_types.intersection(b_types)) > 0:
+        score += weights["crime_type"] * (len(a_types.intersection(b_types)) / max(len(a_types), len(b_types)))
+        
+    # 2. Time Pattern Similarity
+    if mo_a.get("preferred_time") == mo_b.get("preferred_time") and mo_a.get("preferred_time") != "UNKNOWN":
+        score += weights["time"]
+        
+    # 3. Weapon Similarity
+    a_weapons = set(mo_a.get("weapons_pattern", []))
+    b_weapons = set(mo_b.get("weapons_pattern", []))
+    if a_weapons and b_weapons and a_weapons != {"No weapons documented"} and b_weapons != {"No weapons documented"}:
+        if len(a_weapons.intersection(b_weapons)) > 0:
+            score += weights["weapon"]
+            
+    # 4. Location Type Similarity
+    a_locs = {l.get("type") for l in mo_a.get("preferred_locations", []) if isinstance(l, dict)}
+    b_locs = {l.get("type") for l in mo_b.get("preferred_locations", []) if isinstance(l, dict)}
+    if a_locs and b_locs and len(a_locs.intersection(b_locs)) > 0:
+        score += weights["location"]
+        
+    # 5. Accomplice Pattern
+    if mo_a.get("accomplice_pattern") == mo_b.get("accomplice_pattern") and mo_a.get("accomplice_pattern") != "UNKNOWN":
+        score += weights["accomplice"]
+        
+    return score

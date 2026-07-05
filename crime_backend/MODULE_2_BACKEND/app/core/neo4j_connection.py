@@ -93,6 +93,21 @@ async def run_neo4j_query(query: str, parameters: Dict = None) -> List[Dict[str,
         return []
 
 
+async def find_shortest_path(node_id_1: str, node_id_2: str, max_hops: int = 5) -> dict:
+    """Find the shortest relationship path between two entities in the graph."""
+    query = f"""
+    MATCH (a {{offender_id: $id1}}), (b {{offender_id: $id2}})
+    MATCH path = shortestPath((a)-[*..{max_hops}]-(b))
+    RETURN [n IN nodes(path) | {{id: coalesce(n.offender_id, n.victim_id, n.location_id), name: n.name}}] AS path_nodes,
+           [r IN relationships(path) | type(r)] AS path_rels
+    LIMIT 1
+    """
+    results = await run_neo4j_query(query, {"id1": node_id_1, "id2": node_id_2})
+    if not results:
+        return {"found": False, "path_nodes": [], "path_rels": []}
+    return {"found": True, "path_nodes": results[0]["path_nodes"], "path_rels": results[0]["path_rels"]}
+
+
 async def sync_offender_to_neo4j(offender_data: Dict[str, Any]):
     """Sync a new/updated offender to Neo4j"""
     query = """

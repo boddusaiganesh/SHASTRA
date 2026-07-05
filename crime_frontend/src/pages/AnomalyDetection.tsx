@@ -3,12 +3,14 @@ import { motion } from "framer-motion";
 import { AlertOctagon, RefreshCw, CheckCircle, Clock, Eye } from "lucide-react";
 import { anomalyService } from "../services/predictionService";
 import LoadingSpinner from "../components/common/LoadingSpinner";
+import ExplainabilityPanel from "../components/common/ExplainabilityPanel";
 
 interface Anomaly {
   anomaly_id: string; anomaly_type: string; description: string;
   district: string; location: string; severity: string;
   detected_at: string; status: string; confidence_score: number;
-  affected_crimes_count: number;
+  affected_crimes_count: number; evidence_points?: string[];
+  anomaly_score?: number;
 }
 
 const severityColors: Record<string, string> = {
@@ -96,7 +98,8 @@ const AnomalyDetection: React.FC = () => {
                     <span className="text-xs bg-slate-700 text-slate-300 px-2 py-0.5 rounded-full">{a.anomaly_type}</span>
                   </div>
                   <p className="text-sm text-white font-medium mb-1">{a.description}</p>
-                  <p className="text-xs text-slate-400">{a.location} · {a.district}</p>
+                  <ExplainabilityPanel points={a.evidence_points || []} score={a.anomaly_score} />
+                  <p className="text-xs text-slate-400 mt-1">{a.location} · {a.district}</p>
                   <div className="flex items-center gap-4 mt-2 text-xs text-slate-500">
                     <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{new Date(a.detected_at || new Date()).toLocaleString()}</span>
                     <span>Confidence: <span className="text-blue-400 font-bold">{(a.confidence_score * 100).toFixed(0)}%</span></span>

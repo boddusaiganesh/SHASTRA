@@ -1,14 +1,16 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Users, Search, Shield, ChevronRight, MapPin, AlertTriangle } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 import { offenderService } from "../services/offenderService";
 import LoadingSpinner from "../components/common/LoadingSpinner";
+import ExplainabilityPanel from "../components/common/ExplainabilityPanel";
 
 interface Offender {
   offender_id: string; offender_name: string; age: number; offender_age?: number; district: string;
   crime_count: number; primary_crime_type: string; risk_score: number;
   status: string; offender_status?: string; last_known_location: string; modus_operandi: any;
-  photo_url?: string;
+  photo_url?: string; risk_factors?: string[];
 }
 
 const OffenderDatabase: React.FC = () => {
@@ -19,18 +21,28 @@ const OffenderDatabase: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const [modusOperandi, setModusOperandi] = useState<Record<string, unknown> | null>(null);
+  const [offenderRisk, setOffenderRisk] = useState<any>(null);
+
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
     offenderService.searchOffenders("").then((d: any) => {
-      setOffenders(Array.isArray(d) ? d : (d?.offenders || []));
+      const list = Array.isArray(d) ? d : (d?.offenders || []);
+      setOffenders(list);
       setError(null);
+      
+      const deepLinkId = searchParams.get("offender_id");
+      if (deepLinkId && list.length > 0) {
+        const match = list.find((o: any) => o.offender_id === deepLinkId);
+        if (match) handleSelectOffender(match);
+      }
     }).catch(e => {
       console.error(e);
       setError(e.response?.data?.detail || "Failed to connect to backend");
     }).finally(() => {
       setLoading(false);
     });
-  }, []);
+  }, [searchParams]);
 
   const handleSelectOffender = async (o: Offender) => {
     setSelected(o);
@@ -40,6 +52,13 @@ const OffenderDatabase: React.FC = () => {
       if (mo) setModusOperandi(mo as Record<string, unknown>);
     } catch {
       // fallback handled below
+    }
+    
+    try {
+      const risk = await offenderService.getRisk(o.offender_id);
+      if (risk) setOffenderRisk(risk);
+    } catch {
+      // ignore
     }
   };
 
@@ -170,6 +189,7 @@ const OffenderDatabase: React.FC = () => {
                 <div className="h-2 bg-slate-700 rounded-full">
                   <div className="h-full rounded-full bg-gradient-to-r from-orange-500 to-red-500" style={{ width: `${selected.risk_score}%` }} />
                 </div>
+                <ExplainabilityPanel points={offenderRisk?.risk_factors || selected.risk_factors || []} />
               </div>
             </div>
           </motion.div>

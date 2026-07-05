@@ -69,6 +69,12 @@ export const offenderService = {
         };
       }
       return null;
+    }
+  },
+  getRisk: async (id: string) => {
+    try {
+      const res = await api.get(ENDPOINTS.OFFENDERS.RISK(id));
+      return res.data;
     } catch {
       return null;
     }

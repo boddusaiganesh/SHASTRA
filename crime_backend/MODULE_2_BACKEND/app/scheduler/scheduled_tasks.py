@@ -148,6 +148,63 @@ async def run_hotspot_regeneration():
         logger.error(f"Error in hotspot regeneration task: {e}")
 
 
+async def run_cross_district_mo_matching():
+    logger.info("Running cross-district MO matching...")
+    try:
+        async with AsyncSessionLocal() as db:
+            from app.models.database_models.offender_model import Offender
+            from app.services.alert_service import create_alert
+            from app.services.offender_service import get_offender_history
+            from app.ml_models.modus_operandi_analyzer import analyze_modus_operandi, calculate_mo_similarity
+            from sqlalchemy import select
+
+            result = await db.execute(select(Offender).where(Offender.total_crimes >= 2))
+            offenders = result.scalars().all()
+            
+            checked_pairs = set()
+            for i, off_a in enumerate(offenders):
+                for j, off_b in enumerate(offenders[i+1:]):
+                    if off_a.district_id == off_b.district_id:
+                        continue
+
+                    pair_key = tuple(sorted([str(off_a.offender_id), str(off_b.offender_id)]))
+                    if pair_key in checked_pairs:
+                        continue
+                    checked_pairs.add(pair_key)
+
+                    hist_a = await get_offender_history(db, str(off_a.offender_id))
+                    hist_b = await get_offender_history(db, str(off_b.offender_id))
+                    
+                    if not hist_a or not hist_b or not hist_a.get("crimes") or not hist_b.get("crimes"):
+                        continue
+                        
+                    mo_a = analyze_modus_operandi(hist_a["crimes"], off_a.to_dict())
+                    mo_b = analyze_modus_operandi(hist_b["crimes"], off_b.to_dict())
+
+                    similarity = calculate_mo_similarity(mo_a, mo_b)
+                    if similarity >= 0.75:  # tune threshold after a real data run
+                        await create_alert(
+                            db,
+                            alert_type="CROSS_DISTRICT_MATCH",
+                            severity="HIGH" if similarity >= 0.9 else "MEDIUM",
+                            title=f"Possible cross-district match: {off_a.first_name} {off_a.last_name} / {off_b.first_name} {off_b.last_name}",
+                            description=(
+                                f"Offenders in {off_a.district_id} and {off_b.district_id} share a "
+                                f"{similarity*100:.0f}% similar modus operandi (crime type, timing, weapons, "
+                                f"behavioral signature). Recommend cross-checking for a shared offender."
+                            ),
+                            district_id=off_a.district_id,
+                            related_entity_id=str(off_a.offender_id),
+                            related_entity_type="offender",
+                            target_role="SCRB_OFFICER",
+                        )
+            logger.info(f"Cross-district MO scan complete. Checked {len(checked_pairs)} pairs.")
+    except Exception as e:
+        logger.error(f"Error in cross-district MO matching task: {e}")
+
+
+
+
 def init_scheduler():
     """Initialize and start the background scheduler."""
     try:
@@ -204,6 +261,14 @@ def init_scheduler():
         scheduler.add_job(
             run_hotspot_regeneration,
             id="hotspot_regeneration_startup",
+            replace_existing=True,
+        )
+        
+        # 8. Cross-district MO matching — daily
+        scheduler.add_job(
+            run_cross_district_mo_matching,
+            trigger=CronTrigger(hour=3, minute=0),
+            id="cross_district_mo_job",
             replace_existing=True,
         )
         

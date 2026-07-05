@@ -14,6 +14,61 @@ from app.core.redis_connection import cache_get, cache_set
 
 logger = logging.getLogger(__name__)
 
+def compute_graph_centrality(nodes: list, edges: list) -> dict:
+    import networkx as nx
+
+    G = nx.Graph()
+    for n in nodes:
+        G.add_node(n["node_id"])
+    for e in edges:
+        src = e.get("source_node_id") or e.get("source")
+        tgt = e.get("target_node_id") or e.get("target")
+        if src and tgt and src in G and tgt in G:
+            weight = e.get("strength_score", 50)
+            G.add_edge(src, tgt, weight=weight)
+
+    if G.number_of_nodes() == 0:
+        return {}
+
+    betweenness = nx.betweenness_centrality(G, weight="weight")
+    degree = dict(G.degree())
+    try:
+        pagerank = nx.pagerank(G, weight="weight")
+    except Exception:
+        pagerank = {n: 0.0 for n in G.nodes()}
+
+    return {
+        node_id: {
+            "betweenness": round(betweenness.get(node_id, 0), 4),
+            "degree": degree.get(node_id, 0),
+            "pagerank": round(pagerank.get(node_id, 0), 4),
+        }
+        for node_id in G.nodes()
+    }
+
+def detect_communities(nodes: list, edges: list) -> dict:
+    import networkx as nx
+    from networkx.algorithms.community import louvain_communities
+
+    G = nx.Graph()
+    for n in nodes:
+        G.add_node(n["node_id"])
+    for e in edges:
+        src = e.get("source_node_id") or e.get("source")
+        tgt = e.get("target_node_id") or e.get("target")
+        if src and tgt and src in G and tgt in G:
+            G.add_edge(src, tgt, weight=e.get("strength_score", 50))
+
+    if G.number_of_edges() == 0:
+        return {n["node_id"]: 0 for n in nodes}
+
+    communities = louvain_communities(G, weight="weight", seed=42)
+    community_map = {}
+    for idx, community in enumerate(communities):
+        for node_id in community:
+            community_map[node_id] = idx
+    return community_map
+
 
 async def get_network_graph_data(
     db: AsyncSession,
@@ -46,6 +101,18 @@ async def get_network_graph_data(
     # If Neo4j is available but there is no data
     if not graph_data.get("nodes"):
         graph_data["status"] = "no_data"
+    else:
+        # Inject metrics
+        centrality = compute_graph_centrality(graph_data["nodes"], graph_data["edges"])
+        communities = detect_communities(graph_data["nodes"], graph_data["edges"])
+        for n in graph_data["nodes"]:
+            n["centrality"] = centrality.get(n["node_id"], {"betweenness": 0, "degree": 0, "pagerank": 0})
+            n["community_id"] = communities.get(n["node_id"], 0)
+        
+        graph_data["key_players"] = [
+            n["node_id"] for n in
+            sorted(graph_data["nodes"], key=lambda x: x.get("centrality", {}).get("betweenness", 0), reverse=True)[:5]
+        ]
         
     await cache_set(cache_key, graph_data, expiry=600)
     return graph_data
@@ -121,6 +188,12 @@ async def build_network_from_postgres(
                         "crime_count": 1,
                     })
     
+    centrality = compute_graph_centrality(nodes, edges)
+    communities = detect_communities(nodes, edges)
+    for n in nodes:
+        n["centrality"] = centrality.get(n["node_id"], {"betweenness": 0, "degree": 0, "pagerank": 0})
+        n["community_id"] = communities.get(n["node_id"], 0)
+        
     return {
         "nodes": nodes,
         "edges": edges,
@@ -129,7 +202,7 @@ async def build_network_from_postgres(
         "network_density": round(len(edges) / max(len(nodes), 1), 2),
         "key_players": [
             n["node_id"]
-            for n in sorted(nodes, key=lambda x: x["crime_count"], reverse=True)[:5]
+            for n in sorted(nodes, key=lambda x: x.get("centrality", {}).get("betweenness", 0), reverse=True)[:5]
         ],
     }
 

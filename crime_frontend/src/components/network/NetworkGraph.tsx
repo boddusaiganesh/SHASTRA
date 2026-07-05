@@ -4,6 +4,8 @@ import { NODE_COLORS } from "../../constants/colorCodes";
 
 interface NetworkNode {
   node_id: string; node_type: string; label: string; risk_score: number; crime_count: number; profile_data: Record<string, unknown>;
+  centrality?: { betweenness: number; degree: number; pagerank: number };
+  community_id?: number;
 }
 interface NetworkEdge {
   source?: string; target?: string; source_node_id?: string; target_node_id?: string; relationship_type: string; strength_score: number;
@@ -11,10 +13,13 @@ interface NetworkEdge {
 interface Props {
   nodes: NetworkNode[]; edges: NetworkEdge[];
   onNodeSelect?: (node: NetworkNode) => void;
+  onNodeExpand?: (node: NetworkNode) => void;
+  onNodeCompare?: (node: NetworkNode) => void;
   selectedNodeId?: string | null;
+  highlightPath?: string[];
 }
 
-const NetworkGraph: React.FC<Props> = ({ nodes, edges, onNodeSelect, selectedNodeId }) => {
+const NetworkGraph: React.FC<Props> = ({ nodes, edges, onNodeSelect, onNodeExpand, onNodeCompare, selectedNodeId, highlightPath }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<cytoscape.Core | null>(null);
 
@@ -31,6 +36,8 @@ const NetworkGraph: React.FC<Props> = ({ nodes, edges, onNodeSelect, selectedNod
             type: n.node_type,
             risk: n.risk_score,
             crimes: n.crime_count,
+            betweenness: n.centrality?.betweenness || 0,
+            community: n.community_id || 0,
           },
         })),
         ...edges.map((e, i) => ({
@@ -47,7 +54,11 @@ const NetworkGraph: React.FC<Props> = ({ nodes, edges, onNodeSelect, selectedNod
         {
           selector: "node",
           style: {
-            "background-color": (ele: cytoscape.NodeSingular) => NODE_COLORS[ele.data("type") as string] || "#6B7280",
+            "background-color": (ele: cytoscape.NodeSingular) => {
+              const commColors = ["#ef4444", "#3b82f6", "#22c55e", "#f59e0b", "#a855f7", "#ec4899", "#14b8a6", "#f97316"];
+              const cId = ele.data("community") as number;
+              return commColors[cId % commColors.length] || NODE_COLORS[ele.data("type") as string] || "#6B7280";
+            },
             "border-color": "#1e293b",
             "border-width": 3,
             "label": "data(label)",
@@ -56,8 +67,8 @@ const NetworkGraph: React.FC<Props> = ({ nodes, edges, onNodeSelect, selectedNod
             "text-valign": "bottom",
             "text-halign": "center",
             "text-margin-y": 4,
-            "width": (ele: cytoscape.NodeSingular) => Math.max(30, Math.min(60, 20 + ele.data("crimes"))),
-            "height": (ele: cytoscape.NodeSingular) => Math.max(30, Math.min(60, 20 + ele.data("crimes"))),
+            "width": (ele: cytoscape.NodeSingular) => Math.max(30, Math.min(80, 20 + ele.data("crimes") * 2 + ele.data("betweenness") * 100)),
+            "height": (ele: cytoscape.NodeSingular) => Math.max(30, Math.min(80, 20 + ele.data("crimes") * 2 + ele.data("betweenness") * 100)),
             "text-wrap": "wrap",
             "text-max-width": "80px",
           },
@@ -87,6 +98,10 @@ const NetworkGraph: React.FC<Props> = ({ nodes, edges, onNodeSelect, selectedNod
           selector: "edge:selected",
           style: { "line-color": "#3b82f6", "target-arrow-color": "#3b82f6" },
         },
+        {
+          selector: ".dimmed",
+          style: { "opacity": 0.2 },
+        },
       ],
       layout: { name: "cose", animate: true, randomize: true, nodeRepulsion: () => 8000, idealEdgeLength: () => 100 },
       wheelSensitivity: 0.3,
@@ -95,7 +110,19 @@ const NetworkGraph: React.FC<Props> = ({ nodes, edges, onNodeSelect, selectedNod
     cy.on("tap", "node", (evt: cytoscape.EventObject) => {
       const nodeId = evt.target.id();
       const node = nodes.find((n) => n.node_id === nodeId);
-      if (node) onNodeSelect?.(node);
+      if (node) {
+        if ((evt.originalEvent as MouseEvent).shiftKey) {
+          onNodeCompare?.(node);
+        } else {
+          onNodeSelect?.(node);
+        }
+      }
+    });
+
+    cy.on("dblclick", "node", (evt: cytoscape.EventObject) => {
+      const nodeId = evt.target.id();
+      const node = nodes.find((n) => n.node_id === nodeId);
+      if (node) onNodeExpand?.(node);
     });
 
     cyRef.current = cy;
@@ -103,9 +130,20 @@ const NetworkGraph: React.FC<Props> = ({ nodes, edges, onNodeSelect, selectedNod
   }, [nodes, edges]);
 
   useEffect(() => {
-    if (!cyRef.current || !selectedNodeId) return;
-    cyRef.current.getElementById(selectedNodeId).select();
+    if (!cyRef.current) return;
+    if (selectedNodeId) {
+      cyRef.current.getElementById(selectedNodeId).select();
+    }
   }, [selectedNodeId]);
+
+  useEffect(() => {
+    if (!cyRef.current) return;
+    cyRef.current.elements().removeClass("dimmed");
+    if (highlightPath && highlightPath.length > 0) {
+      const pathSelectors = highlightPath.map(id => `#${id}`).join(", ");
+      cyRef.current.elements().not(pathSelectors).addClass("dimmed");
+    }
+  }, [highlightPath]);
 
   return <div ref={containerRef} className="h-full w-full" style={{ background: "#0f172a" }} />;
 };

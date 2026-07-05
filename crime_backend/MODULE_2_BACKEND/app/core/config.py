@@ -50,6 +50,16 @@ class Settings(BaseSettings):
     BACKEND_PORT: int = 8000
     FRONTEND_URL: str = "http://localhost:3000"
     ENVIRONMENT: str = "development"
+    
+    # SMTP Notifications
+    SMTP_HOST: Optional[str] = None
+    SMTP_PORT: int = 587
+    SMTP_USER: Optional[str] = None
+    SMTP_PASS: Optional[str] = None
+    SMTP_FROM: str = "noreply@shastra.gov.in"
+    
+    # Initial Seeding
+    SEED_ADMIN_PASSWORD: Optional[str] = None
 
     # Scheduling
     HOTSPOT_UPDATE_HOUR: int = 2
@@ -126,6 +136,7 @@ ALERT_TYPES = [
     "ANOMALY_DETECTED",
     "NETWORK_DISCOVERED",
     "PREDICTION_BREACH",
+    "CROSS_DISTRICT_MATCH",
 ]
 
 NODE_TYPES = ["criminal", "victim", "location", "organization"]

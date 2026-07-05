@@ -14,7 +14,9 @@ router = APIRouter()
 
 @router.get("/graph")            
 @router.get("/graph-data")
+@limiter.limit("30/minute")
 async def fetch_network_graph(
+    request: Request,
     search_query: Optional[str] = Query(None),
     crime_type: Optional[str] = Query(None),
     district_id: Optional[str] = Query(None),
@@ -26,7 +28,9 @@ async def fetch_network_graph(
     return {"success": True, "data": data}
 
 @router.get("/node-detail/{node_id}")
+@limiter.limit("30/minute")
 async def fetch_node_detail(
+    request: Request,
     node_id: str,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
@@ -47,4 +51,35 @@ async def fetch_ai_summary(
     resolved_id = await resolve_district_id(db, district_id)
     data = await get_network_ai_summary(db, resolved_id)
     return {"success": True, "data": data}
+
+@router.get("/shortest-path")
+@limiter.limit("10/minute")
+async def shortest_path(
+    request: Request,
+    node_a: str = Query(...),
+    node_b: str = Query(...),
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    from app.core.neo4j_connection import find_shortest_path
+    data = await find_shortest_path(node_a, node_b)
+    return {"success": True, "data": data}
+
+@router.get("/expand/{node_id}")
+@limiter.limit("20/minute")
+async def expand_node(
+    request: Request,
+    node_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """Return only the immediate neighbors of one node — for incremental graph expansion."""
+    from app.core.neo4j_connection import run_neo4j_query
+    query = """
+    MATCH (n {offender_id: $id})-[r]-(connected)
+    RETURN connected, labels(connected) AS labels, type(r) AS rel_type, r
+    LIMIT 25
+    """
+    results = await run_neo4j_query(query, {"id": node_id})
+    return {"success": True, "data": results}
 
