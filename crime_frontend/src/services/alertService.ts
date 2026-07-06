@@ -11,7 +11,8 @@ export const alertService = {
       return Array.isArray(data) ? data : (data?.alerts || data?.data || mockRecentAlerts);
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockRecentAlerts; }
-      throw error;
+      console.error("Error fetching alerts:", error);
+      return [];
     }
   },
   markRead: async (id: string) => {
@@ -32,7 +33,8 @@ export const settingsService = {
       return Array.isArray(data) ? data : (data?.users || data?.data || mockUsers);
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockUsers; }
-      throw error;
+      console.error(error);
+      return [];
     }
   },
   addUser: async (user: Record<string, string>) => {
@@ -41,7 +43,8 @@ export const settingsService = {
       return { data: res.data };
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return { user: { ...user, user_id: "mock-id-" + Math.random().toString(36).substring(2, 11) } }; }
-      throw error;
+      console.error(error);
+      return [];
     }
   },
   getDistricts: async () => {
@@ -51,7 +54,8 @@ export const settingsService = {
       return Array.isArray(data) ? data : (data?.districts || data?.data || []);
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return []; }
-      throw error;
+      console.error(error);
+      return [];
     }
   },
   getAlertThresholds: async () => {
@@ -60,7 +64,8 @@ export const settingsService = {
       return res.data;
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockAlertThresholds; }
-      throw error;
+      console.error(error);
+      return [];
     }
   },
   updateAlertThresholds: async (thresholds: Record<string, unknown>) => {
@@ -69,7 +74,8 @@ export const settingsService = {
       return res.data;
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return { success: true, thresholds }; }
-      throw error;
+      console.error(error);
+      return [];
     }
   },
   getDataSources: async () => {
@@ -84,7 +90,8 @@ export const settingsService = {
       ];
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockDataSources; }
-      throw error;
+      console.error(error);
+      return [];
     }
   },
   getAuditLogs: async () => {
@@ -93,7 +100,8 @@ export const settingsService = {
       return res.data || [];
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return []; }
-      throw error;
+      console.error(error);
+      return [];
     }
   },
 };
@@ -120,7 +128,8 @@ export const reportService = {
           generated_at: new Date().toISOString(),
         };
       }
-      throw error;
+      console.error(error);
+      return [];
     }
   },
   getSavedList: async () => {
@@ -130,7 +139,8 @@ export const reportService = {
       return Array.isArray(data) ? data : (data?.reports || data?.data || mockSavedReports);
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockSavedReports; }
-      throw error;
+      console.error(error);
+      return [];
     }
   },
   download: async (id: string) => {
@@ -138,7 +148,7 @@ export const reportService = {
       const res = await api.get(ENDPOINTS.REPORTS.DOWNLOAD(id), { responseType: 'blob' });
       return res.data;
     } catch {
-      return null;
+      return [];
     }
   },
 };

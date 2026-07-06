@@ -11,7 +11,7 @@ export const KARNATAKA_DISTRICTS = [
   "Chikkamagaluru",
   "Chitradurga",
   "Dakshina Kannada",
-  "Davanagere",
+  "Davangere",
   "Dharwad",
   "Gadag",
   "Hassan",
@@ -28,6 +28,7 @@ export const KARNATAKA_DISTRICTS = [
   "Tumakuru",
   "Udupi",
   "Uttara Kannada",
+  "Vijayanagara",
   "Vijayapura",
   "Yadgir",
 ];

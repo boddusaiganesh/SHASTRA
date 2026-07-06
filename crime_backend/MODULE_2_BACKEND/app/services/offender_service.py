@@ -151,6 +151,15 @@ async def get_offender_profile(
     
     profile["linked_locations"] = linked_locations
     
+    if offender.known_associates:
+        assoc_result = await db.execute(select(Offender).where(Offender.offender_id.in_(offender.known_associates)))
+        profile["associates_list"] = [
+            {"associate_id": str(a.offender_id), "name": f"{a.first_name} {a.last_name}", "relationship": "Known Associate"}
+            for a in assoc_result.scalars().all()
+        ]
+    else:
+        profile["associates_list"] = []
+    
     # Get AI assessment
     ai_assessment = await get_offender_ai_analysis(profile, crime_history)
     profile["ai_assessment"] = {

@@ -126,7 +126,8 @@ async def get_network_graph_data(
             sorted(graph_data["nodes"], key=lambda x: x.get("centrality", {}).get("betweenness", 0), reverse=True)[:5]
         ]
         
-    await cache_set(cache_key, graph_data, expiry=600)
+    expiry = 60 if graph_data.get("source") == "postgres_fallback" else 600
+    await cache_set(cache_key, graph_data, expiry=expiry)
     return graph_data
 
 
@@ -185,14 +186,18 @@ async def build_network_from_postgres(
             })
             
             if offender.known_associates:
+                current_node_ids = {n["node_id"] for n in nodes}
                 for associate_id in offender.known_associates:
-                    edges.append({
-                        "edge_id": f"{node_id}_{associate_id}",
-                        "source_node_id": node_id,
-                        "target_node_id": associate_id,
-                        "relationship_type": "KNOWS",
-                        "strength_score": 60,
-                    })
+                    if associate_id in current_node_ids:
+                        edges.append({
+                            "edge_id": f"{node_id}_{associate_id}",
+                            "source_node_id": node_id,
+                            "target_node_id": associate_id,
+                            "relationship_type": "KNOWS",
+                            "strength_score": 60,
+                            "confidence_level": "SUSPECTED",
+                            "crime_types": [],
+                        })
 
     # --- Victims ---
     if node_type in (None, "victim"):
@@ -227,6 +232,7 @@ async def build_network_from_postgres(
             off_links = (await db.execute(
                 select(CrimeOffenderLink).where(CrimeOffenderLink.crime_id == cvl.crime_id)
             )).scalars().all()
+            crime = (await db.execute(select(Crime).where(Crime.crime_id == cvl.crime_id))).scalar_one_or_none()
             for ol in off_links:
                 if any(n["node_id"] == str(ol.offender_id) for n in nodes) and \
                    any(n["node_id"] == str(cvl.victim_id) for n in nodes):
@@ -236,6 +242,8 @@ async def build_network_from_postgres(
                         "target_node_id": str(cvl.victim_id),
                         "relationship_type": "VICTIMIZED_AT", 
                         "strength_score": 70,
+                        "confidence_level": "CONFIRMED",
+                        "crime_types": [crime.crime_type] if crime else [],
                     })
 
     # --- Locations ---

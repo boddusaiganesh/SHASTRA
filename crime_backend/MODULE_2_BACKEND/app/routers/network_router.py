@@ -86,7 +86,12 @@ async def expand_node(
            type(r) AS rel_type, properties(r) AS r_props
     LIMIT 25
     """
-    results = await run_neo4j_query(query, {"id": node_id})
+    try:
+        results = await run_neo4j_query(query, {"id": node_id})
+        if not results:
+            return {"success": False, "message": "No additional connections found for this node."}
+    except Exception as e:
+        return {"success": False, "message": "Node expansion is currently not available in fallback mode (Neo4j is offline)."}
     
     nodes_map = {}
     edges = []

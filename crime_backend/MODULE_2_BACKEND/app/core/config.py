@@ -48,7 +48,7 @@ class Settings(BaseSettings):
 
     # Server
     BACKEND_PORT: int = 8000
-    FRONTEND_URL: str = "http://localhost:3000"
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:5173")
     ENVIRONMENT: str = "development"
     
     # SMTP Notifications
@@ -82,7 +82,7 @@ class Settings(BaseSettings):
             keys.append(self.GEMINI_API_KEY)
         return keys
 
-    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True)
+    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True, extra="ignore")
 
     @field_validator("JWT_SECRET_KEY")
     @classmethod

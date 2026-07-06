@@ -9,6 +9,11 @@ from alembic import context
 # access to the values within the .ini file in use.
 config = context.config
 
+from app.core.config import settings
+# Override the url in alembic.ini with the one from config, converting to sync driver for alembic
+sync_url = str(settings.DATABASE_URL).replace("+asyncpg", "")
+config.set_main_option("sqlalchemy.url", sync_url)
+
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
 if config.config_file_name is not None:

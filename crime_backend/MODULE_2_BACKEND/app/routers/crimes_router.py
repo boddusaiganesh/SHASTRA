@@ -6,7 +6,7 @@ import logging
 
 from app.core.database import get_db
 from app.core.security import get_current_user, scope_district_filter, require_role
-from app.models.database_models.crime_model import Crime, District, PoliceStation
+from app.models.database_models.crime_model import Crime, District, PoliceStation, CrimeVictimLink, CrimeOffenderLink
 from app.models.response_models.crime_response import CreateCrimeRequest
 from app.services.crime_service import create_crime
 from app.utils.district_resolver import resolve_district_id
@@ -91,6 +91,13 @@ async def get_map_data(
         
         result = await db.execute(stmt)
         rows = result.all()
+        crime_ids = [crime.crime_id for crime, _, _ in rows]
+        
+        victim_links = (await db.execute(select(CrimeVictimLink).where(CrimeVictimLink.crime_id.in_(crime_ids)))).scalars().all() if crime_ids else []
+        offender_links = (await db.execute(select(CrimeOffenderLink).where(CrimeOffenderLink.crime_id.in_(crime_ids)))).scalars().all() if crime_ids else []
+        
+        v_map = {vl.crime_id: str(vl.victim_id) for vl in victim_links}
+        o_map = {ol.crime_id: str(ol.offender_id) for ol in offender_links}
         
         formatted_data = []
         for crime, district, station in rows:
@@ -104,8 +111,8 @@ async def get_map_data(
                 "status": crime.status,
                 "latitude": crime.latitude,
                 "longitude": crime.longitude,
-                "victim_id": None, # Future: Fetch from CrimeVictimLink
-                "suspect_id": None, # Future: Fetch from CrimeOffenderLink
+                "victim_id": v_map.get(crime.crime_id),
+                "suspect_id": o_map.get(crime.crime_id),
             })
             
         if file_format == "csv":

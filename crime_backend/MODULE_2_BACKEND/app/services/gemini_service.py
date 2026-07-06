@@ -195,6 +195,24 @@ Keep the analysis concise and actionable for law enforcement use.
     return result.get("text", "") or "Anomaly detected through statistical analysis. Pattern deviates from baseline. Recommend immediate investigation."
 
 
+async def get_edge_connection_insight(node_a: Dict, node_b: Dict, edge: Dict) -> str:
+    """Generate an AI explanation for why two network nodes are linked."""
+    prompt = f"""
+Analyze this connection in a Karnataka State Police criminal network graph:
+
+NODE A: {node_a.get('label', 'Unknown')} ({node_a.get('node_type', 'unknown')})
+NODE B: {node_b.get('label', 'Unknown')} ({node_b.get('node_type', 'unknown')})
+RELATIONSHIP: {edge.get('label') or edge.get('relationship_type', 'Unknown')}
+STRENGTH SCORE: {edge.get('strength') or edge.get('strength_score', 0)}
+CONFIDENCE: {edge.get('confidence') or edge.get('confidence_level', 'SUSPECTED')}
+
+In 2-3 sentences, explain the likely criminological significance of this connection
+and one recommended investigative next step.
+"""
+    result = await call_gemini(prompt)
+    return result.get("text", "") or "This connection is based on shared crime records or associate data. Manual review recommended."
+
+
 async def get_prediction_recommended_action(prediction_data: Dict) -> str:
     """Generate AI recommended action for a prediction"""
     

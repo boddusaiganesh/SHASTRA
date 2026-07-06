@@ -194,4 +194,13 @@ export const crimeService = {
       throw error;
     }
   },
+  filterCrimes: async (params: { district_id?: string, crime_type?: string, status?: string, page?: number, page_size?: number }) => {
+    try {
+      const res = await api.get(ENDPOINTS.CRIMES.FILTER, { params });
+      return res.data;
+    } catch (error) {
+      if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return { success: true, data: mockMapCrimes }; }
+      throw error;
+    }
+  },
 };

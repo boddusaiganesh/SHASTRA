@@ -22,7 +22,12 @@ api.interceptors.response.use(
   (response) => {
     // Unwrap the response if it matches our standard payload
     if (response.data && response.data.success !== undefined && response.data.data !== undefined) {
-      return { ...response, data: response.data.data };
+      const keys = Object.keys(response.data);
+      const hasMetadata = keys.some(k => !['success', 'data', 'message'].includes(k));
+      if (!hasMetadata) {
+        return { ...response, data: response.data.data };
+      }
+      return response;
     }
     return response;
   },
