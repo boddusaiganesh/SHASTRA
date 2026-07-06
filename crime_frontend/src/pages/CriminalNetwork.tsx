@@ -59,8 +59,8 @@ const CriminalNetwork: React.FC = () => {
       setLoading(true);
       try {
         const [g, ai] = await Promise.all([
-          networkService.getGraphData(),
-          networkService.getAiSummary(),
+          networkService.getGraphData(searchQuery || undefined, filterCrimeType, filterDistrict, filterNodeType),
+          networkService.getAiSummary(filterDistrict),
         ]);
         
         if (g.status === "offline") {
@@ -85,15 +85,29 @@ const CriminalNetwork: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    const controller = new AbortController();
     const handle = setTimeout(async () => {
-      const g = await networkService.getGraphData(searchQuery || undefined);
-      if (g && g.status !== "offline" && g.status !== "no_data") {
-        setNodes(g.nodes);
-        setEdges(g.edges);
+      try {
+        const g = await networkService.getGraphData(
+          searchQuery || undefined,
+          filterCrimeType,
+          filterDistrict,
+          filterNodeType,
+          { signal: controller.signal }
+        );
+        if (g && g.status !== "offline" && g.status !== "no_data") {
+          setNodes(g.nodes);
+          setEdges(g.edges);
+        }
+      } catch (e: any) {
+        if (e.name !== "CanceledError") console.error(e);
       }
     }, 400);
-    return () => clearTimeout(handle);
-  }, [searchQuery]);
+    return () => {
+      clearTimeout(handle);
+      controller.abort();
+    };
+  }, [searchQuery, filterCrimeType, filterDistrict, filterNodeType]);
 
   const navigateToNode = async (node: NetworkNode, fromHistory = false) => {
     setViewMode("graph");

@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from "react-leaflet";
 import MarkerClusterGroup from 'react-leaflet-cluster';
+import HeatLayer from "./HeatLayer";
 import { CRIME_TYPE_COLORS } from "../../constants/crimeTypes";
 import { karnatakaCenter } from "../../utils/mapHelpers";
 import { formatDateTime } from "../../utils/dateFormatter";
@@ -40,7 +41,9 @@ const CrimeMap: React.FC<Props> = ({ crimes, viewMode, onCrimeSelect }) => {
         className="map-tiles"
       />
       <FitBounds />
-      {viewMode === "cluster" ? (
+      {viewMode === "heatmap" ? (
+        <HeatLayer points={crimes.map((c) => [c.latitude, c.longitude, 0.6])} />
+      ) : viewMode === "cluster" ? (
         <MarkerClusterGroup>
           {crimes.map((crime) => (
             <CircleMarker

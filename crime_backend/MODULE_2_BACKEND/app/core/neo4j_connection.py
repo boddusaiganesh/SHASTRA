@@ -231,6 +231,7 @@ async def get_network_graph(
     search_query: str = None,
     crime_type: str = None,
     district_id: str = None,
+    node_type: str | None = None,
     depth: int = 2,
     node_limit: int = 100,
 ) -> Dict[str, Any]:
@@ -242,12 +243,21 @@ async def get_network_graph(
         
     # SECURITY EXCEPTION: The following Cypher query uses unparameterized input because APOC path expansion requires labels and rel-types to be dynamic strings. Input is sanitized using regex strictly allowing alphanumeric characters before query execution.
 
-    # Build the Cypher query dynamically
-    where_clauses = []
+    label_map = {
+        "criminal": "Criminal",
+        "victim": "Victim",
+        "location": "Location",
+        "organization": "Organization",
+    }
+    
+    root_labels = [label_map[node_type]] if node_type in label_map else list(label_map.values())
+    label_filter = " OR ".join(f"n:{lbl}" for lbl in root_labels)
+
+    where_clauses = [f"({label_filter})"]
     params = {"node_limit": node_limit, "limit": node_limit * 3}
 
     if search_query:
-        where_clauses.append("(n.name CONTAINS $search OR n.offender_id = $search)")
+        where_clauses.append("(n.name CONTAINS $search OR n.offender_id = $search OR n.victim_id = $search OR n.location_id = $search OR n.org_id = $search)")
         params["search"] = search_query
 
     if district_id:
@@ -258,12 +268,9 @@ async def get_network_graph(
         where_clauses.append("$crime_type IN n.crime_types")
         params["crime_type"] = crime_type
 
-    match_clause = "MATCH (n:Criminal)"
-    if where_clauses:
-        match_clause += " WHERE " + " AND ".join(where_clauses)
-    
     query = f"""
-    {match_clause}
+    MATCH (n)
+    WHERE {" AND ".join(where_clauses)}
     OPTIONAL MATCH (n)-[r]-()
     WITH n, count(r) AS degree
     ORDER BY degree DESC, n.risk_score DESC

@@ -12,13 +12,21 @@ export const networkService = {
     }
   },
 
-  getGraphData: async (searchQuery?: string, crimeType?: string, districtId?: string) => {
+  getGraphData: async (
+    searchQuery?: string, 
+    crimeType?: string, 
+    districtId?: string, 
+    nodeType?: string,
+    opts?: { signal?: AbortSignal }
+  ) => {
     try {
       const response = await api.get(ENDPOINTS.NETWORK.GRAPH_DATA, {
-        params: { search_query: searchQuery, crime_type: crimeType, district_id: districtId },
+        params: { search_query: searchQuery, crime_type: crimeType, district_id: districtId, node_type: nodeType },
+        signal: opts?.signal,
       });
       return response.data || null;
     } catch (error: any) {
+      if (error.name === "CanceledError") throw error;
       console.error("Error fetching network graph:", error);
       return { status: "offline", error: error.response?.data?.detail || "Failed to connect to the backend API." };
     }

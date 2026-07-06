@@ -19,12 +19,13 @@ async def fetch_network_graph(
     search_query: Optional[str] = Query(None),
     crime_type: Optional[str] = Query(None),
     district_id: Optional[str] = Query(None),
+    node_type: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
     resolved_id = await resolve_district_id(db, district_id)
     resolved_id = scope_district_param(resolved_id, current_user)
-    data = await get_network_graph_data(db, search_query, crime_type, resolved_id)
+    data = await get_network_graph_data(db, search_query, crime_type, resolved_id, node_type=node_type)
     return {"success": True, "data": data}
 
 @router.get("/node-detail/{node_id}")

@@ -30,8 +30,11 @@ const ConnectivityMatrix: React.FC<MatrixProps> = ({ nodes, edges, onCellClick }
   const [sortMode, setSortMode] = useState<'community' | 'degree' | 'risk'>('community');
 
   // Order nodes based on sort mode
+  // Order nodes based on sort mode, cap at 200 to prevent React rendering death
+  const MAX_MATRIX_NODES = 200;
+  
   const ordered = useMemo(() => {
-    return [...nodes].sort((a, b) => {
+    const sorted = [...nodes].sort((a, b) => {
       if (sortMode === 'community') {
         const ca = a.community_id ?? 0, cb = b.community_id ?? 0;
         if (ca !== cb) return ca - cb;
@@ -43,6 +46,7 @@ const ConnectivityMatrix: React.FC<MatrixProps> = ({ nodes, edges, onCellClick }
       }
       return 0;
     });
+    return sorted.slice(0, MAX_MATRIX_NODES);
   }, [nodes, sortMode]);
 
   // Build a fast lookup for edges
@@ -80,6 +84,12 @@ const ConnectivityMatrix: React.FC<MatrixProps> = ({ nodes, edges, onCellClick }
           </button>
         ))}
       </div>
+
+      {nodes.length > MAX_MATRIX_NODES && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 px-4 py-2 bg-yellow-900/80 text-yellow-50 text-xs rounded-full shadow-lg">
+          Showing top {MAX_MATRIX_NODES} of {nodes.length} nodes to maintain performance.
+        </div>
+      )}
 
       <div className="flex-1 overflow-auto custom-scrollbar p-6 pt-16">
         <svg

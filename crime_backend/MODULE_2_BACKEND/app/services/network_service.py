@@ -75,12 +75,13 @@ async def get_network_graph_data(
     search_query: Optional[str] = None,
     crime_type: Optional[str] = None,
     district_id: Optional[str] = None,
+    node_type: Optional[str] = None,
     depth: int = 2,
     node_limit: int = 100,
 ) -> Dict[str, Any]:
     """Get criminal network graph data"""
     
-    cache_key = f"network_graph:{search_query}:{crime_type}:{district_id}:{depth}:{node_limit}"
+    cache_key = f"network_graph:{search_query}:{crime_type}:{district_id}:{node_type}:{depth}:{node_limit}"
     cached = await cache_get(cache_key)
     if cached:
         return cached
@@ -90,6 +91,7 @@ async def get_network_graph_data(
         search_query=search_query,
         crime_type=crime_type,
         district_id=district_id,
+        node_type=node_type,
         depth=depth,
         node_limit=node_limit,
     )
@@ -97,7 +99,7 @@ async def get_network_graph_data(
     # NEW: fall back to Postgres instead of just reporting "offline"
     if graph_data.get("status") == "offline":
         graph_data = await build_network_from_postgres(
-            db, search_query=search_query, district_id=district_id, node_limit=node_limit, crime_type=crime_type
+            db, search_query=search_query, district_id=district_id, node_limit=node_limit, crime_type=crime_type, node_type=node_type
         )
         graph_data["source"] = "postgres_fallback"
     
@@ -105,9 +107,16 @@ async def get_network_graph_data(
     if not graph_data.get("nodes"):
         graph_data["status"] = "no_data"
     else:
-        # Inject metrics
-        centrality = compute_graph_centrality(graph_data["nodes"], graph_data["edges"])
-        communities = detect_communities(graph_data["nodes"], graph_data["edges"])
+        import asyncio
+        from functools import partial
+        loop = asyncio.get_running_loop()
+        
+        # Inject metrics using a thread pool to avoid blocking the event loop
+        centrality, communities = await asyncio.gather(
+            loop.run_in_executor(None, partial(compute_graph_centrality, graph_data["nodes"], graph_data["edges"])),
+            loop.run_in_executor(None, partial(detect_communities, graph_data["nodes"], graph_data["edges"])),
+        )
+        
         for n in graph_data["nodes"]:
             n["centrality"] = centrality.get(n["node_id"], {"betweenness": 0, "degree": 0, "pagerank": 0})
             n["community_id"] = communities.get(n["node_id"], 0)
@@ -127,72 +136,130 @@ async def build_network_from_postgres(
     district_id: Optional[str] = None,
     node_limit: int = 100,
     crime_type: Optional[str] = None,
+    node_type: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Build network graph from PostgreSQL data when Neo4j is unavailable"""
-    from app.models.database_models.crime_model import CrimeOffenderLink, Crime
+    from app.models.database_models.crime_model import CrimeOffenderLink, Crime, CrimeVictimLink
+    from app.models.database_models.victim_model import Victim
+    from app.models.database_models.location_model import Location
     
-    # Get offenders
-    query = select(Offender).limit(node_limit)
+    nodes: list[dict] = []
+    edges: list[dict] = []
+    per_type_limit = max(1, node_limit // (1 if node_type else 3))
     
-    if district_id:
-        query = query.where(Offender.district_id == district_id)
-    if search_query:
-        query = query.where(
-            (Offender.first_name.ilike(f"%{search_query}%")) |
-            (Offender.last_name.ilike(f"%{search_query}%"))
-        )
-    if crime_type:
-        query = query.join(CrimeOffenderLink).join(Crime).where(Crime.crime_type == crime_type)
-    
-    result = await db.execute(query)
-    offenders = result.scalars().all()
-    
-    nodes = []
-    edges = []
-    node_id_map = {}
-    
-    for offender in offenders:
-        node_id = str(offender.offender_id)
+    # --- Criminals ---
+    if node_type in (None, "criminal"):
+        q = select(Offender).limit(per_type_limit)
+        if district_id:
+            q = q.where(Offender.district_id == district_id)
+        if search_query:
+            q = q.where(
+                (Offender.first_name.ilike(f"%{search_query}%")) |
+                (Offender.last_name.ilike(f"%{search_query}%"))
+            )
+        if crime_type:
+            q = q.join(CrimeOffenderLink).join(Crime).where(Crime.crime_type == crime_type).distinct()
         
-        # Risk-based color
-        color_map = {"HIGH": "#ef4444", "MEDIUM": "#f97316", "LOW": "#22c55e"}
-        color = color_map.get(offender.risk_level, "#6b7280")
+        result = await db.execute(q)
+        offenders = result.scalars().all()
         
-        nodes.append({
-            "node_id": node_id,
-            "node_type": "criminal",
-            "label": f"{offender.first_name} {offender.last_name}",
-            "risk_score": offender.risk_score or 0,
-            "crime_count": offender.total_crimes or 0,
-            "size": 15 + (offender.total_crimes or 0) * 3,
-            "color": color,
-            "profile_data": {
-                "offender_reference": offender.offender_reference,
-                "status": offender.status,
-                "risk_level": offender.risk_level,
-                "district_id": offender.district_id,
-            },
-        })
-        node_id_map[node_id] = offender
-    
-    # Build edges from known_associates
-    for offender in offenders:
-        if offender.known_associates:
-            for associate_id in offender.known_associates:
-                source_id = str(offender.offender_id)
-                target_id = associate_id
-                
-                # Only add edge if target node exists
-                if any(n["node_id"] == target_id for n in nodes):
+        for offender in offenders:
+            node_id = str(offender.offender_id)
+            color_map = {"HIGH": "#ef4444", "MEDIUM": "#f97316", "LOW": "#22c55e"}
+            color = color_map.get(offender.risk_level, "#6b7280")
+            
+            nodes.append({
+                "node_id": node_id,
+                "node_type": "criminal",
+                "label": f"{offender.first_name} {offender.last_name}",
+                "risk_score": offender.risk_score or 0,
+                "crime_count": offender.total_crimes or 0,
+                "size": 15 + (offender.total_crimes or 0) * 3,
+                "color": color,
+                "profile_data": {
+                    "offender_reference": offender.offender_reference,
+                    "status": offender.status,
+                    "risk_level": offender.risk_level,
+                    "district_id": offender.district_id,
+                },
+            })
+            
+            if offender.known_associates:
+                for associate_id in offender.known_associates:
                     edges.append({
-                        "edge_id": f"{source_id}_{target_id}",
-                        "source_node_id": source_id,
-                        "target_node_id": target_id,
+                        "edge_id": f"{node_id}_{associate_id}",
+                        "source_node_id": node_id,
+                        "target_node_id": associate_id,
                         "relationship_type": "KNOWS",
                         "strength_score": 60,
-                        "confidence_level": "SUSPECTED",
-                        "crime_count": 1,
                     })
+
+    # --- Victims ---
+    if node_type in (None, "victim"):
+        vq = select(Victim).limit(per_type_limit)
+        if district_id:
+            vq = vq.where(Victim.district_id == district_id)
+        if search_query:
+            vq = vq.where(
+                (Victim.first_name.ilike(f"%{search_query}%")) |
+                (Victim.last_name.ilike(f"%{search_query}%"))
+            )
+            
+        v_result = await db.execute(vq)
+        victims = v_result.scalars().all()
+        for v in victims:
+            nodes.append({
+                "node_id": str(v.victim_id), 
+                "node_type": "victim",
+                "label": f"{v.first_name} {v.last_name}",
+                "risk_score": v.vulnerability_level or 0,
+                "crime_count": 1,
+                "size": 20,
+                "color": "#3b82f6", # blue for victims
+                "profile_data": {"district_id": v.district_id},
+            })
+            
+        link_q = select(CrimeVictimLink)
+        if district_id:
+            link_q = link_q.join(Crime).where(Crime.district_id == district_id)
+        cv_links = (await db.execute(link_q)).scalars().all()
+        for cvl in cv_links:
+            off_links = (await db.execute(
+                select(CrimeOffenderLink).where(CrimeOffenderLink.crime_id == cvl.crime_id)
+            )).scalars().all()
+            for ol in off_links:
+                if any(n["node_id"] == str(ol.offender_id) for n in nodes) and \
+                   any(n["node_id"] == str(cvl.victim_id) for n in nodes):
+                    edges.append({
+                        "edge_id": f"{ol.offender_id}_{cvl.victim_id}",
+                        "source_node_id": str(ol.offender_id), 
+                        "target_node_id": str(cvl.victim_id),
+                        "relationship_type": "VICTIMIZED_AT", 
+                        "strength_score": 70,
+                    })
+
+    # --- Locations ---
+    if node_type in (None, "location"):
+        lq = select(Location).limit(per_type_limit)
+        if district_id:
+            lq = lq.where(Location.district_id == district_id)
+        if search_query:
+            lq = lq.where(Location.address.ilike(f"%{search_query}%"))
+            
+        l_result = await db.execute(lq)
+        locations = l_result.scalars().all()
+        for l in locations:
+            nodes.append({
+                "node_id": str(l.location_id), 
+                "node_type": "location",
+                "label": l.address,
+                "risk_score": 0,
+                "crime_count": 0,
+                "size": 25,
+                "color": "#a855f7", # purple for locations
+                "profile_data": {"district_id": l.district_id},
+            })
+
     
     centrality = compute_graph_centrality(nodes, edges)
     communities = detect_communities(nodes, edges)

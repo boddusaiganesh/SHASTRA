@@ -17,21 +17,47 @@ logger = logging.getLogger(__name__)
 @router.get("/map-data")
 async def get_map_data(
     file_format: str = Query("json", enum=["json", "csv"]),
+    days: int = Query(90, ge=1, le=730, description="Only crimes from the last N days"),
+    limit: int = Query(5000, ge=1, le=20000),
+    min_lat: float | None = Query(None),
+    max_lat: float | None = Query(None),
+    min_lng: float | None = Query(None),
+    max_lng: float | None = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user)
 ):
     """
-    Fetch all crime data mapped with district and police station names for the frontend map.
+    Fetch crime data mapped with district and police station names for the frontend map.
     """
     try:
-        # Join Crime with District and PoliceStation
+        from datetime import datetime, timedelta
+        from sqlalchemy import func
+        
+        # Base statements
         stmt = select(Crime, District, PoliceStation).join(
             District, Crime.district_id == District.district_id, isouter=True
         ).join(
             PoliceStation, Crime.police_station_id == PoliceStation.station_id, isouter=True
         )
+        count_stmt = select(func.count(Crime.crime_id))
         
-        stmt = scope_district_filter(stmt, current_user, Crime.district_id)
+        # Apply filters
+        cutoff = datetime.utcnow() - timedelta(days=days)
+        
+        for q in [stmt, count_stmt]:
+            q = q.where(Crime.date_of_occurrence >= cutoff)
+            if min_lat is not None and max_lat is not None:
+                q = q.where(Crime.latitude.between(min_lat, max_lat))
+            if min_lng is not None and max_lng is not None:
+                q = q.where(Crime.longitude.between(min_lng, max_lng))
+            q = scope_district_filter(q, current_user, Crime.district_id)
+
+        # Get total count
+        count_result = await db.execute(count_stmt)
+        total_count = count_result.scalar_one_or_none() or 0
+
+        # Apply limit to data query
+        stmt = stmt.order_by(Crime.date_of_occurrence.desc()).limit(limit)
         
         result = await db.execute(stmt)
         rows = result.all()
@@ -71,7 +97,7 @@ async def get_map_data(
                 headers={"Content-Disposition": 'attachment; filename="crimes_export.csv"'}
             )
             
-        return {"success": True, "data": formatted_data}
+        return {"success": True, "data": formatted_data, "total_count": total_count, "limit": limit}
     except Exception as e:
         logger.error(f"Error fetching map data: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")

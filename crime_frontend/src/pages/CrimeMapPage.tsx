@@ -22,6 +22,7 @@ const CrimeMapPage: React.FC = () => {
   const dispatch = useDispatch();
   const { mapCrimes, filters } = useSelector((s: RootState) => s.crimes);
   const [loading, setLoading] = useState(true);
+  const [pinsTruncated, setPinsTruncated] = useState(false);
   const [selectedCrime, setSelectedCrime] = useState<Crime | null>(null);
   const [showCaseModal, setShowCaseModal] = useState(false);
   const [modalTab, setModalTab] = useState<"details" | "attachments">("details");
@@ -61,6 +62,20 @@ const CrimeMapPage: React.FC = () => {
     }
     return true;
   });
+
+  const MAX_RENDERABLE_PINS = 1500;
+  
+  useEffect(() => {
+    if (filters.viewMode === "pins" && filteredCrimes.length > MAX_RENDERABLE_PINS) {
+      setPinsTruncated(true);
+    } else {
+      setPinsTruncated(false);
+    }
+  }, [filters.viewMode, filteredCrimes.length]);
+
+  const displayCrimes = filters.viewMode === "pins" && pinsTruncated 
+    ? filteredCrimes.slice(0, MAX_RENDERABLE_PINS) 
+    : filteredCrimes;
 
   const statusColor: Record<string, string> = {
     "Under Investigation": "bg-yellow-900/40 text-yellow-400",
@@ -130,13 +145,26 @@ const CrimeMapPage: React.FC = () => {
 
       <div className="flex flex-1 min-h-0 overflow-hidden relative">
         {/* Map */}
-        <div className="flex-1 relative">
+        <div className="flex-1 relative flex flex-col min-w-0">
+          {pinsTruncated && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] bg-yellow-500/90 text-yellow-50 px-4 py-2 rounded-full shadow-lg text-sm font-medium flex items-center gap-2">
+              <Info size={16} />
+              {filteredCrimes.length - MAX_RENDERABLE_PINS} additional points hidden — switch to Heatmap or Cluster view, or narrow your date range.
+            </div>
+          )}
           {loading ? (
             <div className="h-full flex items-center justify-center bg-slate-900">
               <LoadingSpinner size="lg" text="Loading crime map data..." />
             </div>
           ) : (
-            <CrimeMap crimes={filteredCrimes} viewMode={filters.viewMode} onCrimeSelect={setSelectedCrime} />
+            <CrimeMap 
+              crimes={displayCrimes} 
+              viewMode={filters.viewMode as "heatmap" | "cluster" | "pins"}
+              onCrimeSelect={(c) => {
+                setSelectedCrime(c);
+                handleViewCase(c);
+              }} 
+            />
           )}
 
           {/* Crime count badge */}
