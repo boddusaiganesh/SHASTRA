@@ -59,8 +59,8 @@ const CriminalNetwork: React.FC = () => {
       setLoading(true);
       try {
         const [g, ai] = await Promise.all([
-          networkService.getGraphData(searchQuery || undefined, filterCrimeType, filterDistrict, filterNodeType),
-          networkService.getAiSummary(filterDistrict),
+          networkService.getGraphData(searchQuery || undefined, undefined, undefined, nodeTypeFilter === "all" ? undefined : nodeTypeFilter),
+          networkService.getAiSummary(undefined),
         ]);
         
         if (g.status === "offline") {
@@ -90,9 +90,9 @@ const CriminalNetwork: React.FC = () => {
       try {
         const g = await networkService.getGraphData(
           searchQuery || undefined,
-          filterCrimeType,
-          filterDistrict,
-          filterNodeType,
+          undefined,
+          undefined,
+          nodeTypeFilter === "all" ? undefined : nodeTypeFilter,
           { signal: controller.signal }
         );
         if (g && g.status !== "offline" && g.status !== "no_data") {
@@ -107,7 +107,7 @@ const CriminalNetwork: React.FC = () => {
       clearTimeout(handle);
       controller.abort();
     };
-  }, [searchQuery, filterCrimeType, filterDistrict, filterNodeType]);
+  }, [searchQuery, nodeTypeFilter]);
 
   const navigateToNode = async (node: NetworkNode, fromHistory = false) => {
     setViewMode("graph");
