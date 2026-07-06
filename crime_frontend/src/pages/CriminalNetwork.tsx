@@ -17,6 +17,8 @@ interface NetworkNode {
 interface NetworkEdge {
   edge_id?: string;
   source_node_id: string; target_node_id: string; relationship_type: string; strength_score: number;
+  crime_types?: string[];
+  confidence_level?: string;
 }
 
 const nodeTypeIcons: Record<string, React.FC<{ className?: string }>> = {
@@ -29,6 +31,7 @@ const nodeTypeIcons: Record<string, React.FC<{ className?: string }>> = {
 const CriminalNetwork: React.FC = () => {
   const [nodes, setNodes] = useState<NetworkNode[]>([]);
   const [edges, setEdges] = useState<NetworkEdge[]>([]);
+  const [keyPlayers, setKeyPlayers] = useState<string[]>([]);
   const [aiSummary, setAiSummary] = useState<{
     summary_text: string;
     key_findings: string[];
@@ -36,9 +39,14 @@ const CriminalNetwork: React.FC = () => {
     recommended_actions: string[];
     network_stats: { total_criminals: number; high_risk_count: number; active_count: number; network_density: number };
   } | null>(null);
+  
   const [selectedNode, setSelectedNode] = useState<NetworkNode | null>(null);
+  const [selectedEdge, setSelectedEdge] = useState<any>(null);
+  const [edgeInsight, setEdgeInsight] = useState<{ text: string; loading: boolean } | null>(null);
+  
   const [searchQuery, setSearchQuery] = useState("");
   const [nodeTypeFilter, setNodeTypeFilter] = useState("all");
+  const [crimeTypeLens, setCrimeTypeLens] = useState("all");
   const [showIsolated, setShowIsolated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<"ok" | "offline" | "no_data">("ok");
@@ -73,6 +81,7 @@ const CriminalNetwork: React.FC = () => {
           setStatus("ok");
           setNodes(g.nodes as NetworkNode[]);
           setEdges(g.edges as NetworkEdge[]);
+          setKeyPlayers(g.key_players || []);
           setAiSummary(ai as typeof aiSummary);
         }
       } catch (e: any) {
@@ -98,6 +107,7 @@ const CriminalNetwork: React.FC = () => {
         if (g && g.status !== "offline" && g.status !== "no_data") {
           setNodes(g.nodes);
           setEdges(g.edges);
+          setKeyPlayers(g.key_players || []);
         }
       } catch (e: any) {
         if (e.name !== "CanceledError") console.error(e);
@@ -151,11 +161,28 @@ const CriminalNetwork: React.FC = () => {
     setNavHistory([]);
     setNavIndex(-1);
     setSelectedNode(null);
+    setSelectedEdge(null);
+    setEdgeInsight(null);
     graphRef.current?.clearFocus();
   };
 
   const handleNodeSelect = async (node: NetworkNode) => {
+    setSelectedEdge(null);
+    setEdgeInsight(null);
     navigateToNode(node);
+  };
+
+  const handleEdgeSelect = async (sourceId: string, targetId: string, edgeData: any) => {
+    setSelectedNode(null);
+    setSelectedEdge(edgeData);
+    
+    const nodeA = nodes.find(n => n.node_id === sourceId);
+    const nodeB = nodes.find(n => n.node_id === targetId);
+    if (!nodeA || !nodeB) return;
+    
+    setEdgeInsight({ text: "", loading: true });
+    const insight = await networkService.getEdgeInsight(nodeA, nodeB, edgeData);
+    setEdgeInsight({ text: insight || "No insight available.", loading: false });
   };
 
   const handleNodeCompare = async (node: NetworkNode) => {
@@ -219,6 +246,16 @@ const CriminalNetwork: React.FC = () => {
   }, [nodes, edges, nodeTypeFilter, searchQuery, showIsolated]);
 
   const nodeTypeCounts = nodes.reduce((acc, n) => { acc[n.node_type] = (acc[n.node_type] || 0) + 1; return acc; }, {} as Record<string, number>);
+
+  const uniqueCrimeTypes = useMemo(() => {
+    const types = new Set<string>();
+    edges.forEach(e => {
+      if (e.crime_types) {
+        e.crime_types.forEach(t => types.add(t));
+      }
+    });
+    return Array.from(types).sort();
+  }, [edges]);
 
   if (loading) return <div className="flex-1 flex items-center justify-center"><LoadingSpinner size="lg" text="Building criminal network..." /></div>;
 
@@ -330,6 +367,28 @@ const CriminalNetwork: React.FC = () => {
             ))}
           </div>
           <div className="flex items-center gap-1.5 ml-3 pl-3 border-l border-slate-700">
+            <select
+              value={crimeTypeLens}
+              onChange={(e) => setCrimeTypeLens(e.target.value)}
+              className="bg-slate-800 border border-slate-700 text-slate-300 text-xs rounded-lg px-2 py-1 outline-none"
+            >
+              <option value="all">All Crimes Lens</option>
+              {uniqueCrimeTypes.map((type) => (
+                <option key={type} value={type}>{type}</option>
+              ))}
+            </select>
+            
+            <button
+              onClick={() => {
+                if (keyPlayers.length > 0) {
+                  graphRef.current?.highlightKeyPlayers(keyPlayers);
+                }
+              }}
+              className="px-2.5 py-1 rounded-lg text-xs font-medium transition-colors bg-orange-900/40 text-orange-400 hover:bg-orange-900/60"
+            >
+              Highlight Key Players
+            </button>
+
             <button
               onClick={() => setShowIsolated(!showIsolated)}
               className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
@@ -375,8 +434,10 @@ const CriminalNetwork: React.FC = () => {
                   onNodeSelect={handleNodeSelect} 
                   onNodeCompare={handleNodeCompare}
                   onNodeExpand={handleNodeExpand}
+                  onEdgeSelect={handleEdgeSelect}
                   selectedNodeId={selectedNode?.node_id} 
                   highlightPath={highlightPath}
+                  crimeTypeLens={crimeTypeLens === "all" ? null : crimeTypeLens}
                 />
               ) : (
                 <ConnectivityMatrix 
@@ -392,6 +453,27 @@ const CriminalNetwork: React.FC = () => {
               <div className="absolute bottom-4 left-4 bg-slate-900/90 backdrop-blur border border-slate-700/50 rounded-lg p-2">
                 <p className="text-xs text-slate-400">Click to explore • Double-click to expand • Shift-click to compare • Scroll to zoom</p>
               </div>
+              
+              {edgeInsight && (
+                <div className="absolute bottom-16 left-4 right-4 max-w-md bg-blue-950/90 backdrop-blur border border-blue-500/30 rounded-lg p-3 z-10 shadow-lg shadow-blue-900/20">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Brain className="h-3.5 w-3.5 text-blue-400" />
+                    <span className="text-xs font-semibold text-white">Connection Insight</span>
+                    <button onClick={() => setEdgeInsight(null)} className="ml-auto text-slate-500 hover:text-white text-xs">✕</button>
+                  </div>
+                  <p className="text-xs text-blue-200 leading-relaxed">
+                    {edgeInsight.loading ? (
+                      <span className="flex items-center gap-2">
+                        <span className="h-3 w-3 rounded-full border-2 border-blue-400 border-t-transparent animate-spin inline-block"></span>
+                        Analyzing connection…
+                      </span>
+                    ) : (
+                      edgeInsight.text
+                    )}
+                  </p>
+                </div>
+              )}
+
               {(compareNode1 || compareNode2) && (
                 <div className="absolute top-4 left-4 right-4 flex items-center justify-between bg-slate-900/90 backdrop-blur border border-slate-700/50 rounded-lg p-3">
                   <div className="flex items-center gap-4">
@@ -417,8 +499,49 @@ const CriminalNetwork: React.FC = () => {
 
         {/* Right Panel */}
         <div className="w-80 bg-slate-900/95 border-l border-slate-700/50 flex flex-col overflow-y-auto custom-scrollbar">
-          {/* Node Detail */}
-          {selectedNode ? (
+          
+          {/* Edge Detail */}
+          {selectedEdge ? (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 border-b border-slate-700/50">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-blue-500/20">
+                  <Network className="h-5 w-5 text-blue-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-white">{selectedEdge.label}</p>
+                  <span className="text-xs text-slate-400">Connection</span>
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                <div className="flex justify-between text-xs pb-2 border-b border-slate-800">
+                  <span className="text-slate-400">Confidence</span>
+                  <span className={`font-bold ${selectedEdge.confidence === 'CONFIRMED' ? 'text-green-400' : 'text-orange-400'}`}>
+                    {selectedEdge.confidence}
+                  </span>
+                </div>
+                
+                <div className="flex justify-between text-xs pb-2 border-b border-slate-800">
+                  <span className="text-slate-400">Strength Score</span>
+                  <span className="font-bold text-blue-400">{selectedEdge.strength}%</span>
+                </div>
+                
+                {selectedEdge.crimeTypes && selectedEdge.crimeTypes.length > 0 && (
+                  <div>
+                    <span className="text-xs text-slate-400 block mb-2">Associated Crimes</span>
+                    <div className="flex flex-wrap gap-1">
+                      {selectedEdge.crimeTypes.map((t: string) => (
+                        <span key={t} className="text-[10px] px-2 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+                          {t}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          ) : selectedNode ? (
+            /* Node Detail */
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 border-b border-slate-700/50">
               <div className="flex items-center gap-3 mb-4">
                 <div className="h-10 w-10 rounded-xl flex items-center justify-center" style={{ background: NODE_COLORS[selectedNode.node_type] + "30" }}>
@@ -498,7 +621,7 @@ const CriminalNetwork: React.FC = () => {
           ) : (
             <div className="p-4 border-b border-slate-700/50 text-center">
               <Network className="h-8 w-8 text-slate-600 mx-auto mb-2" />
-              <p className="text-xs text-slate-500">Click a node in the network to view details</p>
+              <p className="text-xs text-slate-500">Click a node or edge in the network to view details</p>
             </div>
           )}
 

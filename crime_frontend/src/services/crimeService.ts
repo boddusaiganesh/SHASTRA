@@ -77,12 +77,16 @@ export const crimeService = {
       throw error;
     }
   },
-  getMapData: async (filters?: Record<string, string>) => { 
+  getMapData: async (
+    filters?: { crime_type?: string; district_id?: string; date_from?: string; date_to?: string },
+    opts?: { signal?: AbortSignal }
+  ) => { 
     try {
-      const response = await api.get(ENDPOINTS.CRIMES.MAP_DATA, { params: filters });
+      const response = await api.get(ENDPOINTS.CRIMES.MAP_DATA, { params: filters, signal: opts?.signal });
       const data = response.data;
       return Array.isArray(data) ? data : (data?.crimes || data?.data || mockMapCrimes);
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === "CanceledError") throw error;
       if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockMapCrimes; }
       throw error;
     }

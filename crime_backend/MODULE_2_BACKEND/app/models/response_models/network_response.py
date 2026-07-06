@@ -25,6 +25,7 @@ class NetworkEdge(BaseModel):
     strength_score: float = 50
     confidence_level: str = "SUSPECTED"
     crime_count: int = 0
+    crime_types: List[str] = []
 
 
 class NetworkGraphResponse(BaseModel):

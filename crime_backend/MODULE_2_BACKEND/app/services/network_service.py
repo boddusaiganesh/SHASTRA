@@ -261,8 +261,14 @@ async def build_network_from_postgres(
             })
 
     
-    centrality = compute_graph_centrality(nodes, edges)
-    communities = detect_communities(nodes, edges)
+    import asyncio
+    from functools import partial
+    loop = asyncio.get_running_loop()
+    
+    centrality, communities = await asyncio.gather(
+        loop.run_in_executor(None, partial(compute_graph_centrality, nodes, edges)),
+        loop.run_in_executor(None, partial(detect_communities, nodes, edges)),
+    )
     for n in nodes:
         n["centrality"] = centrality.get(n["node_id"], {"betweenness": 0, "degree": 0, "pagerank": 0})
         n["community_id"] = communities.get(n["node_id"], 0)

@@ -158,6 +158,7 @@ async def create_criminal_relationship(
     strength_score: float = 50.0,
     confidence_level: str = "SUSPECTED",
     crime_ids: List[str] = None,
+    crime_types: List[str] = None,
     first_seen_date: str = None,
     last_seen_date: str = None,
 ):
@@ -176,6 +177,7 @@ async def create_criminal_relationship(
     SET r.strength_score = $strength_score,
         r.confidence_level = $confidence_level,
         r.crime_ids = $crime_ids,
+        r.crime_types = $crime_types,
         r.first_seen_date = $first_seen_date,
         r.last_seen_date = $last_seen_date
     RETURN r
@@ -186,20 +188,24 @@ async def create_criminal_relationship(
         "strength_score": strength_score,
         "confidence_level": confidence_level,
         "crime_ids": crime_ids or [],
+        "crime_types": crime_types or [],
         "first_seen_date": first_seen_date,
         "last_seen_date": last_seen_date,
     })
 
 
-async def create_victim_offender_relationship(offender_id: str, victim_id: str, crime_id: str):
+async def create_victim_offender_relationship(offender_id: str, victim_id: str, crime_id: str, crime_type: str = None):
     """Create a relationship between a victim and a criminal."""
     query = """
     MATCH (c:Criminal {offender_id: $offender_id})
     MATCH (v:Victim {victim_id: $victim_id})
     MERGE (c)-[r:VICTIMIZED_AT]->(v)
-    SET r.crime_id = $crime_id, r.confidence_level = 'CONFIRMED'
+    SET r.crime_id = $crime_id, r.crime_types = $crime_types, r.confidence_level = 'CONFIRMED'
     """
-    await run_neo4j_query(query, {"offender_id": offender_id, "victim_id": victim_id, "crime_id": crime_id})
+    await run_neo4j_query(query, {
+        "offender_id": offender_id, "victim_id": victim_id, 
+        "crime_id": crime_id, "crime_types": [crime_type] if crime_type else []
+    })
 
 
 def normalize_node(raw_node: dict, labels: list[str], eid: str = None) -> dict:
@@ -327,6 +333,7 @@ async def get_network_graph(
                 "strength_score": rel.get("strength_score", 50) if rel else 50,
                 "confidence_level": rel.get("confidence_level", "SUSPECTED") if rel else "SUSPECTED",
                 "crime_count": len(rel.get("crime_ids", [])) if rel else 0,
+                "crime_types": rel.get("crime_types", []) if rel else [],
             })
     
     nodes = list(nodes_map.values())

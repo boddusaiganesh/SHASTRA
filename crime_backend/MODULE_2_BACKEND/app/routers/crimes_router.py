@@ -17,7 +17,10 @@ logger = logging.getLogger(__name__)
 @router.get("/map-data")
 async def get_map_data(
     file_format: str = Query("json", enum=["json", "csv"]),
-    days: int = Query(90, ge=1, le=730, description="Only crimes from the last N days"),
+    crime_type: Optional[str] = Query(None),
+    district_id: Optional[str] = Query(None),
+    date_from: Optional[str] = Query(None),
+    date_to: Optional[str] = Query(None),
     limit: int = Query(5000, ge=1, le=20000),
     min_lat: float | None = Query(None),
     max_lat: float | None = Query(None),
@@ -30,9 +33,11 @@ async def get_map_data(
     Fetch crime data mapped with district and police station names for the frontend map.
     """
     try:
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, date
         from sqlalchemy import func
         
+        resolved_district = await resolve_district_id(db, district_id)
+
         # Base statements
         stmt = select(Crime, District, PoliceStation).join(
             District, Crime.district_id == District.district_id, isouter=True
@@ -42,15 +47,40 @@ async def get_map_data(
         count_stmt = select(func.count(Crime.crime_id))
         
         # Apply filters
-        cutoff = datetime.utcnow() - timedelta(days=days)
-        
-        for q in [stmt, count_stmt]:
-            q = q.where(Crime.date_of_occurrence >= cutoff)
+        def apply_filters(q):
+            if crime_type and crime_type != "All":
+                q = q.where(Crime.crime_type == crime_type)
+            if resolved_district and resolved_district != "All Districts":
+                q = q.where(Crime.district_id == resolved_district)
+            
+            has_date_filter = False
+            if date_from:
+                try:
+                    df = datetime.strptime(date_from, "%Y-%m-%d").date()
+                    q = q.where(Crime.date_of_occurrence >= df)
+                    has_date_filter = True
+                except ValueError:
+                    pass
+            if date_to:
+                try:
+                    dt = datetime.strptime(date_to, "%Y-%m-%d").date()
+                    q = q.where(Crime.date_of_occurrence <= dt)
+                    has_date_filter = True
+                except ValueError:
+                    pass
+                    
+            if not has_date_filter:
+                q = q.where(Crime.date_of_occurrence >= date.today() - timedelta(days=180))
+
             if min_lat is not None and max_lat is not None:
                 q = q.where(Crime.latitude.between(min_lat, max_lat))
             if min_lng is not None and max_lng is not None:
                 q = q.where(Crime.longitude.between(min_lng, max_lng))
             q = scope_district_filter(q, current_user, Crime.district_id)
+            return q
+
+        stmt = apply_filters(stmt)
+        count_stmt = apply_filters(count_stmt)
 
         # Get total count
         count_result = await db.execute(count_stmt)

@@ -32,14 +32,21 @@ const CrimeMapPage: React.FC = () => {
   const [rightPanelData, setRightPanelData] = useState<{ total: number; byType: Record<string, number> }>({ total: 0, byType: {} });
 
   useEffect(() => {
-    const fetch = async () => {
+    const controller = new AbortController();
+    const fetchData = async () => {
       setLoading(true);
-      const data = await crimeService.getMapData();
+      const data = await crimeService.getMapData({
+        crime_type: filters.crimeType !== "All" ? filters.crimeType : undefined,
+        district_id: filters.district !== "All Districts" ? filters.district : undefined,
+        date_from: filters.dateFrom || undefined,
+        date_to: filters.dateTo || undefined,
+      }, { signal: controller.signal });
       dispatch(setMapCrimes(data));
       setLoading(false);
     };
-    fetch();
-  }, []);
+    fetchData();
+    return () => controller.abort();
+  }, [filters.crimeType, filters.district, filters.dateFrom, filters.dateTo, dispatch]);
 
   useEffect(() => {
     const crimes = mapCrimes as Crime[];
@@ -49,10 +56,6 @@ const CrimeMapPage: React.FC = () => {
   }, [mapCrimes]);
 
   const filteredCrimes = (mapCrimes as Crime[]).filter((c) => {
-    if (filters.crimeType !== "All" && c.crime_type !== filters.crimeType) return false;
-    if (filters.district !== "All Districts" && c.district !== filters.district) return false;
-    if (filters.dateFrom && new Date(c.date_time) < new Date(filters.dateFrom)) return false;
-    if (filters.dateTo && new Date(c.date_time) > new Date(filters.dateTo)) return false;
     if (filters.timeOfDay && filters.timeOfDay !== "All Times") {
        const hour = new Date(c.date_time).getHours();
        if (filters.timeOfDay === "Morning (6AM-12PM)" && (hour < 6 || hour >= 12)) return false;

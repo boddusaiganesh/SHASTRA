@@ -34,6 +34,7 @@ export const ENDPOINTS = {
     AI_SUMMARY: "/network/ai-summary",
     EXPAND: (id: string) => `/network/expand/${id}`,
     SHORTEST_PATH: "/network/shortest-path",
+    EDGE_INSIGHT: "/network/edge-insight",
   },
   // Offenders
   OFFENDERS: {

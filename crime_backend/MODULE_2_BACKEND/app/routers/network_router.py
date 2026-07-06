@@ -132,3 +132,20 @@ async def expand_node(
     
     return {"success": True, "data": data}
 
+from pydantic import BaseModel
+
+class EdgeInsightRequest(BaseModel):
+    node_a: dict
+    node_b: dict
+    edge: dict
+
+@router.post("/edge-insight")
+@limiter.limit("15/minute")
+async def edge_insight(
+    request: Request,
+    payload: EdgeInsightRequest,
+    current_user=Depends(get_current_user),
+):
+    from app.services.gemini_service import get_edge_connection_insight
+    text = await get_edge_connection_insight(payload.node_a, payload.node_b, payload.edge)
+    return {"success": True, "data": {"insight": text}}

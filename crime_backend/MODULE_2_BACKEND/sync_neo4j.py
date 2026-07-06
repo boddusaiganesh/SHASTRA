@@ -13,7 +13,7 @@ from app.core.neo4j_connection import (
 )
 from app.models.database_models.offender_model import Offender
 from app.models.database_models.victim_model import Victim
-from app.models.database_models.crime_model import CrimeOffenderLink, CrimeVictimLink, District
+from app.models.database_models.crime_model import CrimeOffenderLink, CrimeVictimLink, District, Crime
 from collections import defaultdict
 
 logging.basicConfig(level=logging.INFO)
@@ -57,6 +57,9 @@ async def sync():
         result = await session.execute(select(CrimeOffenderLink))
         links = result.scalars().all()
         
+        crime_result = await session.execute(select(Crime.crime_id, Crime.crime_type))
+        crime_type_by_id = {str(cid): ctype for cid, ctype in crime_result.all()}
+        
         # Group by crime_id
         crimes = {}
         for link in links:
@@ -68,6 +71,7 @@ async def sync():
         links_created = 0
         for crime_id, offender_ids in crimes.items():
             if len(offender_ids) > 1:
+                crime_type = crime_type_by_id.get(crime_id)
                 # Pair them up
                 for i in range(len(offender_ids)):
                     for j in range(i + 1, len(offender_ids)):
@@ -77,7 +81,8 @@ async def sync():
                             relationship_type="WORKED_WITH",
                             strength_score=80.0,
                             confidence_level="CONFIRMED",
-                            crime_ids=[crime_id]
+                            crime_ids=[crime_id],
+                            crime_types=[crime_type] if crime_type else []
                         )
                         links_created += 1
                         
@@ -133,10 +138,11 @@ async def sync():
 
         victims_linked = 0
         for crime_id, offender_ids in crimes.items():
+            crime_type = crime_type_by_id.get(crime_id)
             for victim_id in crime_to_victims.get(crime_id, []):
                 for offender_id in offender_ids:
                     await create_victim_offender_relationship(
-                        offender_id, victim_id, crime_id
+                        offender_id, victim_id, crime_id, crime_type
                     )
                     victims_linked += 1
         logger.info(f"Created {victims_linked} victim-offender links.")

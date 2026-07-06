@@ -12,20 +12,38 @@ interface NetworkNode {
 }
 interface NetworkEdge {
   source?: string; target?: string; source_node_id?: string; target_node_id?: string; relationship_type: string; strength_score: number;
+  crime_types?: string[];
+  confidence_level?: string;
+  edge_id?: string;
 }
 interface Props {
   nodes: NetworkNode[]; edges: NetworkEdge[];
   onNodeSelect?: (node: NetworkNode) => void;
   onNodeExpand?: (node: NetworkNode) => void;
   onNodeCompare?: (node: NetworkNode) => void;
+  onEdgeSelect?: (sourceId: string, targetId: string, edgeData: any) => void;
   selectedNodeId?: string | null;
   highlightPath?: string[];
+  crimeTypeLens?: string | null;
 }
 
 export interface NetworkGraphHandle {
   focusOnNode: (nodeId: string) => void;
   clearFocus: () => void;
+  highlightKeyPlayers: (nodeIds: string[]) => void;
 }
+
+const LAYOUT_OPTIONS = {
+  name: "fcose",
+  quality: "default",
+  animate: true,
+  randomize: true,
+  nodeSeparation: 160,
+  idealEdgeLength: 220,
+  nodeRepulsion: 9000,
+  edgeElasticity: 0.35,
+  gravity: 0.15,
+} as const;
 
 const buildElements = (nodes: NetworkNode[], edges: NetworkEdge[]) => [
   ...nodes.map((n) => ({
@@ -52,6 +70,8 @@ const buildElements = (nodes: NetworkNode[], edges: NetworkEdge[]) => [
         target: e.target || e.target_node_id || "",
         label: e.relationship_type,
         strength: e.strength_score,
+        crimeTypes: e.crime_types || [],
+        confidence: e.confidence_level || "SUSPECTED",
       },
     })),
 ];
@@ -98,6 +118,8 @@ const styleSheet: cytoscape.Stylesheet[] = [
       "font-size": "8px",
       "color": "#64748b",
       "text-rotation": "autorotate",
+      // @ts-ignore
+      "line-style": (ele: cytoscape.EdgeSingular) => ele.data("confidence") === "SUSPECTED" ? "dashed" : "solid",
     },
   },
   {
@@ -108,16 +130,24 @@ const styleSheet: cytoscape.Stylesheet[] = [
     selector: ".dimmed",
     style: { "opacity": 0.2 },
   },
+  {
+    selector: ".lens-dimmed",
+    style: { "opacity": 0.12 },
+  },
+  {
+    selector: ".key-player",
+    // @ts-ignore
+    style: { "border-color": "#f59e0b", "border-width": 6, "border-style": "double" },
+  },
 ];
 
-const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNodeSelect, onNodeExpand, onNodeCompare, selectedNodeId, highlightPath }, ref) => {
+const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNodeSelect, onNodeExpand, onNodeCompare, onEdgeSelect, selectedNodeId, highlightPath, crimeTypeLens }, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<cytoscape.Core | null>(null);
   const prevIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    if (!containerRef.current || !nodes.length) return;
-
+    if (!containerRef.current) return;
     const currentIds = new Set(nodes.map(n => n.node_id));
 
     if (!cyRef.current) {
@@ -125,8 +155,7 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNo
         container: containerRef.current,
         elements: buildElements(nodes, edges),
         style: styleSheet,
-        // @ts-ignore
-        layout: { name: "fcose", quality: "default", animate: true, nodeSeparation: 75, idealEdgeLength: 100 },
+        layout: LAYOUT_OPTIONS as any,
         wheelSensitivity: 0.3,
       });
 
@@ -148,6 +177,11 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNo
         if (node) onNodeExpand?.(node);
       });
 
+      cy.on("tap", "edge", (evt: cytoscape.EventObject) => {
+        const edgeData = evt.target.data();
+        onEdgeSelect?.(edgeData.source, edgeData.target, edgeData);
+      });
+
       cyRef.current = cy;
       prevIdsRef.current = currentIds;
       return;
@@ -167,19 +201,34 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNo
       // Full graph shrunk — full rebuild
       cy.elements().remove();
       cy.add(buildElements(nodes, edges));
-      // @ts-ignore
-      cy.layout({ name: "fcose", quality: "default", animate: true, nodeSeparation: 75, idealEdgeLength: 100 }).run();
+      cy.layout(LAYOUT_OPTIONS as any).run();
     } else {
       // Incremental expand
       cy.add(buildElements(newNodes, newEdges));
-      // @ts-ignore
-      cy.layout({ name: "fcose", quality: "default", animate: true, randomize: false, fit: false, nodeSeparation: 75, idealEdgeLength: 100 }).run();
+      cy.layout({ ...LAYOUT_OPTIONS, randomize: false, fit: false } as any).run();
     }
 
     prevIdsRef.current = currentIds;
   }, [nodes, edges]);
 
+  useEffect(() => {
+    if (!cyRef.current) return;
+    cyRef.current.edges().removeClass("lens-dimmed");
+    cyRef.current.nodes().removeClass("lens-dimmed");
+    if (!crimeTypeLens) return;
 
+    const matchingEdges = cyRef.current.edges().filter(
+      (e) => (e.data("crimeTypes") || []).includes(crimeTypeLens)
+    );
+    const nonMatching = cyRef.current.edges().not(matchingEdges);
+    nonMatching.addClass("lens-dimmed");
+
+    // Dim nodes that have NO matching edge and aren't isolated-by-design
+    const connectedNodeIds = new Set(matchingEdges.map((e) => [e.source().id(), e.target().id()]).flat());
+    cyRef.current.nodes().forEach((n) => {
+      if (!connectedNodeIds.has(n.id())) n.addClass("lens-dimmed");
+    });
+  }, [crimeTypeLens]);
 
   useImperativeHandle(ref, () => ({
     focusOnNode: (nodeId: string) => {
@@ -191,6 +240,7 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNo
       const neighborhood = node.closedNeighborhood();
       cy.elements().addClass("dimmed");
       neighborhood.removeClass("dimmed");
+      neighborhood.removeClass("lens-dimmed");
 
       cy.animate({
         fit: { eles: neighborhood, padding: 60 },
@@ -207,7 +257,18 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNo
         duration: 500,
         easing: "ease-in-out-cubic",
       });
-    }
+    },
+    highlightKeyPlayers: (nodeIds: string[]) => {
+      const cy = cyRef.current;
+      if (!cy) return;
+      cy.elements().removeClass("dimmed");
+      cy.elements().removeClass("key-player");
+      const keyEls = cy.collection();
+      nodeIds.forEach((id) => keyEls.merge(cy.getElementById(id)));
+      cy.elements().not(keyEls).addClass("dimmed");
+      keyEls.addClass("key-player");
+      cy.animate({ fit: { eles: keyEls, padding: 80 }, duration: 500, easing: "ease-in-out-cubic" });
+    },
   }));
 
   useEffect(() => {

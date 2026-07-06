@@ -1,7 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 
 // We define interfaces locally to match the ones in CriminalNetwork.tsx
-// Note: Usually these would be in a shared types file.
 interface NetworkNode {
   node_id: string; node_type: string; label: string; risk_score: number;
   crime_count: number; profile_data: Record<string, unknown>;
@@ -28,11 +27,9 @@ interface MatrixProps {
 
 const ConnectivityMatrix: React.FC<MatrixProps> = ({ nodes, edges, onCellClick }) => {
   const [sortMode, setSortMode] = useState<'community' | 'degree' | 'risk'>('community');
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Order nodes based on sort mode
-  // Order nodes based on sort mode, cap at 200 to prevent React rendering death
-  const MAX_MATRIX_NODES = 200;
-  
   const ordered = useMemo(() => {
     const sorted = [...nodes].sort((a, b) => {
       if (sortMode === 'community') {
@@ -46,7 +43,7 @@ const ConnectivityMatrix: React.FC<MatrixProps> = ({ nodes, edges, onCellClick }
       }
       return 0;
     });
-    return sorted.slice(0, MAX_MATRIX_NODES);
+    return sorted; // No longer capped at 200 since we use canvas
   }, [nodes, sortMode]);
 
   // Build a fast lookup for edges
@@ -65,6 +62,51 @@ const ConnectivityMatrix: React.FC<MatrixProps> = ({ nodes, edges, onCellClick }
 
   const cellSize = Math.max(8, Math.min(24, 800 / Math.max(1, ordered.length)));
   const offset = 180; // Space for labels
+
+  const totalWidth = ordered.length * cellSize + offset + 20;
+  const totalHeight = ordered.length * cellSize + offset + 20;
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!canvas || !ctx) return;
+
+    // Handle high DPI displays for crisp rendering
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = totalWidth * dpr;
+    canvas.height = totalHeight * dpr;
+    ctx.scale(dpr, dpr);
+
+    ctx.clearRect(0, 0, totalWidth, totalHeight);
+
+    ordered.forEach((rowNode, i) => {
+      ordered.forEach((colNode, j) => {
+        const edge = i !== j ? edgeMap.get(`${rowNode.node_id}_${colNode.node_id}`) : null;
+        let fill = "#1e293b"; // Default: no connection
+        if (i === j) {
+          fill = "#334155"; // Diagonal self
+        } else if (edge) {
+          const t = Math.min(1, (edge.strength_score || 50) / 100);
+          fill = `rgb(${Math.round(30 + t * 195)}, ${Math.round(41 - t * 20)}, ${Math.round(59 - t * 40)})`;
+        }
+        ctx.fillStyle = fill;
+        ctx.fillRect(offset + j * cellSize, offset + i * cellSize, cellSize - 1, cellSize - 1);
+      });
+    });
+  }, [ordered, edgeMap, cellSize, totalWidth, totalHeight]);
+
+  const handleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const rect = canvasRef.current!.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const j = Math.floor((x - offset) / cellSize);
+    const i = Math.floor((y - offset) / cellSize);
+    if (i === j || i < 0 || j < 0 || i >= ordered.length || j >= ordered.length) return;
+    const rowNode = ordered[i], colNode = ordered[j];
+    if (edgeMap.has(`${rowNode.node_id}_${colNode.node_id}`)) {
+      onCellClick(rowNode.node_id, colNode.node_id);
+    }
+  };
 
   return (
     <div className="w-full h-full flex flex-col bg-slate-900 overflow-hidden relative">
@@ -85,131 +127,83 @@ const ConnectivityMatrix: React.FC<MatrixProps> = ({ nodes, edges, onCellClick }
         ))}
       </div>
 
-      {nodes.length > MAX_MATRIX_NODES && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 px-4 py-2 bg-yellow-900/80 text-yellow-50 text-xs rounded-full shadow-lg">
-          Showing top {MAX_MATRIX_NODES} of {nodes.length} nodes to maintain performance.
-        </div>
-      )}
-
-      <div className="flex-1 overflow-auto custom-scrollbar p-6 pt-16">
-        <svg
-          width={ordered.length * cellSize + offset + 20}
-          height={ordered.length * cellSize + offset + 20}
-        >
-          {/* Row labels */}
-          {ordered.map((n, i) => (
-            <text
-              key={`r-${n.node_id}`}
-              x={offset - 8}
-              y={offset + i * cellSize + cellSize / 1.5}
-              fontSize={Math.min(10, cellSize - 1)}
-              textAnchor="end"
-              fill="#94a3b8"
-              className="pointer-events-none select-none"
-            >
-              {n.label.length > 25 ? n.label.slice(0, 25) + '...' : n.label}
-            </text>
-          ))}
-          
-          {/* Column labels (rotated) */}
-          {ordered.map((n, i) => (
-            <text
-              key={`c-${n.node_id}`}
-              x={offset + i * cellSize + cellSize / 2}
-              y={offset - 8}
-              fontSize={Math.min(10, cellSize - 1)}
-              textAnchor="start"
-              fill="#94a3b8"
-              transform={`rotate(-45 ${offset + i * cellSize + cellSize / 2} ${offset - 8})`}
-              className="pointer-events-none select-none"
-            >
-              {n.label.length > 25 ? n.label.slice(0, 25) + '...' : n.label}
-            </text>
-          ))}
-
-          {/* Matrix cells */}
-          {ordered.map((rowNode, i) =>
-            ordered.map((colNode, j) => {
-              const edge = i !== j ? edgeMap.get(`${rowNode.node_id}_${colNode.node_id}`) : null;
-              
-              let fill = "#1e293b"; // Default: no connection
-              if (i === j) {
-                fill = "#334155"; // Diagonal self
-              } else if (edge) {
-                const strength = edge.strength_score || 50;
-                const t = Math.min(1, strength / 100);
-                const r = Math.round(30 + t * 195);
-                fill = `rgb(${r}, ${Math.round(41 - t * 20)}, ${Math.round(59 - t * 40)})`;
+      <div className="flex-1 overflow-auto custom-scrollbar p-6 pt-16 relative">
+        <div style={{ position: 'relative', width: totalWidth, height: totalHeight }}>
+          <canvas
+            ref={canvasRef}
+            onClick={handleClick}
+            className="cursor-pointer absolute top-0 left-0"
+            style={{ width: totalWidth, height: totalHeight }}
+          />
+          <svg
+            width={totalWidth}
+            height={totalHeight}
+            className="absolute top-0 left-0 pointer-events-none"
+          >
+            {/* Row labels */}
+            {ordered.map((n, i) => (
+              <text
+                key={`r-${n.node_id}`}
+                x={offset - 8}
+                y={offset + i * cellSize + cellSize / 1.5}
+                fontSize={Math.min(10, cellSize - 1)}
+                textAnchor="end"
+                fill="#94a3b8"
+                className="select-none"
+              >
+                {n.label.length > 25 ? n.label.slice(0, 25) + '...' : n.label}
+              </text>
+            ))}
+            
+            {/* Column labels (rotated) */}
+            {ordered.map((n, i) => (
+              <text
+                key={`c-${n.node_id}`}
+                x={offset + i * cellSize + cellSize / 2}
+                y={offset - 8}
+                fontSize={Math.min(10, cellSize - 1)}
+                textAnchor="start"
+                fill="#94a3b8"
+                transform={`rotate(-45 ${offset + i * cellSize + cellSize / 2} ${offset - 8})`}
+                className="select-none"
+              >
+                {n.label.length > 25 ? n.label.slice(0, 25) + '...' : n.label}
+              </text>
+            ))}
+            
+            {/* Community boundary lines */}
+            {sortMode === 'community' && ordered.map((n, i) => {
+              if (i === 0) return null;
+              if (n.community_id !== ordered[i - 1].community_id) {
+                return (
+                  <g key={`comm-${i}`}>
+                    <line
+                      x1={offset}
+                      y1={offset + i * cellSize}
+                      x2={offset + ordered.length * cellSize}
+                      y2={offset + i * cellSize}
+                      stroke="#475569"
+                      strokeWidth="1.5"
+                      strokeDasharray="4,4"
+                      opacity="0.5"
+                    />
+                    <line
+                      x1={offset + i * cellSize}
+                      y1={offset}
+                      x2={offset + i * cellSize}
+                      y2={offset + ordered.length * cellSize}
+                      stroke="#475569"
+                      strokeWidth="1.5"
+                      strokeDasharray="4,4"
+                      opacity="0.5"
+                    />
+                  </g>
+                );
               }
-
-              return (
-                <rect
-                  key={`${rowNode.node_id}-${colNode.node_id}`}
-                  x={offset + j * cellSize}
-                  y={offset + i * cellSize}
-                  width={cellSize - 1}
-                  height={cellSize - 1}
-                  fill={fill}
-                  rx={2}
-                  className={edge ? "cursor-pointer hover:opacity-80 transition-opacity" : "cursor-default"}
-                  onClick={() => {
-                    if (edge && i !== j) {
-                      onCellClick(rowNode.node_id, colNode.node_id);
-                    }
-                  }}
-                >
-                  {i !== j && (
-                    <title>
-                      {edge
-                        ? `${rowNode.label} ↔ ${colNode.label}\nConnection: ${edge.relationship_type}\nStrength: ${edge.strength_score}%`
-                        : `${rowNode.label} ↔ ${colNode.label}\nNo connection`}
-                    </title>
-                  )}
-                </rect>
-              );
-            })
-          )}
-          
-          {/* Community boundary lines */}
-          {sortMode === 'community' && ordered.map((n, i) => {
-            if (i === 0) return null;
-            if (n.community_id !== ordered[i - 1].community_id) {
-              return (
-                <line
-                  key={`comm-${i}`}
-                  x1={offset}
-                  y1={offset + i * cellSize}
-                  x2={offset + ordered.length * cellSize}
-                  y2={offset + i * cellSize}
-                  stroke="#475569"
-                  strokeWidth="1.5"
-                  strokeDasharray="4,4"
-                  opacity="0.5"
-                />
-              );
-            }
-            return null;
-          })}
-          {sortMode === 'community' && ordered.map((n, i) => {
-            if (i === 0) return null;
-            if (n.community_id !== ordered[i - 1].community_id) {
-              return (
-                <line
-                  key={`comm-v-${i}`}
-                  x1={offset + i * cellSize}
-                  y1={offset}
-                  x2={offset + i * cellSize}
-                  y2={offset + ordered.length * cellSize}
-                  stroke="#475569"
-                  strokeWidth="1.5"
-                  strokeDasharray="4,4"
-                  opacity="0.5"
-                />
-              );
-            }
-            return null;
-          })}
-        </svg>
+              return null;
+            })}
+          </svg>
+        </div>
       </div>
     </div>
   );
