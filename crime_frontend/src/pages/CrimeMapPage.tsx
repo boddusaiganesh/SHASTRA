@@ -81,6 +81,11 @@ const CrimeMapPage: React.FC = () => {
     : filteredCrimes;
 
   const statusColor: Record<string, string> = {
+    "UNDER_INVESTIGATION": "bg-yellow-900/40 text-yellow-400",
+    "REPORTED": "bg-blue-900/40 text-blue-400",
+    "SOLVED": "bg-green-900/40 text-green-400",
+    "CLOSED": "bg-green-900/60 text-green-300",
+    "ARCHIVED": "bg-purple-900/40 text-purple-400",
     "Under Investigation": "bg-yellow-900/40 text-yellow-400",
     "FIR Filed": "bg-blue-900/40 text-blue-400",
     "Arrested": "bg-green-900/40 text-green-400",
@@ -203,7 +208,7 @@ const CrimeMapPage: React.FC = () => {
                 <p className="text-xs text-slate-400">Total Shown</p>
               </div>
               <div className="bg-slate-800/60 rounded-lg p-2 text-center">
-                <p className="text-xl font-bold text-green-400">{filteredCrimes.filter(c => c.status === "Solved" || c.status === "Arrested").length}</p>
+                <p className="text-xl font-bold text-green-400">{filteredCrimes.filter(c => c.status === "SOLVED" || c.status === "CLOSED" || c.status === "Solved" || c.status === "Arrested").length}</p>
                 <p className="text-xs text-slate-400">Resolved</p>
               </div>
             </div>

@@ -242,19 +242,18 @@ async def get_top_hotspots(
 
 async def get_deployment_suggestions(
     db: AsyncSession,
-    district_id: str,
+    district_id: Optional[str] = None,
     target_date: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Get AI-powered deployment suggestions for a district"""
+    """Get AI-powered deployment suggestions for a district or state-wide"""
     from app.services.gemini_service import get_deployment_suggestions_ai
     
     # Get active hotspots for district
-    result = await db.execute(
-        select(Hotspot)
-        .where(and_(Hotspot.district_id == district_id, Hotspot.is_active == True))
-        .order_by(desc(Hotspot.risk_score))
-        .limit(10)
-    )
+    query = select(Hotspot).where(Hotspot.is_active == True)
+    if district_id and district_id != "ALL":
+        query = query.where(Hotspot.district_id == district_id)
+        
+    result = await db.execute(query.order_by(desc(Hotspot.risk_score)).limit(10))
     hotspots = result.scalars().all()
     
     if not hotspots:

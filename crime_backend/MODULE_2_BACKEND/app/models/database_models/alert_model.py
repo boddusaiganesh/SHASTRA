@@ -39,7 +39,9 @@ class Alert(Base):
             "title": self.title,
             "description": self.description,
             "district_id": self.district_id,
+            "district": self.district_id,
             "location_id": str(self.location_id) if self.location_id else None,
+            "location": self.district_id,
             "related_entity_id": self.related_entity_id,
             "related_entity_type": self.related_entity_type,
             "is_read": self.is_read,
@@ -49,5 +51,6 @@ class Alert(Base):
             "target_district": self.target_district,
             "generated_by": self.generated_by,
             "created_at": self.created_at.isoformat() if self.created_at else None,
+            "datetime": self.created_at.isoformat() if self.created_at else None,
             "expires_at": self.expires_at.isoformat() if self.expires_at else None,
         }

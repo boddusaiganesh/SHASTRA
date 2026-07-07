@@ -10,6 +10,7 @@ import uuid
 import logging
 
 from app.models.database_models.alert_model import Alert
+from app.models.database_models.crime_model import District
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +70,16 @@ async def get_alert_list(
     result = await db.execute(query)
     alerts = result.scalars().all()
     
-    alert_list = [a.to_dict() for a in alerts]
+    all_districts = await db.execute(select(District))
+    district_map = {d.district_id: d.district_name for d in all_districts.scalars().all()}
+    
+    alert_list = []
+    for a in alerts:
+        d = a.to_dict()
+        d["district"] = district_map.get(a.district_id, a.district_id) if a.district_id else "All Districts"
+        d["location"] = d["district"]
+        d["datetime"] = d.get("created_at") or datetime.now(timezone.utc).isoformat()
+        alert_list.append(d)
     
     return {
         "alerts": alert_list,
@@ -298,8 +308,20 @@ async def get_active_alerts(
     unread_result = await db.execute(
         select(func.count(Alert.alert_id)).where(and_(*conditions, Alert.is_read == False))
     )
+    
+    all_districts = await db.execute(select(District))
+    district_map = {d.district_id: d.district_name for d in all_districts.scalars().all()}
+    
+    alert_list = []
+    for a in alerts:
+        d = a.to_dict()
+        d["district"] = district_map.get(a.district_id, a.district_id) if a.district_id else "All Districts"
+        d["location"] = d["district"]
+        d["datetime"] = d.get("created_at") or datetime.now(timezone.utc).isoformat()
+        alert_list.append(d)
+        
     return {
-        "alerts": [a.to_dict() for a in alerts],
+        "alerts": alert_list,
         "total_count": len(alerts),
         "unread_count": unread_result.scalar() or 0,
     }

@@ -3,6 +3,7 @@ import { Search, UserPlus, FileText, User } from 'lucide-react';
 import { victimService } from '../services/victimService';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store/store';
+import { getDistrictName } from '../utils/districtMap';
 
 export default function VictimDatabase() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -127,7 +128,7 @@ export default function VictimDatabase() {
                     <td className="p-4 font-medium text-slate-200">{victim.full_name}</td>
                     <td className="p-4">{victim.age || 'N/A'} / {victim.gender || 'N/A'}</td>
                     <td className="p-4">{victim.phone_number || 'N/A'}</td>
-                    <td className="p-4">{victim.district_id || 'N/A'}</td>
+                    <td className="p-4">{getDistrictName(victim.district_id)}</td>
                     <td className="p-4">
                       <button
                         onClick={() => viewProfile(victim.victim_id)}

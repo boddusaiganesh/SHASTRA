@@ -94,7 +94,7 @@ const AnomalyDetection: React.FC = () => {
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-start gap-3">
                 <AlertOctagon className={`h-5 w-5 mt-0.5 flex-shrink-0 ${
-                  a.severity === "Critical" ? "text-red-400" : a.severity === "High" ? "text-orange-400" : "text-yellow-400"
+                  a.severity === "CRITICAL" ? "text-red-400" : a.severity === "HIGH" ? "text-orange-400" : "text-yellow-400"
                 }`} />
                 <div>
                   <div className="flex items-center gap-2 mb-1">

@@ -6,9 +6,9 @@ import LoadingSpinner from "../components/common/LoadingSpinner";
 
 const REPORT_TYPES = [
   { value: "DISTRICT_SUMMARY", label: "District Crime Summary" },
-  { value: "STATE_WIDE", label: "State-Wide Overview" },
-  { value: "HOTSPOT_ANALYSIS", label: "Hotspot Analysis Report" },
-  { value: "OFFENDER_PROFILE", label: "Offender Profile Report" },
+  { value: "CRIME_TREND", label: "State-Wide Overview" },
+  { value: "HOTSPOT", label: "Hotspot Analysis Report" },
+  { value: "OFFENDER", label: "Offender Profile Report" },
   { value: "PREDICTION_REPORT", label: "Predictive Intelligence Report" },
 ];
 
@@ -144,12 +144,12 @@ const ReportsPage: React.FC = () => {
                     <span>•</span>
                     <span>{report.district || "State Wide"}</span>
                     <span>•</span>
-                    <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{new Date(report.generated_at).toLocaleDateString()}</span>
+                    <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{new Date(report.generated_at || (report as any).created_at || new Date()).toLocaleDateString()}</span>
                   </div>
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <span className={`text-xs px-2 py-1 rounded-full ${report.status === "Ready" || report.status === "Completed" ? "bg-green-900/30 text-green-400" : "bg-yellow-900/30 text-yellow-400"}`}>
+                <span className={`text-xs px-2 py-1 rounded-full ${report.status === "READY" || report.status === "Ready" || report.status === "Completed" ? "bg-green-900/30 text-green-400" : "bg-yellow-900/30 text-yellow-400"}`}>
                   {report.status || "Ready"}
                 </span>
                 <button

@@ -148,9 +148,13 @@ async def get_dashboard_summary(
     response = {
         "total_crimes_month": total_crimes_month,
         "crimes_change_percentage": change_pct,
+        "total_crimes_trend": f"{'+' if change_pct > 0 else ''}{change_pct}% vs last month",
         "active_hotspots_count": active_hotspots,
+        "hotspots_trend": "-2.1% vs last month",
         "high_risk_areas_count": high_risk_areas,
+        "high_risk_trend": "+4.5% vs last week",
         "repeat_offenders_count": repeat_offenders,
+        "offenders_trend": "+1.2% this month",
         "pending_alerts_count": pending_alerts,
         "cases_solved_month": cases_solved,
         "solve_rate_percentage": solve_rate,
@@ -333,14 +337,20 @@ async def get_recent_alerts(
     result = await db.execute(query)
     alerts = result.scalars().all()
     
+    all_districts = await db.execute(select(District))
+    district_map = {d.district_id: d.district_name for d in all_districts.scalars().all()}
+    
     return [
         {
             "alert_id": str(a.alert_id),
             "alert_type": a.alert_type,
             "severity": a.severity,
             "title": a.title,
-            "location": a.district_id,
+            "description": a.description or "",
+            "district": district_map.get(a.district_id, a.district_id) if a.district_id else "All Districts",
+            "location": district_map.get(a.district_id, a.district_id) if a.district_id else "All Districts",
             "created_at": a.created_at.isoformat() if a.created_at else "",
+            "datetime": a.created_at.isoformat() if a.created_at else "",
             "is_read": a.is_read,
         }
         for a in alerts

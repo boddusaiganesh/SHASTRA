@@ -149,20 +149,48 @@ async def filter_crimes(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user)
 ):
-    query = select(Crime)
-    query = scope_district_filter(query, current_user, Crime.district_id)
-    if district_id:
-        query = query.where(Crime.district_id == district_id)
-    if crime_type:
-        query = query.where(Crime.crime_type == crime_type)
-    if status:
-        query = query.where(Crime.status == status)
-        
-    query = query.order_by(Crime.date_of_occurrence.desc()).offset((page - 1) * page_size).limit(page_size)
-    result = await db.execute(query)
-    crimes = result.scalars().all()
-    
-    return {"success": True, "data": [c.to_dict() for c in crimes]}
+    from sqlalchemy import func
+
+    base = select(Crime, District, PoliceStation).join(
+        District, Crime.district_id == District.district_id, isouter=True
+    ).join(
+        PoliceStation, Crime.police_station_id == PoliceStation.station_id, isouter=True
+    )
+    count_base = select(func.count(Crime.crime_id))
+
+    def apply_filter_conditions(q):
+        q = scope_district_filter(q, current_user, Crime.district_id)
+        if district_id:
+            q = q.where(Crime.district_id == district_id)
+        if crime_type:
+            q = q.where(Crime.crime_type == crime_type)
+        if status:
+            q = q.where(Crime.status == status)
+        return q
+
+    base = apply_filter_conditions(base)
+    count_base = apply_filter_conditions(count_base)
+
+    total_count = (await db.execute(count_base)).scalar_one_or_none() or 0
+
+    base = base.order_by(Crime.date_of_occurrence.desc()).offset((page - 1) * page_size).limit(page_size)
+    rows = (await db.execute(base)).all()
+
+    data = [
+        {
+            "crime_id": str(crime.crime_id),
+            "crime_type": crime.crime_type,
+            "date_time": crime.date_of_occurrence.isoformat() if crime.date_of_occurrence else "",
+            "location": crime.address or crime.landmark or "Unknown Location",
+            "district": district.district_name if district else crime.district_id,
+            "police_station": station.station_name if station else "Unknown PS",
+            "status": crime.status,
+            "severity": crime.severity,
+        }
+        for crime, district, station in rows
+    ]
+
+    return {"success": True, "data": data, "total_count": total_count}
 
 @router.get("/detail/{crime_id}")
 async def crime_detail(

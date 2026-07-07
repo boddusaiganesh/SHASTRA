@@ -41,4 +41,5 @@ class Report(Base):
             "ai_narrative": self.ai_narrative,
             "status": self.status,
             "created_at": self.created_at.isoformat() if self.created_at else None,
+            "generated_at": self.created_at.isoformat() if self.created_at else None,
         }

@@ -117,8 +117,10 @@ const OffenderDatabase: React.FC = () => {
                 <div className="flex items-center gap-2 mb-0.5">
                   <p className="text-sm font-semibold text-white">{o.offender_name}</p>
                   <span className={`text-xs px-2 py-0.5 rounded-full ${
-                    statusVal === "Active" ? "bg-red-900/40 text-red-400" :
-                    statusVal === "Arrested" || statusVal === "Imprisoned" ? "bg-green-900/40 text-green-400" :
+                    statusVal === "ACTIVE" || statusVal === "Active" ? "bg-red-900/40 text-red-400" :
+                    statusVal === "IMPRISONED" || statusVal === "Arrested" || statusVal === "Imprisoned" ? "bg-green-900/40 text-green-400" :
+                    statusVal === "ABSCONDING" ? "bg-orange-900/40 text-orange-400" :
+                    statusVal === "DECEASED" ? "bg-slate-700 text-slate-400" :
                     "bg-yellow-900/40 text-yellow-400"
                   }`}>{statusVal}</span>
                 </div>

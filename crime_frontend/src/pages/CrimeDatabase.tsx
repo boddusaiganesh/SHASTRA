@@ -152,10 +152,11 @@ export default function CrimeDatabase() {
             className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-blue-500 outline-none"
           >
             <option value="All">All Statuses</option>
-            <option value="OPEN">Open</option>
-            <option value="INVESTIGATING">Investigating</option>
+            <option value="REPORTED">Reported</option>
+            <option value="UNDER_INVESTIGATION">Under Investigation</option>
+            <option value="SOLVED">Solved</option>
             <option value="CLOSED">Closed</option>
-            <option value="COLD">Cold</option>
+            <option value="ARCHIVED">Archived</option>
           </select>
         </div>
       </div>

@@ -68,7 +68,17 @@ async def get_anomaly_list(
     result = await db.execute(query)
     anomalies = result.scalars().all()
     
-    anomaly_list = [a.to_dict() for a in anomalies]
+    district_result = await db.execute(select(District))
+    district_map = {d.district_id: d.district_name for d in district_result.scalars().all()}
+    
+    anomaly_list = []
+    for a in anomalies:
+        d = a.to_dict()
+        d["district"] = district_map.get(a.district_id, a.district_id)
+        d["location"] = d["district"]
+        d["confidence_score"] = (a.anomaly_score or 0) / 100
+        d["affected_crimes_count"] = len(a.related_case_ids or [])
+        anomaly_list.append(d)
     
     return {
         "anomalies": anomaly_list,
@@ -99,6 +109,13 @@ async def get_anomaly_detail(
         return None
     
     detail = anomaly.to_dict()
+    
+    d_result = await db.execute(select(District).where(District.district_id == anomaly.district_id))
+    d_row = d_result.scalar_one_or_none()
+    detail["district"] = d_row.district_name if d_row else anomaly.district_id
+    detail["location"] = detail["district"]
+    detail["confidence_score"] = (anomaly.anomaly_score or 0) / 100
+    detail["affected_crimes_count"] = len(anomaly.related_case_ids or [])
     
     # Get related crimes
     related_cases = []
