@@ -9,6 +9,7 @@ import NetworkGraph, { NetworkGraphHandle } from "../components/network/NetworkG
 import ConnectivityMatrix from "../components/network/ConnectivityMatrix";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import { NODE_COLORS } from "../constants/colorCodes";
+import { CRIME_TYPES } from "../constants/crimeTypes";
 
 interface NetworkNode {
   node_id: string; node_type: string; label: string; risk_score: number;
@@ -281,15 +282,6 @@ const CriminalNetwork: React.FC = () => {
 
   const nodeTypeCounts = nodes.reduce((acc, n) => { acc[n.node_type] = (acc[n.node_type] || 0) + 1; return acc; }, {} as Record<string, number>);
 
-  const uniqueCrimeTypes = useMemo(() => {
-    const types = new Set<string>();
-    edges.forEach(e => {
-      if (e.crime_types) {
-        e.crime_types.forEach(t => types.add(t));
-      }
-    });
-    return Array.from(types).sort();
-  }, [edges]);
 
   if (loading) return <div className="flex-1 flex items-center justify-center"><LoadingSpinner size="lg" text="Building criminal network..." /></div>;
 
@@ -418,7 +410,7 @@ const CriminalNetwork: React.FC = () => {
               className="bg-slate-800 border border-slate-700 text-slate-300 text-xs rounded-lg px-2 py-1 outline-none"
             >
               <option value="all">All Crimes Lens</option>
-              {uniqueCrimeTypes.map((type) => (
+              {CRIME_TYPES.map((type) => (
                 <option key={type} value={type}>{type}</option>
               ))}
             </select>

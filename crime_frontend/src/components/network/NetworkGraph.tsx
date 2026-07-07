@@ -156,7 +156,8 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNo
         elements: buildElements(nodes, edges),
         style: styleSheet,
         layout: LAYOUT_OPTIONS as any,
-        wheelSensitivity: 0.3,
+        minZoom: 0.2,
+        maxZoom: 3,
       });
 
       cy.on("tap", "node", (evt: cytoscape.EventObject) => {

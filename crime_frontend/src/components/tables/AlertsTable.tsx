@@ -23,7 +23,7 @@ const severityBg: Record<string, string> = {
   Low: "bg-blue-900/20 border-l-2 border-blue-500",
 };
 
-const AlertsTable: React.FC<Props> = ({ alerts, onMarkRead, compact }) => (
+const AlertsTable: React.FC<Props> = ({ alerts, onMarkRead, onDismiss, compact }) => (
   <div className="space-y-2">
     {alerts.map((a) => {
       const cfg = severityConfig[a.severity] || severityConfig.Low;
