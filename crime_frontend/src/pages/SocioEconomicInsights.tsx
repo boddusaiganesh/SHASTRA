@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ZAxis } from "recharts";
 import { Building2, Users, Briefcase, TrendingUp } from "lucide-react";
 import api from "../services/api";
+import { ENDPOINTS } from "../constants/apiEndpoints";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 
 export default function SocioEconomicInsights() {
@@ -10,7 +11,7 @@ export default function SocioEconomicInsights() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api.get("/predictions/socioeconomic-correlation")
+    api.get(ENDPOINTS.PREDICTIONS.SOCIOECONOMIC)
       .then((res) => {
         setData(res.data);
         setLoading(false);

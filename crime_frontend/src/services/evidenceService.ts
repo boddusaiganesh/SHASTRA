@@ -1,8 +1,9 @@
 import api from './api';
+import { ENDPOINTS } from '../constants/apiEndpoints';
 
 export const evidenceService = {
   getEvidenceList: async (crimeId: string) => {
-    const res = await api.get(`/evidence/${crimeId}`);
+    const res = await api.get(ENDPOINTS.EVIDENCE.BY_CRIME(crimeId));
     return res.data || [];
   },
   
@@ -10,7 +11,7 @@ export const evidenceService = {
     const formData = new FormData();
     formData.append('file', file);
     
-    const res = await api.post(`/evidence/${crimeId}`, formData, {
+    const res = await api.post(ENDPOINTS.EVIDENCE.BY_CRIME(crimeId), formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },

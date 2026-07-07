@@ -23,6 +23,14 @@ export const alertService = {
       return { success: true, alert_id: id };
     }
   },
+  dismiss: async (id: string) => {
+    try {
+      const res = await api.delete(ENDPOINTS.ALERTS.DISMISS(id));
+      return res.data;
+    } catch {
+      return { success: true, alert_id: id };
+    }
+  },
 };
 
 export const settingsService = {
@@ -83,10 +91,10 @@ export const settingsService = {
       const res = await api.get("/health");
       const h = res.data?.data || res.data;
       return [
-        { name: "PostgreSQL", type: "Database", status: h?.database === "healthy" ? "Active" : "Error", last_sync: "Live" },
-        { name: "Redis Cache", type: "Cache", status: h?.redis === "healthy" ? "Active" : "Error", last_sync: "Live" },
-        { name: "Neo4j", type: "Graph DB", status: h?.neo4j === "healthy" ? "Active" : "Error", last_sync: "Live" },
-        { name: "Gemini AI", type: "AI Engine", status: "Active", last_sync: "On-demand" },
+        { name: "PostgreSQL", type: "Database", status: h?.database === "healthy" ? "Active" : "Error", last_sync: "Live", source_id: "postgres" },
+        { name: "Redis Cache", type: "Cache", status: h?.redis === "healthy" ? "Active" : "Error", last_sync: "Live", source_id: "redis" },
+        { name: "Neo4j", type: "Graph DB", status: h?.neo4j === "healthy" ? "Active" : "Error", last_sync: "Live", source_id: "neo4j" },
+        { name: "Gemini AI", type: "AI Engine", status: "Active", last_sync: "On-demand", source_id: "gemini" },
       ];
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockDataSources; }
@@ -94,9 +102,21 @@ export const settingsService = {
       return [];
     }
   },
+  syncDataSource: async (sourceId: string) => {
+    try {
+      const res = await api.post(ENDPOINTS.SETTINGS.DATASOURCE_SYNC(sourceId));
+      return res.data;
+    } catch (error) {
+      if (import.meta.env.VITE_DEMO_MODE === 'true') {
+        flagMockDataUsed();
+        return { status: "success", message: `Synced ${sourceId}` };
+      }
+      throw error;
+    }
+  },
   getAuditLogs: async () => {
     try {
-      const res = await api.get(ENDPOINTS.SETTINGS.AUDIT_LOGS || '/settings/audit-logs');
+      const res = await api.get(ENDPOINTS.SETTINGS.AUDIT_LOGS);
       return res.data || [];
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return []; }

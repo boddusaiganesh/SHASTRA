@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { FileText, Download, Plus, CheckCircle, Clock, Loader2 } from "lucide-react";
 import { reportService } from "../services/alertService";
-import { KARNATAKA_DISTRICTS } from "../constants/districtsList";
+import { useDistricts } from "../hooks/useDistricts";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 
 const REPORT_TYPES = [
@@ -21,6 +21,7 @@ const ReportsPage: React.FC = () => {
   const [savedReports, setSavedReports] = useState<SavedReport[]>([]);
   const [reportType, setReportType] = useState(REPORT_TYPES[0].value);
   const [district, setDistrict] = useState("All Districts");
+  const districts = useDistricts();
   const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
   const [successMsg, setSuccessMsg] = useState("");
@@ -105,8 +106,8 @@ const ReportsPage: React.FC = () => {
               className="w-full bg-slate-900 border border-slate-600 text-slate-200 text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:border-blue-500"
             >
               <option value="All Districts">All Districts (State Wide)</option>
-              {KARNATAKA_DISTRICTS.map((d) => (
-                <option key={d} value={d}>{d}</option>
+              {districts.map((d) => (
+                <option key={d.district_id} value={d.district_name}>{d.district_name}</option>
               ))}
             </select>
           </div>

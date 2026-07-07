@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { MessageSquare, X, Send, Bot, User, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../../services/api';
+import { ENDPOINTS } from '../../constants/apiEndpoints';
 
 interface Message {
   id: string;
@@ -27,7 +28,7 @@ export default function AIChatWidget() {
     setLoading(true);
 
     try {
-      const res = await api.post('/assistant/ask', { question: userMsg.text });
+      const res = await api.post(ENDPOINTS.ASSISTANT.ASK, { question: userMsg.text });
       const answer = res.data?.answer || 'Sorry, no response available.';
       const isFallback = res.data?.is_fallback || false;
       setMessages(prev => [...prev, { id: Date.now().toString(), type: 'assistant', text: answer, isFallback }]);

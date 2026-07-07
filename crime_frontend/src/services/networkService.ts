@@ -54,9 +54,9 @@ export const networkService = {
     }
   },
 
-  getAiSummary: async (districtId?: string) => {
+  getAiSummary: async (districtId?: string, crimeType?: string) => {
     try {
-      const response = await api.get(ENDPOINTS.NETWORK.AI_SUMMARY, { params: { district_id: districtId } });
+      const response = await api.get(ENDPOINTS.NETWORK.AI_SUMMARY, { params: { district_id: districtId, crime_type: crimeType } });
       return response.data || null;
     } catch (error) {
       console.error("Error fetching AI summary:", error);

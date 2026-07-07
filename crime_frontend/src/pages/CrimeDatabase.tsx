@@ -3,13 +3,14 @@ import { Search, X, Upload, AlertTriangle, ChevronLeft, ChevronRight, Filter } f
 import { crimeService } from "../services/crimeService";
 import CrimesTable from "../components/tables/CrimesTable";
 import LoadingSpinner from "../components/common/LoadingSpinner";
-import { KARNATAKA_DISTRICTS } from "../constants/districtsList";
+import { useDistricts } from "../hooks/useDistricts";
 import { CRIME_TYPES } from "../constants/crimeTypes";
 
 export default function CrimeDatabase() {
   const [crimes, setCrimes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const districts = useDistricts();
   
   // Filters
   const [search, setSearch] = useState(""); // Still used for client-side text filtering if needed, or we could pass it to backend if supported. We'll use it client-side on the page data.
@@ -133,7 +134,8 @@ export default function CrimeDatabase() {
             onChange={(e) => { setDistrict(e.target.value); setPage(1); }}
             className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-blue-500 outline-none"
           >
-            {KARNATAKA_DISTRICTS.map(d => <option key={d} value={d === "All Districts" ? "All" : d}>{d}</option>)}
+            <option value="All">All Districts</option>
+            {districts.map(d => <option key={d.district_id} value={d.district_name}>{d.district_name}</option>)}
           </select>
           
           <select 

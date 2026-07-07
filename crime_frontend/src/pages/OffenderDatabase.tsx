@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Users, Search, Shield, ChevronRight, MapPin, AlertTriangle } from "lucide-react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { offenderService } from "../services/offenderService";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import ExplainabilityPanel from "../components/common/ExplainabilityPanel";
@@ -24,6 +24,7 @@ const OffenderDatabase: React.FC = () => {
   const [offenderRisk, setOffenderRisk] = useState<any>(null);
 
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   useEffect(() => {
     offenderService.searchOffenders("").then((d: any) => {
@@ -191,6 +192,12 @@ const OffenderDatabase: React.FC = () => {
                 </div>
                 <ExplainabilityPanel points={offenderRisk?.risk_factors || selected.risk_factors || []} />
               </div>
+              <button
+                onClick={() => navigate(`/network?focus=${selected.offender_id}`)}
+                className="mt-3 w-full text-xs px-3 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-medium transition-colors"
+              >
+                View in Criminal Network →
+              </button>
             </div>
           </motion.div>
         )}

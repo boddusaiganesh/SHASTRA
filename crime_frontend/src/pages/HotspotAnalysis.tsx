@@ -7,7 +7,7 @@ import TimePatternChart from "../components/charts/TimePatternChart";
 import HotspotsTable from "../components/tables/HotspotsTable";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import { CRIME_TYPES } from "../constants/crimeTypes";
-import { KARNATAKA_DISTRICTS } from "../constants/districtsList";
+import { useDistricts } from "../hooks/useDistricts";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
 const HotspotAnalysis: React.FC = () => {
@@ -17,6 +17,7 @@ const HotspotAnalysis: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [district, setDistrict] = useState("All Districts");
+  const districts = useDistricts();
   const [crimeType, setCrimeType] = useState("All");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -84,7 +85,8 @@ const HotspotAnalysis: React.FC = () => {
         </div>
         <div className="flex flex-wrap gap-3">
           <select value={district} onChange={(e) => setDistrict(e.target.value)} className={selectClass}>
-            {KARNATAKA_DISTRICTS.map((d) => <option key={d}>{d}</option>)}
+            <option value="All Districts">All Districts</option>
+            {districts.map((d) => <option key={d.district_id} value={d.district_name}>{d.district_name}</option>)}
           </select>
           <select value={crimeType} onChange={(e) => setCrimeType(e.target.value)} className={selectClass}>
             {CRIME_TYPES.map((t) => <option key={t}>{t}</option>)}

@@ -151,15 +151,32 @@ const SettingsPage: React.FC = () => {
         <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4">
           <h3 className="text-sm font-semibold text-white mb-4">Connected Data Sources</h3>
           <div className="space-y-3">
-            {(Array.isArray(dataSources) ? (dataSources as { name: string; source_name?: string; type: string; status: string; last_sync: string }[]) : []).map((ds, i) => (
+            {(Array.isArray(dataSources) ? (dataSources as { name: string; source_name?: string; type: string; status: string; last_sync: string; source_id?: string }[]) : []).map((ds, i) => (
               <div key={i} className="flex items-center justify-between p-3 bg-slate-900/60 rounded-lg border border-slate-700/50">
                 <div>
                   <p className="text-sm text-white">{ds.name || ds.source_name}</p>
                   <p className="text-xs text-slate-400">{ds.type || 'Database'} · Last sync: {ds.last_sync}</p>
                 </div>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${ds.status === "Active" || ds.status === "Connected" ? "bg-green-900/40 text-green-400" : "bg-red-900/40 text-red-400"}`}>
-                  {ds.status}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${ds.status === "Active" || ds.status === "Connected" ? "bg-green-900/40 text-green-400" : "bg-red-900/40 text-red-400"}`}>
+                    {ds.status}
+                  </span>
+                  {ds.source_id && (
+                    <button
+                      onClick={async () => {
+                        try {
+                          await settingsService.syncDataSource(ds.source_id!);
+                          alert(`Successfully synced ${ds.name || ds.source_name}`);
+                        } catch (e: any) {
+                          alert(`Failed to sync: ${e.message || "Unknown error"}`);
+                        }
+                      }}
+                      className="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs transition-colors font-medium"
+                    >
+                      Sync
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>

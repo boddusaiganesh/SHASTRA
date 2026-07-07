@@ -7,6 +7,7 @@ from sqlalchemy import select, and_
 from typing import Optional, Dict, Any, List
 from datetime import datetime, timezone
 import logging
+import uuid
 
 from app.core.neo4j_connection import get_network_graph, run_neo4j_query
 from app.models.database_models.offender_model import Offender
@@ -148,6 +149,14 @@ async def build_network_from_postgres(
     edges: list[dict] = []
     per_type_limit = max(1, node_limit // (1 if node_type else 3))
     
+    # --- Organization check (§1.4) ---
+    if node_type == "organization":
+        return {
+            "nodes": [], "edges": [], "total_nodes": 0, "total_edges": 0,
+            "network_density": 0, "key_players": [],
+            "warning": "Organization entities are only available when Neo4j is connected.",
+        }
+
     # --- Criminals ---
     if node_type in (None, "criminal"):
         q = select(Offender).limit(per_type_limit)
@@ -163,6 +172,9 @@ async def build_network_from_postgres(
         
         result = await db.execute(q)
         offenders = result.scalars().all()
+        
+        offender_node_ids = set()
+        offender_associate_map = {}
         
         for offender in offenders:
             node_id = str(offender.offender_id)
@@ -184,20 +196,28 @@ async def build_network_from_postgres(
                     "district_id": offender.district_id,
                 },
             })
-            
+            offender_node_ids.add(node_id)
             if offender.known_associates:
-                current_node_ids = {n["node_id"] for n in nodes}
-                for associate_id in offender.known_associates:
-                    if associate_id in current_node_ids:
-                        edges.append({
-                            "edge_id": f"{node_id}_{associate_id}",
-                            "source_node_id": node_id,
-                            "target_node_id": associate_id,
-                            "relationship_type": "KNOWS",
-                            "strength_score": 60,
-                            "confidence_level": "SUSPECTED",
-                            "crime_types": [],
-                        })
+                offender_associate_map[node_id] = offender.known_associates
+
+        # Second pass for offender-offender KNOWS edges (§1.5)
+        seen_pairs = set()
+        for node_id, associates in offender_associate_map.items():
+            for associate_id in associates:
+                if associate_id in offender_node_ids:
+                    pair_key = tuple(sorted([node_id, associate_id]))
+                    if pair_key in seen_pairs:
+                        continue
+                    seen_pairs.add(pair_key)
+                    edges.append({
+                        "edge_id": f"{node_id}_{associate_id}",
+                        "source_node_id": node_id,
+                        "target_node_id": associate_id,
+                        "relationship_type": "KNOWS",
+                        "strength_score": 60,
+                        "confidence_level": "SUSPECTED",
+                        "crime_types": [],
+                    })
 
     # --- Victims ---
     if node_type in (None, "victim"):
@@ -256,17 +276,50 @@ async def build_network_from_postgres(
             
         l_result = await db.execute(lq)
         locations = l_result.scalars().all()
+        location_ids_in_graph = set()
         for l in locations:
             nodes.append({
                 "node_id": str(l.location_id), 
                 "node_type": "location",
-                "label": l.address,
-                "risk_score": 0,
-                "crime_count": 0,
+                "label": l.address or l.location_name or "Unknown Address",
+                "risk_score": l.risk_score or 0,
+                "crime_count": l.total_crimes or 0,
                 "size": 25,
                 "color": "#a855f7", # purple for locations
                 "profile_data": {"district_id": l.district_id},
             })
+            location_ids_in_graph.add(str(l.location_id))
+
+        # NEW (§1.3): connect locations to offenders via crimes that happened there
+        if location_ids_in_graph:
+            try:
+                crime_q = select(Crime).where(Crime.location_id.in_([uuid.UUID(lid) for lid in location_ids_in_graph]))
+                crimes_at_locations = (await db.execute(crime_q)).scalars().all()
+                crime_ids_by_location = {}
+                for c in crimes_at_locations:
+                    if c.location_id:
+                        crime_ids_by_location.setdefault(str(c.location_id), []).append(c.crime_id)
+
+                existing_offender_ids = {n["node_id"] for n in nodes if n["node_type"] == "criminal"}
+                for loc_id, crime_ids in crime_ids_by_location.items():
+                    if not crime_ids:
+                        continue
+                    link_q = select(CrimeOffenderLink).where(CrimeOffenderLink.crime_id.in_(crime_ids))
+                    offender_links = (await db.execute(link_q)).scalars().all()
+                    for ol in offender_links:
+                        offender_id = str(ol.offender_id)
+                        if offender_id in existing_offender_ids:
+                            edges.append({
+                                "edge_id": f"{offender_id}_{loc_id}",
+                                "source_node_id": offender_id,
+                                "target_node_id": loc_id,
+                                "relationship_type": "FREQUENTED",
+                                "strength_score": 55,
+                                "confidence_level": "SUSPECTED",
+                                "crime_types": [],
+                            })
+            except Exception as e:
+                logger.warning(f"Failed to link locations to crimes/offenders in fallback: {e}")
 
     
     import asyncio

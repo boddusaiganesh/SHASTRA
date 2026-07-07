@@ -28,6 +28,11 @@ const AlertsPage: React.FC = () => {
     dispatch(markAlertRead(id));
   };
 
+  const handleDismiss = async (id: string) => {
+    await alertService.dismiss(id);
+    load();
+  };
+
   const handleMarkAllRead = async () => {
     const unread = (alerts as { alert_id: string; is_read: boolean }[]).filter((a) => !a.is_read);
     for (const a of unread) {
@@ -103,6 +108,7 @@ const AlertsPage: React.FC = () => {
         <AlertsTable
           alerts={filtered as any}
           onMarkRead={handleMarkRead}
+          onDismiss={handleDismiss}
         />
         {filtered.length === 0 && (
           <div className="text-center py-8 text-slate-500">No alerts match the current filter.</div>

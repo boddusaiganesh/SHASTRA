@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { UploadCloud, FileText, AlertCircle, CheckCircle } from 'lucide-react';
 import api from '../../services/api';
+import { ENDPOINTS } from '../../constants/apiEndpoints';
 
 export default function DataImport() {
   const [file, setFile] = useState<File | null>(null);
@@ -30,7 +31,7 @@ export default function DataImport() {
     formData.append('model_type', modelType);
     
     try {
-      const response = await api.post('/import/bulk', formData, {
+      const response = await api.post(ENDPOINTS.IMPORT.BULK, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }

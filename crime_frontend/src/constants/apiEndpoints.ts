@@ -18,6 +18,9 @@ export const ENDPOINTS = {
   CRIMES: {
     MAP_DATA: "/crimes/map-data",
     DETAIL: (id: string) => `/crimes/detail/${id}`,
+    UPDATE: (id: string) => `/crimes/${id}`,
+    UPDATE_STATUS: (id: string) => `/crimes/${id}/status`,
+    DELETE: (id: string) => `/crimes/${id}`,
     FILTER: "/crimes/filter",
   },
   // Hotspots
@@ -62,6 +65,7 @@ export const ENDPOINTS = {
   ALERTS: {
     LIST: "/alerts/active",
     MARK_READ: (id: string) => `/alerts/${id}/read`,
+    DISMISS: (id: string) => `/alerts/${id}`,
   },
   // Reports
   REPORTS: {
@@ -76,9 +80,28 @@ export const ENDPOINTS = {
     DISTRICTS: "/settings/districts",
     ALERT_THRESHOLDS: "/settings/alert-thresholds",
     AUDIT_LOGS: "/settings/audit-logs",
+    DATASOURCE_SYNC: (id: string) => `/settings/datasources/${id}/sync`,
   },
   // Search
   SEARCH: {
     GLOBAL: "/search/global",
+  },
+  // Victims
+  VICTIMS: {
+    SEARCH: "/victims/search",
+    PROFILE: (id: string) => `/victims/${id}/profile`,
+    REGISTER: "/victims",
+  },
+  // Evidence
+  EVIDENCE: {
+    BY_CRIME: (crimeId: string) => `/evidence/${crimeId}`,
+  },
+  // Assistant
+  ASSISTANT: {
+    ASK: "/assistant/ask",
+  },
+  // Import
+  IMPORT: {
+    BULK: "/import/bulk",
   },
 };

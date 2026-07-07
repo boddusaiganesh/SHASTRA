@@ -84,4 +84,12 @@ export const offenderService = {
       return null;
     }
   },
+  getNetwork: async (id: string) => {
+    try {
+      const res = await api.get(ENDPOINTS.OFFENDERS.NETWORK(id));
+      return res.data;
+    } catch {
+      return null;
+    }
+  },
 };

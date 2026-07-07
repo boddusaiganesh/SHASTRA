@@ -1,7 +1,7 @@
 import React from "react";
 import { Layers, MapPin, Flame, Download } from "lucide-react";
 import { CRIME_TYPES, TIME_OF_DAY } from "../../constants/crimeTypes";
-import { KARNATAKA_DISTRICTS } from "../../constants/districtsList";
+import { useDistricts } from "../../hooks/useDistricts";
 
 interface Props {
   viewMode: "heatmap" | "cluster" | "pins";
@@ -26,6 +26,7 @@ const MapControls: React.FC<Props> = ({
 }) => {
   const selectClass = "bg-slate-800 border border-slate-600 text-slate-200 text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-blue-500";
   const inputClass = "bg-slate-800 border border-slate-600 text-slate-200 text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-blue-500";
+  const districts = useDistricts();
   const btnClass = (active: boolean) =>
     `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${active ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white"}`;
 
@@ -38,7 +39,8 @@ const MapControls: React.FC<Props> = ({
         {CRIME_TYPES.map((t) => <option key={t}>{t}</option>)}
       </select>
       <select value={district} onChange={(e) => onDistrictChange(e.target.value)} className={selectClass}>
-        {KARNATAKA_DISTRICTS.map((d) => <option key={d}>{d}</option>)}
+        <option value="All Districts">All Districts</option>
+        {districts.map((d) => <option key={d.district_id} value={d.district_name}>{d.district_name}</option>)}
       </select>
       <select value={timeOfDay} onChange={(e) => onTimeOfDayChange(e.target.value)} className={selectClass}>
         {TIME_OF_DAY.map((t) => <option key={t}>{t}</option>)}

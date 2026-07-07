@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useMemo, useRef } from "react";
 import { motion } from "framer-motion";
 import { Network, AlertTriangle, Search, ChevronRight, Users, MapPin, Building, Brain, ChevronLeft, Grid } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import ReactMarkdown from 'react-markdown';
+import { useDistricts } from "../hooks/useDistricts";
 import { networkService } from "../services/networkService";
 import NetworkGraph, { NetworkGraphHandle } from "../components/network/NetworkGraph";
 import ConnectivityMatrix from "../components/network/ConnectivityMatrix";
@@ -56,6 +57,11 @@ const CriminalNetwork: React.FC = () => {
   const [highlightPath, setHighlightPath] = useState<string[]>([]);
   const navigate = useNavigate();
 
+  const [districtFilter, setDistrictFilter] = useState("all");
+  const [warningMessage, setWarningMessage] = useState("");
+  const [searchParams] = useSearchParams();
+  const districts = useDistricts();
+
   // New states for Ego-Network Navigation and Grid View
   const [viewMode, setViewMode] = useState<"graph" | "matrix">("graph");
   const [navHistory, setNavHistory] = useState<NetworkNode[]>([]);
@@ -67,8 +73,16 @@ const CriminalNetwork: React.FC = () => {
       setLoading(true);
       try {
         const [g, ai] = await Promise.all([
-          networkService.getGraphData(searchQuery || undefined, undefined, undefined, nodeTypeFilter === "all" ? undefined : nodeTypeFilter),
-          networkService.getAiSummary(undefined),
+          networkService.getGraphData(
+            searchQuery || undefined,
+            crimeTypeLens === "all" ? undefined : crimeTypeLens,
+            districtFilter === "all" ? undefined : districtFilter,
+            nodeTypeFilter === "all" ? undefined : nodeTypeFilter
+          ),
+          networkService.getAiSummary(
+            districtFilter === "all" ? undefined : districtFilter,
+            crimeTypeLens === "all" ? undefined : crimeTypeLens
+          ),
         ]);
         
         if (g.status === "offline") {
@@ -83,6 +97,11 @@ const CriminalNetwork: React.FC = () => {
           setEdges(g.edges as NetworkEdge[]);
           setKeyPlayers(g.key_players || []);
           setAiSummary(ai as typeof aiSummary);
+          if (g.warning) {
+            setWarningMessage(g.warning);
+          } else {
+            setWarningMessage("");
+          }
         }
       } catch (e: any) {
         setStatus("offline");
@@ -91,7 +110,7 @@ const CriminalNetwork: React.FC = () => {
       setLoading(false);
     };
     fetch();
-  }, []);
+  }, [crimeTypeLens, districtFilter]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -99,8 +118,8 @@ const CriminalNetwork: React.FC = () => {
       try {
         const g = await networkService.getGraphData(
           searchQuery || undefined,
-          undefined,
-          undefined,
+          crimeTypeLens === "all" ? undefined : crimeTypeLens,
+          districtFilter === "all" ? undefined : districtFilter,
           nodeTypeFilter === "all" ? undefined : nodeTypeFilter,
           { signal: controller.signal }
         );
@@ -108,6 +127,11 @@ const CriminalNetwork: React.FC = () => {
           setNodes(g.nodes);
           setEdges(g.edges);
           setKeyPlayers(g.key_players || []);
+          if (g.warning) {
+            setWarningMessage(g.warning);
+          } else {
+            setWarningMessage("");
+          }
         }
       } catch (e: any) {
         if (e.name !== "CanceledError") console.error(e);
@@ -117,7 +141,7 @@ const CriminalNetwork: React.FC = () => {
       clearTimeout(handle);
       controller.abort();
     };
-  }, [searchQuery, nodeTypeFilter]);
+  }, [searchQuery, nodeTypeFilter, crimeTypeLens, districtFilter]);
 
   const navigateToNode = async (node: NetworkNode, fromHistory = false) => {
     setViewMode("graph");
@@ -144,6 +168,16 @@ const CriminalNetwork: React.FC = () => {
       graphRef.current?.focusOnNode(node.node_id);
     }, 100);
   };
+
+  useEffect(() => {
+    const focusId = searchParams.get("focus");
+    if (focusId && nodes.length > 0) {
+      const target = nodes.find(n => n.node_id === focusId);
+      if (target) {
+        navigateToNode(target);
+      }
+    }
+  }, [nodes, searchParams]);
 
   const goBack = () => {
     if (navIndex <= 0) return;
@@ -368,6 +402,17 @@ const CriminalNetwork: React.FC = () => {
           </div>
           <div className="flex items-center gap-1.5 ml-3 pl-3 border-l border-slate-700">
             <select
+              value={districtFilter}
+              onChange={(e) => setDistrictFilter(e.target.value)}
+              className="bg-slate-800 border border-slate-700 text-slate-300 text-xs rounded-lg px-2 py-1 outline-none mr-1.5"
+            >
+              <option value="all">All Districts</option>
+              {districts.map((d) => (
+                <option key={d.district_id} value={d.district_id}>{d.district_name}</option>
+              ))}
+            </select>
+
+            <select
               value={crimeTypeLens}
               onChange={(e) => setCrimeTypeLens(e.target.value)}
               className="bg-slate-800 border border-slate-700 text-slate-300 text-xs rounded-lg px-2 py-1 outline-none"
@@ -408,6 +453,13 @@ const CriminalNetwork: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {warningMessage && (
+        <div className="bg-amber-900/60 border-b border-amber-500/40 px-4 py-2 flex items-center gap-2 text-xs text-amber-200">
+          <AlertTriangle className="h-4 w-4 text-amber-400 flex-shrink-0" />
+          <span>{warningMessage}</span>
+        </div>
+      )}
 
       <div className="flex-1 min-h-0 flex overflow-hidden">
         {/* Network Graph */}

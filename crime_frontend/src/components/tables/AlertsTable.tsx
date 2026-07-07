@@ -7,7 +7,7 @@ interface Alert {
   district: string; datetime: string; description: string; is_read: boolean;
 }
 
-interface Props { alerts: Alert[]; onMarkRead?: (id: string) => void; compact?: boolean }
+interface Props { alerts: Alert[]; onMarkRead?: (id: string) => void; onDismiss?: (id: string) => void; compact?: boolean }
 
 const severityConfig: Record<string, { icon: React.FC<{ className?: string }>, cls: string }> = {
   Critical: { icon: AlertTriangle, cls: "text-red-400" },
@@ -42,9 +42,14 @@ const AlertsTable: React.FC<Props> = ({ alerts, onMarkRead, compact }) => (
             {!compact && <p className="text-xs text-slate-500">{a.location} • {a.district}</p>}
             <div className="flex items-center justify-between mt-1">
               <span className="text-xs text-slate-600">{formatRelative(a.datetime)}</span>
-              {!a.is_read && onMarkRead && (
-                <button onClick={() => onMarkRead(a.alert_id)} className="text-xs text-blue-400 hover:text-blue-300 transition-colors">Mark read</button>
-              )}
+              <div className="flex items-center gap-2">
+                {!a.is_read && onMarkRead && (
+                  <button onClick={() => onMarkRead(a.alert_id)} className="text-xs text-blue-400 hover:text-blue-300 transition-colors">Mark read</button>
+                )}
+                {onDismiss && (
+                  <button onClick={() => onDismiss(a.alert_id)} className="text-xs text-slate-500 hover:text-red-400 transition-colors">Dismiss</button>
+                )}
+              </div>
             </div>
           </div>
         </div>

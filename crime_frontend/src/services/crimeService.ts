@@ -101,15 +101,15 @@ export const crimeService = {
     }
   },
   update: async (id: string, payload: any) => {
-    const response = await api.put(`/crimes/${id}`, payload);
+    const response = await api.put(ENDPOINTS.CRIMES.UPDATE(id), payload);
     return response.data;
   },
   updateStatus: async (id: string, status: string) => {
-    const response = await api.patch(`/crimes/${id}/status`, null, { params: { status } });
+    const response = await api.patch(ENDPOINTS.CRIMES.UPDATE_STATUS(id), null, { params: { status } });
     return response.data;
   },
   remove: async (id: string) => {
-    const response = await api.delete(`/crimes/${id}`);
+    const response = await api.delete(ENDPOINTS.CRIMES.DELETE(id));
     return response.data;
   },
   getEvidence: evidenceService.getEvidenceList,
