@@ -60,7 +60,7 @@ const CriminalNetwork: React.FC = () => {
 
   const [districtFilter, setDistrictFilter] = useState("all");
   const [warningMessage, setWarningMessage] = useState("");
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const districts = useDistricts();
 
   // New states for Ego-Network Navigation and Grid View
@@ -68,6 +68,20 @@ const CriminalNetwork: React.FC = () => {
   const [navHistory, setNavHistory] = useState<NetworkNode[]>([]);
   const [navIndex, setNavIndex] = useState(-1);
   const graphRef = useRef<NetworkGraphHandle>(null);
+
+  useEffect(() => {
+    const d = searchParams.get("district"); if (d) setDistrictFilter(d);
+    const c = searchParams.get("crime_type"); if (c) setCrimeTypeLens(c);
+    const n = searchParams.get("node_type"); if (n) setNodeTypeFilter(n);
+  }, []); // hydrate on mount
+
+  useEffect(() => {
+    const params: Record<string, string> = {};
+    if (districtFilter !== "all") params.district = districtFilter;
+    if (crimeTypeLens !== "all") params.crime_type = crimeTypeLens;
+    if (nodeTypeFilter !== "all") params.node_type = nodeTypeFilter;
+    setSearchParams(params, { replace: true });
+  }, [districtFilter, crimeTypeLens, nodeTypeFilter, setSearchParams]);
 
   useEffect(() => {
     const fetch = async () => {
@@ -229,6 +243,8 @@ const CriminalNetwork: React.FC = () => {
       if (res && res.found) {
         const pathIds = res.path_nodes.map((n: any) => n.id);
         setHighlightPath(pathIds);
+      } else {
+        setWarningMessage("No path found between the selected nodes, or the graph database is offline.");
       }
     } else {
       setCompareNode1(node);
@@ -262,6 +278,8 @@ const CriminalNetwork: React.FC = () => {
         setNodes(newNodes);
         setEdges(newEdges);
       }
+    } else {
+      setWarningMessage(res?.message || "Node expansion requires the Neo4j graph database, which is currently offline.");
     }
   };
 
@@ -444,7 +462,38 @@ const CriminalNetwork: React.FC = () => {
             ))}
           </div>
         </div>
+        </div>
       </div>
+
+      {(districtFilter !== "all" || crimeTypeLens !== "all" || nodeTypeFilter !== "all") && (
+        <div className="flex items-center gap-2 px-4 py-2 bg-slate-800/60 border-b border-slate-700/50">
+          <span className="text-xs text-slate-400">Active filters:</span>
+          {districtFilter !== "all" && (
+            <span className="flex items-center gap-1 text-xs bg-blue-900/40 text-blue-300 px-2 py-1 rounded-full">
+              District: {districts.find(d => d.district_id === districtFilter)?.district_name || districtFilter}
+              <button onClick={() => setDistrictFilter("all")} className="hover:text-white">x</button>
+            </span>
+          )}
+          {crimeTypeLens !== "all" && (
+            <span className="flex items-center gap-1 text-xs bg-purple-900/40 text-purple-300 px-2 py-1 rounded-full">
+              Crime Type: {crimeTypeLens}
+              <button onClick={() => setCrimeTypeLens("all")} className="hover:text-white">x</button>
+            </span>
+          )}
+          {nodeTypeFilter !== "all" && (
+            <span className="flex items-center gap-1 text-xs bg-emerald-900/40 text-emerald-300 px-2 py-1 rounded-full">
+              Type: {nodeTypeFilter}
+              <button onClick={() => setNodeTypeFilter("all")} className="hover:text-white">x</button>
+            </span>
+          )}
+          <button
+            onClick={() => { setDistrictFilter("all"); setCrimeTypeLens("all"); setNodeTypeFilter("all"); setSearchQuery(""); }}
+            className="ml-auto text-xs text-slate-400 hover:text-red-400 underline"
+          >
+            Clear all filters
+          </button>
+        </div>
+      )}
 
       {warningMessage && (
         <div className="bg-amber-900/60 border-b border-amber-500/40 px-4 py-2 flex items-center gap-2 text-xs text-amber-200">
@@ -465,8 +514,16 @@ const CriminalNetwork: React.FC = () => {
           ) : status === "no_data" ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400">
               <Network className="h-12 w-12 text-slate-600 mb-3 opacity-50" />
-              <h2 className="text-xl font-bold text-white mb-2">No Graph Data</h2>
-              <p className="text-sm max-w-md text-center">There are no records in the Graph Database to visualize. Please ingest data first.</p>
+              <h2 className="text-xl font-bold text-white mb-2">No Matches for This Filter Combination</h2>
+              <p className="text-sm max-w-md text-center mb-4">
+                {warningMessage || "There are no records matching the selected district and crime type."}
+              </p>
+              <button
+                onClick={() => { setDistrictFilter("all"); setCrimeTypeLens("all"); setNodeTypeFilter("all"); setSearchQuery(""); }}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm"
+              >
+                Clear Filters
+              </button>
             </div>
           ) : (
             <>

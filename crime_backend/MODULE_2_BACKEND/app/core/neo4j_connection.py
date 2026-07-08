@@ -272,7 +272,8 @@ async def get_network_graph(
 
     if crime_type:
         where_clauses.append("$crime_type IN n.crime_types")
-        params["crime_type"] = crime_type
+        
+    params["crime_type"] = crime_type if crime_type else None
 
     query = f"""
     MATCH (n)
@@ -284,6 +285,9 @@ async def get_network_graph(
     CALL {{
       WITH n
       OPTIONAL MATCH (n)-[r]-(connected)
+      WHERE $crime_type IS NULL
+         OR $crime_type IN coalesce(r.crime_types, [])
+         OR $crime_type IN coalesce(connected.crime_types, [])
       RETURN r, connected
       LIMIT 25
     }}

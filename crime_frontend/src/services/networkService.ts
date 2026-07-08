@@ -67,7 +67,7 @@ export const networkService = {
   getEdgeInsight: async (nodeA: any, nodeB: any, edge: any) => {
     try {
       const response = await api.post(ENDPOINTS.NETWORK.EDGE_INSIGHT, { node_a: nodeA, node_b: nodeB, edge });
-      return response.data?.data?.insight ?? null;
+      return response.data?.insight ?? null;
     } catch (error) {
       console.error("Error fetching edge insight:", error);
       return null;

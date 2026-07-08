@@ -46,12 +46,13 @@ async def fetch_node_detail(
 async def fetch_ai_summary(
     request: Request,
     district_id: Optional[str] = Query(None),
+    crime_type: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
     resolved_id = await resolve_district_id(db, district_id)
     resolved_id = scope_district_param(resolved_id, current_user)
-    data = await get_network_ai_summary(db, resolved_id)
+    data = await get_network_ai_summary(db, resolved_id, focus_area=crime_type)
     return {"success": True, "data": data}
 
 @router.get("/shortest-path")

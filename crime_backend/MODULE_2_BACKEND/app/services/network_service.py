@@ -148,14 +148,32 @@ async def build_network_from_postgres(
     nodes: list[dict] = []
     edges: list[dict] = []
     per_type_limit = max(1, node_limit // (1 if node_type else 3))
-    
-    # --- Organization check (§1.4) ---
+
     if node_type == "organization":
         return {
             "nodes": [], "edges": [], "total_nodes": 0, "total_edges": 0,
             "network_density": 0, "key_players": [],
             "warning": "Organization entities are only available when Neo4j is connected.",
         }
+
+    # --- Pre-resolve the set of crime_ids that match crime_type (+ district_id) ONCE ---
+    # This becomes the single source of truth every entity type and edge filters against,
+    # so Criminals / Victims / Locations / edges all agree on the same crime-type scope.
+    matching_crime_ids = None
+    if crime_type:
+        crime_filter_q = select(Crime.crime_id).where(Crime.crime_type == crime_type)
+        if district_id:
+            crime_filter_q = crime_filter_q.where(Crime.district_id == district_id)
+        matching_crime_ids = set((await db.execute(crime_filter_q)).scalars().all())
+        if not matching_crime_ids:
+            # No crimes at all match this district+type combo -- return an explicit empty
+            # result instead of silently falling back to an unfiltered graph.
+            return {
+                "nodes": [], "edges": [], "total_nodes": 0, "total_edges": 0,
+                "network_density": 0, "key_players": [],
+                "warning": f"No records found for crime type '{crime_type}'"
+                           + (" in the selected district." if district_id else "."),
+            }
 
     # --- Criminals ---
     if node_type in (None, "criminal"):
@@ -167,20 +185,21 @@ async def build_network_from_postgres(
                 (Offender.first_name.ilike(f"%{search_query}%")) |
                 (Offender.last_name.ilike(f"%{search_query}%"))
             )
-        if crime_type:
-            q = q.join(CrimeOffenderLink).join(Crime).where(Crime.crime_type == crime_type).distinct()
-        
+        if matching_crime_ids is not None:
+            q = q.join(CrimeOffenderLink, CrimeOffenderLink.offender_id == Offender.offender_id) \
+                 .where(CrimeOffenderLink.crime_id.in_(matching_crime_ids)).distinct()
+
         result = await db.execute(q)
         offenders = result.scalars().all()
-        
+
         offender_node_ids = set()
         offender_associate_map = {}
-        
+
         for offender in offenders:
             node_id = str(offender.offender_id)
             color_map = {"HIGH": "#ef4444", "MEDIUM": "#f97316", "LOW": "#22c55e"}
             color = color_map.get(offender.risk_level, "#6b7280")
-            
+
             nodes.append({
                 "node_id": node_id,
                 "node_type": "criminal",
@@ -200,7 +219,6 @@ async def build_network_from_postgres(
             if offender.known_associates:
                 offender_associate_map[node_id] = offender.known_associates
 
-        # Second pass for offender-offender KNOWS edges (§1.5)
         seen_pairs = set()
         for node_id, associates in offender_associate_map.items():
             for associate_id in associates:
@@ -221,6 +239,12 @@ async def build_network_from_postgres(
 
     # --- Victims ---
     if node_type in (None, "victim"):
+        # When a crime_type is selected, only pull victims linked to a matching crime
+        victim_ids_for_crime_type = None
+        if matching_crime_ids is not None:
+            vlink_q = select(CrimeVictimLink.victim_id).where(CrimeVictimLink.crime_id.in_(matching_crime_ids))
+            victim_ids_for_crime_type = set((await db.execute(vlink_q)).scalars().all())
+
         vq = select(Victim).limit(per_type_limit)
         if district_id:
             vq = vq.where(Victim.district_id == district_id)
@@ -229,24 +253,28 @@ async def build_network_from_postgres(
                 (Victim.first_name.ilike(f"%{search_query}%")) |
                 (Victim.last_name.ilike(f"%{search_query}%"))
             )
-            
+        if victim_ids_for_crime_type is not None:
+            vq = vq.where(Victim.victim_id.in_(victim_ids_for_crime_type))
+
         v_result = await db.execute(vq)
         victims = v_result.scalars().all()
         for v in victims:
             nodes.append({
-                "node_id": str(v.victim_id), 
+                "node_id": str(v.victim_id),
                 "node_type": "victim",
                 "label": f"{v.first_name} {v.last_name}",
                 "risk_score": v.vulnerability_level or 0,
                 "crime_count": 1,
                 "size": 20,
-                "color": "#3b82f6", # blue for victims
+                "color": "#3b82f6",
                 "profile_data": {"district_id": v.district_id},
             })
-            
+
         link_q = select(CrimeVictimLink)
         if district_id:
             link_q = link_q.join(Crime).where(Crime.district_id == district_id)
+        if matching_crime_ids is not None:
+            link_q = link_q.where(CrimeVictimLink.crime_id.in_(matching_crime_ids))   # NEW
         cv_links = (await db.execute(link_q)).scalars().all()
         for cvl in cv_links:
             off_links = (await db.execute(
@@ -258,9 +286,9 @@ async def build_network_from_postgres(
                    any(n["node_id"] == str(cvl.victim_id) for n in nodes):
                     edges.append({
                         "edge_id": f"{ol.offender_id}_{cvl.victim_id}",
-                        "source_node_id": str(ol.offender_id), 
+                        "source_node_id": str(ol.offender_id),
                         "target_node_id": str(cvl.victim_id),
-                        "relationship_type": "VICTIMIZED_AT", 
+                        "relationship_type": "VICTIMIZED_AT",
                         "strength_score": 70,
                         "confidence_level": "CONFIRMED",
                         "crime_types": [crime.crime_type] if crime else [],
@@ -268,32 +296,43 @@ async def build_network_from_postgres(
 
     # --- Locations ---
     if node_type in (None, "location"):
+        location_ids_for_crime_type = None
+        if matching_crime_ids is not None:
+            lloc_q = select(Crime.location_id).where(
+                Crime.crime_id.in_(matching_crime_ids), Crime.location_id.isnot(None)
+            )
+            location_ids_for_crime_type = set((await db.execute(lloc_q)).scalars().all())
+
         lq = select(Location).limit(per_type_limit)
         if district_id:
             lq = lq.where(Location.district_id == district_id)
         if search_query:
             lq = lq.where(Location.address.ilike(f"%{search_query}%"))
-            
+        if location_ids_for_crime_type is not None:
+            lq = lq.where(Location.location_id.in_(location_ids_for_crime_type))   # NEW
+
         l_result = await db.execute(lq)
         locations = l_result.scalars().all()
         location_ids_in_graph = set()
         for l in locations:
             nodes.append({
-                "node_id": str(l.location_id), 
+                "node_id": str(l.location_id),
                 "node_type": "location",
                 "label": l.address or l.location_name or "Unknown Address",
                 "risk_score": l.risk_score or 0,
                 "crime_count": l.total_crimes or 0,
                 "size": 25,
-                "color": "#a855f7", # purple for locations
+                "color": "#a855f7",
                 "profile_data": {"district_id": l.district_id},
             })
             location_ids_in_graph.add(str(l.location_id))
 
-        # NEW (§1.3): connect locations to offenders via crimes that happened there
         if location_ids_in_graph:
             try:
+                import uuid
                 crime_q = select(Crime).where(Crime.location_id.in_([uuid.UUID(lid) for lid in location_ids_in_graph]))
+                if matching_crime_ids is not None:
+                    crime_q = crime_q.where(Crime.crime_id.in_(matching_crime_ids))   # NEW
                 crimes_at_locations = (await db.execute(crime_q)).scalars().all()
                 crime_ids_by_location = {}
                 for c in crimes_at_locations:
@@ -356,52 +395,88 @@ async def get_node_detail(
     
     try:
         import uuid
-        offender_uuid = uuid.UUID(node_id)
+        parsed_id = uuid.UUID(node_id)
+    except ValueError:
+        return None
         
+    try:
+        # Try Offender first
         result = await db.execute(
-            select(Offender).where(Offender.offender_id == offender_uuid)
+            select(Offender).where(Offender.offender_id == parsed_id)
         )
         offender = result.scalar_one_or_none()
         
-        if not offender:
-            return None
-        
-        # Get crime history
-        from app.models.database_models.crime_model import CrimeOffenderLink, Crime
-        link_result = await db.execute(
-            select(CrimeOffenderLink).where(CrimeOffenderLink.offender_id == offender_uuid)
-        )
-        links = link_result.scalars().all()
-        
-        crime_ids = [link.crime_id for link in links]
-        crimes = []
-        for cid in crime_ids[:10]:
-            cr = await db.execute(select(Crime).where(Crime.crime_id == cid))
-            crime = cr.scalar_one_or_none()
-            if crime:
-                crimes.append({
-                    "crime_id": str(crime.crime_id),
-                    "crime_type": crime.crime_type,
-                    "date": str(crime.date_of_occurrence),
-                    "status": crime.status,
-                    "severity": crime.severity,
-                })
-        
-        # Get AI analysis
-        ai_analysis = await get_offender_ai_analysis(offender.to_dict(), crimes)
-        
-        return {
-            "node_id": node_id,
-            "node_type": "criminal",
-            "label": f"{offender.first_name} {offender.last_name}",
-            "risk_score": offender.risk_score,
-            "crime_count": offender.total_crimes,
-            "direct_connections": len(offender.known_associates or []),
-            "profile_data": offender.to_dict(),
-            "connected_nodes": offender.known_associates or [],
-            "timeline": crimes,
-            "ai_analysis": ai_analysis,
-        }
+        if offender:
+            # Get crime history
+            from app.models.database_models.crime_model import CrimeOffenderLink, Crime
+            link_result = await db.execute(
+                select(CrimeOffenderLink).where(CrimeOffenderLink.offender_id == parsed_id)
+            )
+            links = link_result.scalars().all()
+            
+            crime_ids = [link.crime_id for link in links]
+            crimes = []
+            for cid in crime_ids[:10]:
+                cr = await db.execute(select(Crime).where(Crime.crime_id == cid))
+                crime = cr.scalar_one_or_none()
+                if crime:
+                    crimes.append({
+                        "crime_id": str(crime.crime_id),
+                        "crime_type": crime.crime_type,
+                        "date": str(crime.date_of_occurrence),
+                        "status": crime.status,
+                        "severity": crime.severity,
+                    })
+            
+            # Get AI analysis
+            ai_analysis = await get_offender_ai_analysis(offender.to_dict(), crimes)
+            
+            return {
+                "node_id": node_id,
+                "node_type": "criminal",
+                "label": f"{offender.first_name} {offender.last_name}",
+                "risk_score": offender.risk_score,
+                "crime_count": offender.total_crimes,
+                "direct_connections": len(offender.known_associates or []),
+                "profile_data": offender.to_dict(),
+                "connected_nodes": offender.known_associates or [],
+                "timeline": crimes,
+                "ai_analysis": ai_analysis,
+            }
+
+        # Try Victim next
+        from app.models.database_models.victim_model import Victim
+        result = await db.execute(select(Victim).where(Victim.victim_id == parsed_id))
+        victim = result.scalar_one_or_none()
+        if victim:
+            return {
+                "node_id": node_id,
+                "node_type": "victim",
+                "label": f"{victim.first_name} {victim.last_name}",
+                "risk_score": victim.vulnerability_level or 0,
+                "crime_count": 1,
+                "profile_data": victim.to_dict(),
+                "timeline": [],
+                "ai_analysis": None,
+            }
+            
+        # Try Location next
+        from app.models.database_models.location_model import Location
+        result = await db.execute(select(Location).where(Location.location_id == parsed_id))
+        location = result.scalar_one_or_none()
+        if location:
+            return {
+                "node_id": node_id,
+                "node_type": "location",
+                "label": location.address or location.location_name or "Unknown Address",
+                "risk_score": location.risk_score or 0,
+                "crime_count": location.total_crimes or 0,
+                "profile_data": location.to_dict(),
+                "timeline": [],
+                "ai_analysis": None,
+            }
+            
+        return None
         
     except Exception as e:
         logger.error(f"Error getting node detail: {e}", exc_info=True)
@@ -425,6 +500,12 @@ async def get_network_ai_summary(
     offender_query = select(Offender).where(Offender.total_crimes > 1)
     if district_id:
         offender_query = offender_query.where(Offender.district_id == district_id)
+    if focus_area:
+        from app.models.database_models.crime_model import CrimeOffenderLink, Crime
+        offender_query = (
+            offender_query.join(CrimeOffenderLink).join(Crime)
+            .where(Crime.crime_type == focus_area).distinct()
+        )
     
     result = await db.execute(offender_query.limit(50))
     high_activity_offenders = result.scalars().all()
