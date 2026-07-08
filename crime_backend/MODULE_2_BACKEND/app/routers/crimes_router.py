@@ -158,10 +158,12 @@ async def filter_crimes(
     )
     count_base = select(func.count(Crime.crime_id))
 
+    resolved_district_id = await resolve_district_id(db, district_id) if district_id else None
+
     def apply_filter_conditions(q):
         q = scope_district_filter(q, current_user, Crime.district_id)
-        if district_id:
-            q = q.where(Crime.district_id == district_id)
+        if resolved_district_id:
+            q = q.where(Crime.district_id == resolved_district_id)
         if crime_type:
             q = q.where(Crime.crime_type == crime_type)
         if status:

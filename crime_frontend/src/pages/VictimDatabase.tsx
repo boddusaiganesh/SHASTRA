@@ -3,7 +3,7 @@ import { Search, UserPlus, FileText, User } from 'lucide-react';
 import { victimService } from '../services/victimService';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store/store';
-import { getDistrictName } from '../utils/districtMap';
+import { useDistricts } from '../hooks/useDistricts';
 
 export default function VictimDatabase() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -11,6 +11,7 @@ export default function VictimDatabase() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedVictim, setSelectedVictim] = useState<any>(null);
+  const districts = useDistricts();
   
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [newVictim, setNewVictim] = useState({ first_name: "", last_name: "", age: "", gender: "", phone_number: "", district_id: "" });
@@ -128,7 +129,7 @@ export default function VictimDatabase() {
                     <td className="p-4 font-medium text-slate-200">{victim.full_name}</td>
                     <td className="p-4">{victim.age || 'N/A'} / {victim.gender || 'N/A'}</td>
                     <td className="p-4">{victim.phone_number || 'N/A'}</td>
-                    <td className="p-4">{getDistrictName(victim.district_id)}</td>
+                    <td className="p-4">{districts.find(d => d.district_id === victim.district_id)?.district_name || victim.district_id}</td>
                     <td className="p-4">
                       <button
                         onClick={() => viewProfile(victim.victim_id)}

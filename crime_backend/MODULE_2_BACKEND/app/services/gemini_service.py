@@ -15,7 +15,7 @@ async def get_network_analysis_summary(
     suspicious_pairs: List[Dict],
     network_stats: Dict,
     focus_area: Optional[str] = None,
-) -> str:
+) -> Dict[str, Any]:
     """Generate AI network analysis summary"""
     
     prompt = f"""
@@ -35,17 +35,32 @@ SUSPICIOUS ASSOCIATIONS DETECTED:
 
 FOCUS AREA: {focus_area or 'General Network Analysis'}
 
-Provide a professional criminal network intelligence briefing in 3-4 paragraphs covering:
-1. Overall network structure and key players
-2. Most significant criminal associations and their implications
-3. Risk assessment and emerging threats
-4. Recommended investigative actions
+Provide a professional criminal network intelligence briefing as a raw JSON object (do not wrap in markdown tags like ```json) with the following structure:
+{{
+  "summary_text": "3-4 paragraphs covering overall network structure, key players, risk assessment, and emerging threats.",
+  "key_findings": ["5 concise bullet points of key findings"],
+  "recommended_actions": ["5 actionable recommendations for investigation"]
+}}
 
 Keep the analysis factual and actionable.
 """
     
     result = await call_gemini(prompt)
-    return result.get("text", "") or "Network analysis temporarily unavailable. Please review the raw network data."
+    import json
+    try:
+        data = json.loads(result.get("text", "{}"))
+        return {
+            "summary_text": data.get("summary_text", "Network analysis temporarily unavailable."),
+            "key_findings": data.get("key_findings", []),
+            "recommended_actions": data.get("recommended_actions", [])
+        }
+    except Exception as e:
+        logger.error(f"Failed to parse Gemini JSON: {e}")
+        return {
+            "summary_text": result.get("text", "Network analysis temporarily unavailable."),
+            "key_findings": [],
+            "recommended_actions": []
+        }
 
 
 async def get_deployment_suggestions_ai(

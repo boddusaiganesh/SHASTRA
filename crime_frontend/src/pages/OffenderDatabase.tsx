@@ -7,6 +7,7 @@ import LoadingSpinner from "../components/common/LoadingSpinner";
 import ExplainabilityPanel from "../components/common/ExplainabilityPanel";
 import { useSelector } from 'react-redux';
 import { RootState } from '../store/store';
+import { useDistricts } from '../hooks/useDistricts';
 
 interface Offender {
   offender_id: string; offender_name: string; age: number; offender_age?: number; district: string;
@@ -15,7 +16,8 @@ interface Offender {
   photo_url?: string; risk_factors?: string[];
 }
 
-const OffenderDatabase: React.FC = () => {
+export default function OffenderDatabase() {
+  const districts = useDistricts();
   const [offenders, setOffenders] = useState<Offender[]>([]);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Offender | null>(null);
@@ -244,7 +246,10 @@ const OffenderDatabase: React.FC = () => {
                 <option value="ABSCONDING">Absconding</option>
                 <option value="DECEASED">Deceased</option>
               </select>
-              <input type="text" placeholder="District ID (e.g. KA-01)" value={newOffender.district_id} onChange={(e) => setNewOffender({...newOffender, district_id: e.target.value})} className="col-span-2 px-3 py-2 bg-slate-800 text-white rounded border border-slate-700 focus:border-purple-500 outline-none" />
+              <select value={newOffender.district_id} onChange={(e) => setNewOffender({...newOffender, district_id: e.target.value})} className="col-span-2 px-3 py-2 bg-slate-800 text-white rounded border border-slate-700 focus:border-purple-500 outline-none">
+                <option value="">Select District</option>
+                {districts.map(d => <option key={d.district_id} value={d.district_id}>{d.district_name}</option>)}
+              </select>
             </div>
             <div className="flex justify-end gap-2 mt-4">
               <button onClick={() => setShowRegisterModal(false)} className="px-4 py-2 bg-slate-700 text-white rounded hover:bg-slate-600 transition-colors">Cancel</button>
@@ -257,4 +262,3 @@ const OffenderDatabase: React.FC = () => {
   );
 };
 
-export default OffenderDatabase;

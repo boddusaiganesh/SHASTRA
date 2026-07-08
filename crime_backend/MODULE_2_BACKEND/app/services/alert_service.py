@@ -164,7 +164,7 @@ async def create_alert(
         from app.core.websocket import manager
         await manager.broadcast({
             "type": "NEW_ALERT",
-            "alert": alert.to_dict()
+            "data": alert.to_dict()
         })
     except Exception as e:
         logger.error(f"Failed to broadcast alert: {e}")

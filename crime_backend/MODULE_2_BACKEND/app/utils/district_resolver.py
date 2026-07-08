@@ -24,7 +24,7 @@ async def resolve_district_id(db: AsyncSession, district_val: Optional[str]) -> 
         )
     )
     result = await db.execute(stmt)
-    resolved = result.scalar_one_or_none()
+    resolved = result.scalars().first()
     if resolved:
         return resolved
         

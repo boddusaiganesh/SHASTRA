@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Users, Bell, Database, Plus, Save, ActivitySquare } from "lucide-react";
 import { settingsService } from "../services/alertService";
-import { KARNATAKA_DISTRICTS_WITH_CODES } from "../constants/districtsList";
+import { useDistricts } from "../hooks/useDistricts";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import DataImport from "../components/settings/DataImport";
 import { UploadCloud } from "lucide-react";
@@ -10,6 +10,7 @@ interface User { user_id: string; username: string; full_name: string; role: str
 interface AlertThresholds { crime_spike_percent: number; anomaly_confidence: number; high_risk_score: number; }
 
 const SettingsPage: React.FC = () => {
+  const districts = useDistricts();
   const [activeTab, setActiveTab] = useState("users");
   const [users, setUsers] = useState<User[]>([]);
   const [thresholds, setThresholds] = useState<AlertThresholds | null>(null);
@@ -95,7 +96,7 @@ const SettingsPage: React.FC = () => {
               </select>
               <select value={newUser.district} onChange={(e) => setNewUser({ ...newUser, district: e.target.value })} className={inputCls}>
                 <option value="">State-Wide</option>
-                {KARNATAKA_DISTRICTS_WITH_CODES.map((d) => <option key={d.district_id} value={d.district_id}>{d.district_name}</option>)}
+                {districts.map((d) => <option key={d.district_id} value={d.district_id}>{d.district_name}</option>)}
               </select>
               <input type="password" placeholder="Password" value={newUser.password} onChange={(e) => setNewUser({ ...newUser, password: e.target.value })} className={inputCls} />
             </div>

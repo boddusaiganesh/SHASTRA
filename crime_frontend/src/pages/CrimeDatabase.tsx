@@ -135,7 +135,7 @@ export default function CrimeDatabase() {
             className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-blue-500 outline-none"
           >
             <option value="All">All Districts</option>
-            {districts.map(d => <option key={d.district_id} value={d.district_name}>{d.district_name}</option>)}
+            {districts.map(d => <option key={d.district_id} value={d.district_id}>{d.district_name}</option>)}
           </select>
           
           <select 

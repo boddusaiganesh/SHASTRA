@@ -66,6 +66,7 @@ async def init_db():
     from app.models.database_models.anomaly_model import Anomaly
     from app.models.database_models.report_model import Report
     from app.models.database_models.system_settings_model import SystemSettings
+    from app.models.database_models.evidence_model import Evidence
 
     # Enable PostGIS extension (optional if installed) in its own transaction so errors don't abort create_all
     try:
@@ -77,10 +78,7 @@ async def init_db():
         logger.warning(f"Optional PostgreSQL extensions not available: {ext_e}")
 
     try:
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-        
-        logger.info("Database tables created successfully")
+        logger.info("Database tables initialized via Alembic migrations")
         
         # Seed initial data
         await seed_initial_data()

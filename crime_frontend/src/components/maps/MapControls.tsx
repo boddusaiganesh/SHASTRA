@@ -40,7 +40,7 @@ const MapControls: React.FC<Props> = ({
       </select>
       <select value={district} onChange={(e) => onDistrictChange(e.target.value)} className={selectClass}>
         <option value="All Districts">All Districts</option>
-        {districts.map((d) => <option key={d.district_id} value={d.district_name}>{d.district_name}</option>)}
+        {districts.map((d) => <option key={d.district_id} value={d.district_id}>{d.district_name}</option>)}
       </select>
       <select value={timeOfDay} onChange={(e) => onTimeOfDayChange(e.target.value)} className={selectClass}>
         {TIME_OF_DAY.map((t) => <option key={t}>{t}</option>)}

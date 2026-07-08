@@ -301,6 +301,7 @@ async def get_network_graph(
     
     for record in results:
         # Process main node
+        node_id = None
         if record.get("n"):
             node = record["n"]
             labels_n = record.get("labels_n") or []
@@ -312,7 +313,7 @@ async def get_network_graph(
                 nodes_map[node_id] = normalized
         
         # Process relationship
-        if record.get("type_r") and record.get("connected"):
+        if record.get("type_r") and record.get("connected") and node_id:
             rel = record.get("r_props") or {}
             connected = record["connected"]
             

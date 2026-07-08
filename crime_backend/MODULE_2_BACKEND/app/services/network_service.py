@@ -554,26 +554,31 @@ async def get_network_ai_summary(
     }
     
     # Get AI summary
-    summary_text = await get_network_analysis_summary(
+    ai_data = await get_network_analysis_summary(
         all_offenders[:20], suspicious_pairs, network_stats, focus_area
     )
     
-    # Extract key findings
-    key_findings = [
-        f"Identified {network_stats['total_criminals']} repeat offenders in the network",
-        f"{network_stats['high_risk_count']} individuals classified as HIGH risk",
-        f"{network_stats['active_count']} offenders currently active",
-        f"Detected {len(suspicious_pairs)} suspicious associations",
-        "Network analysis reveals organized crime patterns requiring investigation",
-    ]
-    
-    recommended_actions = [
-        "Prioritize surveillance of HIGH risk individuals",
-        "Investigate identified suspicious pairs for coordinated activity",
-        "Coordinate inter-district intelligence sharing",
-        "Deploy undercover assets in identified criminal network areas",
-        "Issue lookout notices for absconding network members",
-    ]
+    # Extract AI findings or fallback to defaults
+    summary_text = ai_data.get("summary_text", "Network analysis temporarily unavailable.")
+    key_findings = ai_data.get("key_findings", [])
+    if not key_findings:
+        key_findings = [
+            f"Identified {network_stats['total_criminals']} repeat offenders in the network",
+            f"{network_stats['high_risk_count']} individuals classified as HIGH risk",
+            f"{network_stats['active_count']} offenders currently active",
+            f"Detected {len(suspicious_pairs)} suspicious associations",
+            "Network analysis reveals organized crime patterns requiring investigation",
+        ]
+        
+    recommended_actions = ai_data.get("recommended_actions", [])
+    if not recommended_actions:
+        recommended_actions = [
+            "Prioritize surveillance of HIGH risk individuals",
+            "Investigate identified suspicious pairs for coordinated activity",
+            "Coordinate inter-district intelligence sharing",
+            "Deploy undercover assets in identified criminal network areas",
+            "Issue lookout notices for absconding network members",
+        ]
     
     response = {
         "summary_text": summary_text,
