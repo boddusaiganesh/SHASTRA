@@ -219,7 +219,10 @@ export default function VictimDatabase() {
                 <option value="O">Other</option>
               </select>
               <input type="text" placeholder="Phone Number" value={newVictim.phone_number} onChange={(e) => setNewVictim({...newVictim, phone_number: e.target.value})} className="col-span-2 px-3 py-2 bg-slate-800 text-white rounded border border-slate-700 focus:border-emerald-500 outline-none" />
-              <input type="text" placeholder="District ID (e.g. KA-01)" value={newVictim.district_id} onChange={(e) => setNewVictim({...newVictim, district_id: e.target.value})} className="col-span-2 px-3 py-2 bg-slate-800 text-white rounded border border-slate-700 focus:border-emerald-500 outline-none" />
+              <select value={newVictim.district_id} onChange={(e) => setNewVictim({...newVictim, district_id: e.target.value})} className="col-span-2 px-3 py-2 bg-slate-800 text-white rounded border border-slate-700 focus:border-emerald-500 outline-none">
+                <option value="">Select District</option>
+                {districts.map(d => <option key={d.district_id} value={d.district_id}>{d.district_name}</option>)}
+              </select>
             </div>
             <div className="flex justify-end gap-2 mt-4">
               <button onClick={() => setShowRegisterModal(false)} className="px-4 py-2 bg-slate-700 text-white rounded hover:bg-slate-600 transition-colors">Cancel</button>
