@@ -20,7 +20,8 @@ async def ask_assistant(
     current_user=Depends(get_current_user),
 ):
     # Fetch real-time summary data to ground the LLM in the current state of the database.
-    summary_data = await get_dashboard_summary(db, current_user.district_id)
+    resolved_id = current_user.get("district_id") if current_user.get("role") == "DISTRICT_OFFICER" else None
+    summary_data = await get_dashboard_summary(db, resolved_id)
     
     context = (
         f"Karnataka state crime records: "
