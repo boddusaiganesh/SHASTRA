@@ -254,16 +254,21 @@ async def build_network_from_postgres(
                 (Victim.last_name.ilike(f"%{search_query}%"))
             )
         if victim_ids_for_crime_type is not None:
-            vq = vq.where(Victim.victim_id.in_(victim_ids_for_crime_type))
-
-        v_result = await db.execute(vq)
-        victims = v_result.scalars().all()
+            if not victim_ids_for_crime_type:
+                victims = []
+            else:
+                vq = vq.where(Victim.victim_id.in_(victim_ids_for_crime_type))
+                v_result = await db.execute(vq)
+                victims = v_result.scalars().all()
+        else:
+            v_result = await db.execute(vq)
+            victims = v_result.scalars().all()
         for v in victims:
             nodes.append({
                 "node_id": str(v.victim_id),
                 "node_type": "victim",
                 "label": f"{v.first_name} {v.last_name}",
-                "risk_score": v.vulnerability_level or 0,
+                "risk_score": len(v.vulnerability_factors) * 10 if v.vulnerability_factors else 0,
                 "crime_count": 1,
                 "size": 20,
                 "color": "#3b82f6",
@@ -309,10 +314,15 @@ async def build_network_from_postgres(
         if search_query:
             lq = lq.where(Location.address.ilike(f"%{search_query}%"))
         if location_ids_for_crime_type is not None:
-            lq = lq.where(Location.location_id.in_(location_ids_for_crime_type))   # NEW
-
-        l_result = await db.execute(lq)
-        locations = l_result.scalars().all()
+            if not location_ids_for_crime_type:
+                locations = []
+            else:
+                lq = lq.where(Location.location_id.in_(location_ids_for_crime_type))
+                l_result = await db.execute(lq)
+                locations = l_result.scalars().all()
+        else:
+            l_result = await db.execute(lq)
+            locations = l_result.scalars().all()
         location_ids_in_graph = set()
         for l in locations:
             nodes.append({
@@ -450,10 +460,10 @@ async def get_node_detail(
         victim = result.scalar_one_or_none()
         if victim:
             return {
-                "node_id": node_id,
+                "node_id": str(victim.victim_id),
                 "node_type": "victim",
                 "label": f"{victim.first_name} {victim.last_name}",
-                "risk_score": victim.vulnerability_level or 0,
+                "risk_score": len(victim.vulnerability_factors) * 10 if victim.vulnerability_factors else 0,
                 "crime_count": 1,
                 "profile_data": victim.to_dict(),
                 "timeline": [],
@@ -504,15 +514,25 @@ async def get_network_ai_summary(
         from app.models.database_models.crime_model import CrimeOffenderLink, Crime
         offender_query = (
             offender_query.join(CrimeOffenderLink).join(Crime)
-            .where(Crime.crime_type == focus_area).distinct()
+            .where(Crime.crime_type == focus_area)
         )
     
-    result = await db.execute(offender_query.limit(50))
-    high_activity_offenders = result.scalars().all()
+    result = await db.execute(offender_query)
+    all_offenders = result.scalars().all()
+    # Deduplicate in python because postgres can't do DISTINCT on JSON columns
+    seen_ids = set()
+    unique_offenders = []
+    for off in all_offenders:
+        if off.offender_id not in seen_ids:
+            seen_ids.add(off.offender_id)
+            unique_offenders.append(off)
+            if len(unique_offenders) >= 50:
+                break
+    offenders = unique_offenders
     
     # Find suspicious pairs (shared known associates)
     suspicious_pairs = []
-    all_offenders = [o.to_dict() for o in high_activity_offenders]
+    all_offenders = [o.to_dict() for o in offenders]
     
     for i, o1 in enumerate(all_offenders[:10]):
         for o2 in all_offenders[i+1:i+6]:

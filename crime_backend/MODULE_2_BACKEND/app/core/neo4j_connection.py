@@ -243,7 +243,6 @@ async def get_network_graph(
 ) -> Dict[str, Any]:
     """Get the criminal network graph from Neo4j"""
     # Connect directly to neo4j without awaiting the driver creation itself
-    global _driver
     if not _driver:
         return {"status": "offline", "error": "Graph database (Neo4j) is not connected"}
         

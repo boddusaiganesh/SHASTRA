@@ -76,7 +76,7 @@ const buildElements = (nodes: NetworkNode[], edges: NetworkEdge[]) => [
     })),
 ];
 
-const styleSheet: cytoscape.Stylesheet[] = [
+const styleSheet: any[] = [
   {
     selector: "node",
     style: {
@@ -225,7 +225,7 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNo
     nonMatching.addClass("lens-dimmed");
 
     // Dim nodes that have NO matching edge and aren't isolated-by-design
-    const connectedNodeIds = new Set(matchingEdges.map((e) => [e.source().id(), e.target().id()]).flat());
+    const connectedNodeIds = new Set(matchingEdges.map((e) => [(e as cytoscape.EdgeSingular).source().id(), (e as cytoscape.EdgeSingular).target().id()]).flat());
     cyRef.current.nodes().forEach((n) => {
       if (!connectedNodeIds.has(n.id())) n.addClass("lens-dimmed");
     });

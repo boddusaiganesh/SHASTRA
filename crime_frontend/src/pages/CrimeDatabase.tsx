@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Search, X, Upload, AlertTriangle, ChevronLeft, ChevronRight, Filter } from "lucide-react";
+import { Search, X, Upload, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 import { crimeService } from "../services/crimeService";
 import CrimesTable from "../components/tables/CrimesTable";
 import LoadingSpinner from "../components/common/LoadingSpinner";
