@@ -26,7 +26,7 @@ export const offenderService = {
   searchOffenders: async (query: string = "") => {
     try {
       const res = await api.get(ENDPOINTS.OFFENDERS.SEARCH, { params: { query } });
-      const list = res.data?.offenders || res.data?.data || res.data || [];
+      const list = res.data?.data || res.data || [];
       return (Array.isArray(list) ? list : []).map(normalizeOffender).filter(Boolean);
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') {

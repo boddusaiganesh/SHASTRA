@@ -84,7 +84,7 @@ async def seed_all_data(session: AsyncSession):
         
         # Seed 5000 Crimes with clusters
         logger.info("Generating 5000 crimes...")
-        # High density districts for clustering (Bangalore Urban, Mysuru, Dakshina Kannada)
+        # High density districts for clustering (Bengaluru Urban, Mysuru, Dakshina Kannada)
         high_density_districts = ["KA-01", "KA-03", "KA-08"]
         crimes_list = []
         

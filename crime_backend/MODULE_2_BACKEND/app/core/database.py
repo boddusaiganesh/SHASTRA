@@ -34,12 +34,29 @@ AsyncSessionLocal = async_sessionmaker(
 
 
 class Base(DeclarativeBase):
-    """Base class for all SQLAlchemy models"""
+    """
+    Base class for all SQLAlchemy models in the application.
+    Inherits from DeclarativeBase to enable declarative mapping, providing a 
+    common base for table definitions and model relationships across the system.
+    """
     pass
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    """Dependency to get database session"""
+    """
+    Dependency generator for FastAPI endpoints to get an asynchronous database session.
+    
+    Yields:
+        AsyncSession: An asynchronous SQLAlchemy session connected to the PostgreSQL database.
+        
+    Raises:
+        Exception: Re-raises any exception encountered during the session, and triggers a rollback.
+        
+    Note:
+        This function is designed to be used with FastAPI's Depends() injection.
+        It handles automatic commit if the transaction is successful, and rollback if it fails.
+        The session is automatically closed in the finally block.
+    """
     async with AsyncSessionLocal() as session:
         try:
             yield session
@@ -53,7 +70,22 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 
 async def init_db():
-    """Initialize database and create tables"""
+    """
+    Initialize the database connection and setup required extensions.
+    
+    This function performs the following actions:
+    1. Loads all ORM models to ensure they are registered with SQLAlchemy's Base.metadata.
+    2. Connects to PostgreSQL and attempts to create 'postgis' and 'pg_trgm' extensions.
+       These extensions are required for geospatial queries and text search respectively.
+    3. Seeds initial data if the database is empty.
+    
+    Returns:
+        bool: True if initialization was successful.
+        
+    Raises:
+        Exception: If database initialization fails, it raises an exception which should
+                   be caught by the caller to handle degraded modes or failure states.
+    """
     # Import all models here to ensure they are registered with Base.metadata before create_all
     # Import in order of dependency (parent tables before child tables)
     from app.models.database_models.user_model import User
@@ -86,12 +118,17 @@ async def init_db():
         
     except Exception as e:
         logger.error(f"Database initialization error: {e}")
-        # Don't raise - allow app to start even if DB is not ready in dev mode
-        return False
+        raise
 
 
 async def seed_initial_data():
-    """Seed the database with initial data if empty"""
+    """
+    Seed the database with initial mock data if the database is completely empty.
+    
+    This function checks if there are any existing records in the `User` table.
+    If no users exist, it invokes the `seed_all_data` utility to populate the database
+    with test entities (e.g. users, districts, crimes, alerts) for development or demo usage.
+    """
     try:
         async with AsyncSessionLocal() as session:
             from app.models.database_models.user_model import User

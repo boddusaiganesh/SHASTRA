@@ -130,7 +130,7 @@ async def get_dashboard_summary(
             .limit(1)
         )
         most_affected_row = district_result.first()
-        most_affected_district = most_affected_row[0] if most_affected_row else "Bangalore Urban"
+        most_affected_district = most_affected_row[0] if most_affected_row else "Bengaluru Urban"
         
         # Get actual district name
         if most_affected_row:

@@ -73,7 +73,7 @@ async def _import_crime(db: AsyncSession, data: dict, user_id: str):
         day_of_week=crime_date.strftime("%A"),
         month=crime_date.month,
         year=crime_date.year,
-        district_id=data.get("district_id", "KAA_01"),
+        district_id=data.get("district_id") or None,
         police_station_id=data.get("police_station_id"),
         latitude=float(data["latitude"]) if data.get("latitude") else None,
         longitude=float(data["longitude"]) if data.get("longitude") else None,

@@ -1,18 +1,16 @@
 import { flagMockDataUsed } from '../utils/mockDataFlag';
 import api from "./api";
 import { ENDPOINTS } from "../constants/apiEndpoints";
-import { mockRecentAlerts, mockUsers, mockDataSources, mockAlertThresholds, mockSavedReports } from "./mockData";
+import { mockRecentAlerts } from "./mockData";
 
 export const alertService = {
   getAlerts: async () => {
     try {
       const res = await api.get(ENDPOINTS.ALERTS.LIST);
-      const data = res.data;
-      return Array.isArray(data) ? data : (data?.alerts || data?.data || mockRecentAlerts);
+      return res.data?.data || res.data;
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockRecentAlerts; }
-      console.error("Error fetching alerts:", error);
-      return [];
+      throw error;
     }
   },
   markRead: async (id: string) => {
@@ -29,146 +27,6 @@ export const alertService = {
       return res.data;
     } catch {
       return { success: true, alert_id: id };
-    }
-  },
-};
-
-export const settingsService = {
-  getUsers: async () => {
-    try {
-      const res = await api.get(ENDPOINTS.SETTINGS.USERS);
-      const data = res.data;
-      return Array.isArray(data) ? data : (data?.users || data?.data || mockUsers);
-    } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockUsers; }
-      console.error(error);
-      return [];
-    }
-  },
-  addUser: async (user: Record<string, string>) => {
-    try {
-      const res = await api.post(ENDPOINTS.SETTINGS.USERS_ADD, user);
-      return { data: res.data };
-    } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return { user: { ...user, user_id: "mock-id-" + Math.random().toString(36).substring(2, 11) } }; }
-      console.error(error);
-      return [];
-    }
-  },
-  getDistricts: async () => {
-    try {
-      const res = await api.get(ENDPOINTS.SETTINGS.DISTRICTS);
-      const data = res.data;
-      return Array.isArray(data) ? data : (data?.districts || data?.data || []);
-    } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return []; }
-      console.error(error);
-      return [];
-    }
-  },
-  getAlertThresholds: async () => {
-    try {
-      const res = await api.get(ENDPOINTS.SETTINGS.ALERT_THRESHOLDS);
-      return res.data;
-    } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockAlertThresholds; }
-      console.error(error);
-      return [];
-    }
-  },
-  updateAlertThresholds: async (thresholds: Record<string, unknown>) => {
-    try {
-      const res = await api.put(ENDPOINTS.SETTINGS.ALERT_THRESHOLDS, thresholds);
-      return res.data;
-    } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return { success: true, thresholds }; }
-      console.error(error);
-      return [];
-    }
-  },
-  getDataSources: async () => {
-    try {
-      const res = await api.get("/health");
-      const h = res.data?.data || res.data;
-      return [
-        { name: "PostgreSQL", type: "Database", status: h?.database === "healthy" ? "Active" : "Error", last_sync: "Live", source_id: "postgres" },
-        { name: "Redis Cache", type: "Cache", status: h?.redis === "healthy" ? "Active" : "Error", last_sync: "Live", source_id: "redis" },
-        { name: "Neo4j", type: "Graph DB", status: h?.neo4j === "healthy" ? "Active" : "Error", last_sync: "Live", source_id: "neo4j" },
-        { name: "Gemini AI", type: "AI Engine", status: "Active", last_sync: "On-demand", source_id: "gemini" },
-      ];
-    } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockDataSources; }
-      console.error(error);
-      return [];
-    }
-  },
-  syncDataSource: async (sourceId: string) => {
-    try {
-      const res = await api.post(ENDPOINTS.SETTINGS.DATASOURCE_SYNC(sourceId));
-      return res.data;
-    } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') {
-        flagMockDataUsed();
-        return { status: "success", message: `Synced ${sourceId}` };
-      }
-      throw error;
-    }
-  },
-  getAuditLogs: async () => {
-    try {
-      const res = await api.get(ENDPOINTS.SETTINGS.AUDIT_LOGS);
-      return res.data || [];
-    } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return []; }
-      console.error(error);
-      return [];
-    }
-  },
-};
-
-export const reportService = {
-  generateReport: async (params: Record<string, string>) => {
-    try {
-      const queryParams = {
-        report_type: params.report_type,
-        report_name: params.report_name || `${params.report_type}_${Date.now()}`,
-        ...(params.district_id ? { district_id: params.district_id } : {}),
-      };
-      const res = await api.post(
-        `${ENDPOINTS.REPORTS.GENERATE}?${new URLSearchParams(queryParams).toString()}`
-      );
-      return res.data;
-    } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') {
-      flagMockDataUsed();
-        return {
-          report_id: `RPT_${Date.now()}`,
-          report_type: params.report_type,
-          status: "Ready",
-          generated_at: new Date().toISOString(),
-        };
-      }
-      console.error(error);
-      return [];
-    }
-  },
-  getSavedList: async () => {
-    try {
-      const res = await api.get(ENDPOINTS.REPORTS.SAVED_LIST);
-      const data = res.data;
-      return Array.isArray(data) ? data : (data?.reports || data?.data || mockSavedReports);
-    } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockSavedReports; }
-      console.error(error);
-      return [];
-    }
-  },
-  download: async (id: string) => {
-    try {
-      const res = await api.get(ENDPOINTS.REPORTS.DOWNLOAD(id), { responseType: 'blob' });
-      return res.data;
-    } catch {
-      return [];
     }
   },
 };

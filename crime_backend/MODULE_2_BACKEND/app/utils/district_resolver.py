@@ -13,8 +13,8 @@ async def resolve_district_id(db: AsyncSession, district_val: Optional[str]) -> 
     if district_val.startswith("KA-"):
         return district_val
         
-    # Standardize names (e.g. Bengaluru vs Bangalore)
-    search_name = district_val.replace("Bengaluru", "Bangalore").strip()
+    # Standardize names (e.g. Bangalore to Bengaluru)
+    search_name = district_val.replace("Bangalore", "Bengaluru").strip()
     
     stmt = select(District.district_id).where(
         or_(

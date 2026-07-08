@@ -33,17 +33,28 @@ export interface NetworkGraphHandle {
   highlightKeyPlayers: (nodeIds: string[]) => void;
 }
 
-const LAYOUT_OPTIONS = {
-  name: "fcose",
-  quality: "default",
-  animate: true,
-  randomize: true,
-  nodeSeparation: 160,
-  idealEdgeLength: 220,
-  nodeRepulsion: 9000,
-  edgeElasticity: 0.35,
-  gravity: 0.15,
-} as const;
+const getDynamicLayoutOptions = (nodeCount: number, edgeCount: number) => {
+  const scale = 1 + Math.sqrt(Math.max(nodeCount, 1)) / 6;
+  const avgDegree = nodeCount > 0 ? (edgeCount * 2) / nodeCount : 0;
+  const densityFactor = 1 + Math.min(avgDegree / 6, 1) * 0.4;
+  const isLarge = nodeCount > 150;
+
+  return {
+    name: "fcose",
+    quality: isLarge ? "draft" : "default",
+    animate: !isLarge,
+    randomize: true,
+    nodeDimensionsIncludeLabels: true,
+    packComponents: true,
+    nodeSeparation: Math.min(600, Math.round(160 * scale)),
+    idealEdgeLength: Math.min(520, Math.round(220 * scale * densityFactor)),
+    nodeRepulsion: Math.min(60000, Math.round(9000 * scale * scale)),
+    edgeElasticity: 0.35,
+    gravity: Math.max(0.02, 0.15 / scale),
+    numIter: isLarge ? 1500 : 2500,
+    tile: true,
+  } as any;
+};
 
 const buildElements = (nodes: NetworkNode[], edges: NetworkEdge[]) => [
   ...nodes.map((n) => ({
@@ -135,12 +146,40 @@ const styleSheet: any[] = [
     style: { "opacity": 0.12 },
   },
   {
+    selector: "node.lens-dimmed",
+    style: { "font-size": "8px" },
+  },
+  {
     selector: ".key-player",
     // @ts-ignore
     style: { "border-color": "#f59e0b", "border-width": 6, "border-style": "double" },
   },
 ];
 
+/**
+ * NetworkGraph Component
+ * 
+ * Renders an interactive network graph using Cytoscape.js and fcose layout.
+ * Used for visualizing criminal networks, relationships, and connections.
+ * 
+ * Features:
+ * - Dynamic layout scaling based on node/edge counts
+ * - Expandable nodes (double-click to expand)
+ * - Node and Edge selection handling
+ * - Lens effects for filtering by crime type
+ * - Imperative handle methods to focus, clear, and highlight key players
+ * 
+ * @param props.nodes Array of network nodes
+ * @param props.edges Array of network edges connecting the nodes
+ * @param props.onNodeSelect Callback triggered on single node click
+ * @param props.onNodeExpand Callback triggered on node double-click
+ * @param props.onNodeCompare Callback triggered on shift + node click
+ * @param props.onEdgeSelect Callback triggered on edge click
+ * @param props.selectedNodeId Currently selected node to highlight
+ * @param props.highlightPath Array of node/edge IDs to highlight (dimming others)
+ * @param props.crimeTypeLens Crime type string to filter edges/nodes visually
+ * @param ref Forwarded ref exposing NetworkGraphHandle methods (focusOnNode, clearFocus, highlightKeyPlayers)
+ */
 const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNodeSelect, onNodeExpand, onNodeCompare, onEdgeSelect, selectedNodeId, highlightPath, crimeTypeLens }, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<cytoscape.Core | null>(null);
@@ -155,7 +194,7 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNo
         container: containerRef.current,
         elements: buildElements(nodes, edges),
         style: styleSheet,
-        layout: LAYOUT_OPTIONS as any,
+        layout: getDynamicLayoutOptions(nodes.length, edges.length),
         minZoom: 0.2,
         maxZoom: 3,
       });
@@ -202,11 +241,13 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNo
       // Full graph shrunk — full rebuild
       cy.elements().remove();
       cy.add(buildElements(nodes, edges));
-      cy.layout(LAYOUT_OPTIONS as any).run();
+      cy.layout(getDynamicLayoutOptions(nodes.length, edges.length)).run();
     } else {
       // Incremental expand
       cy.add(buildElements(newNodes, newEdges));
-      cy.layout({ ...LAYOUT_OPTIONS, randomize: false, fit: false } as any).run();
+      const totalNodes = cy.nodes().length;
+      const totalEdges = cy.edges().length;
+      cy.layout({ ...getDynamicLayoutOptions(totalNodes, totalEdges), randomize: false, fit: false } as any).run();
     }
 
     prevIdsRef.current = currentIds;

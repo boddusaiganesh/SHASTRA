@@ -165,7 +165,7 @@ async def create_alert(
         await manager.broadcast({
             "type": "NEW_ALERT",
             "data": alert.to_dict()
-        })
+        }, target_district=alert.district_id)
     except Exception as e:
         logger.error(f"Failed to broadcast alert: {e}")
     
@@ -284,7 +284,7 @@ async def detect_and_generate_alerts(db: AsyncSession):
     from app.services.notification_service import notify_high_priority_alert
     
     for alert in generated:
-        await manager.broadcast({"type": "NEW_ALERT", "data": alert.to_dict()})
+        await manager.broadcast({"type": "NEW_ALERT", "data": alert.to_dict()}, target_district=alert.district_id)
         if alert.severity in ["HIGH", "CRITICAL"]:
             await notify_high_priority_alert(alert.to_dict(), ["district_officer@ksp.gov.in"])
             

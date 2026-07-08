@@ -36,6 +36,22 @@ async def create_victim(db: AsyncSession, payload: Dict[str, Any]) -> Dict[str, 
     db.add(victim)
     await db.commit()
     await db.refresh(victim)
+    
+    # Sync to Neo4j
+    from app.core.neo4j_connection import sync_victim_to_neo4j
+    try:
+        await sync_victim_to_neo4j({
+            "victim_id": str(victim.victim_id),
+            "name": f"{victim.first_name} {victim.last_name}",
+            "vulnerability_level": len(victim.vulnerability_factors) * 10 if victim.vulnerability_factors else 0,
+            "victimization_count": victim.total_victimizations or 1,
+            "district_id": victim.district_id,
+            "crime_types": [],  # new victim has no crimes linked yet
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Failed to sync victim to Neo4j: {e}")
+        
     return victim.to_dict()
 
 

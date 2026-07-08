@@ -452,6 +452,7 @@ const CriminalNetwork: React.FC = () => {
             >
               {showIsolated ? "Hide Isolated" : "Show Isolated"}
             </button>
+            <span className="text-xs text-slate-500 ml-2">{filteredNodes.length} nodes • {edges.length} connections</span>
           </div>
           <div className="ml-auto flex items-center gap-3">
             {[["criminal", "Criminals"], ["victim", "Victims"], ["location", "Locations"], ["organization", "Organizations"]].map(([type, label]) => (
@@ -747,6 +748,18 @@ const CriminalNetwork: React.FC = () => {
                 >
                   {aiSummary.summary_text}
                 </ReactMarkdown>
+              </div>
+
+              <h4 className="text-xs font-semibold text-blue-400 mb-2 flex items-center gap-1">
+                <Brain className="h-3 w-3" />Key Findings
+              </h4>
+              <div className="space-y-1 mb-3">
+                {(Array.isArray(aiSummary?.key_findings) ? aiSummary.key_findings : []).map((kf, i) => (
+                  <div key={i} className="flex items-start gap-2 text-xs text-slate-300">
+                    <span className="text-blue-400 font-bold mt-0.5">•</span>
+                    <span>{kf}</span>
+                  </div>
+                ))}
               </div>
 
               <h4 className="text-xs font-semibold text-orange-400 mb-2 flex items-center gap-1">

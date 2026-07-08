@@ -23,8 +23,7 @@ export const predictionService = {
   getAnomalies: async (filters?: any) => {
     try {
       const res = await api.get(ENDPOINTS.ANOMALIES.LIST, { params: filters });
-      const data = res.data;
-      return Array.isArray(data) ? data : (data?.anomalies || []);
+      return res.data?.data || res.data || [];
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockAnomalies; }
       throw error;
@@ -81,8 +80,7 @@ export const anomalyService = {
   getList: async () => {
     try {
       const res = await api.get(ENDPOINTS.ANOMALIES.LIST);
-      const data = res.data;
-      return Array.isArray(data) ? data : (data?.anomalies || []);
+      return res.data?.data || res.data || [];
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockAnomalies; }
       throw error;

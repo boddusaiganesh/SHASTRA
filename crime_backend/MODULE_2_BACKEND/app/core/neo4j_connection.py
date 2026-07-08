@@ -120,7 +120,9 @@ async def sync_offender_to_neo4j(offender_data: Dict[str, Any]):
         c.risk_level = $risk_level,
         c.risk_score = $risk_score,
         c.crime_count = $crime_count,
-        c.status = $status
+        c.status = $status,
+        c.district_id = $district_id,
+        c.crime_types = $crime_types
     RETURN c
     """
     await run_neo4j_query(query, offender_data)
@@ -132,7 +134,9 @@ async def sync_victim_to_neo4j(victim_data: Dict[str, Any]):
     MERGE (v:Victim {victim_id: $victim_id})
     SET v.name = $name,
         v.vulnerability_level = $vulnerability_level,
-        v.victimization_count = $victimization_count
+        v.victimization_count = $victimization_count,
+        v.district_id = $district_id,
+        v.crime_types = $crime_types
     RETURN v
     """
     await run_neo4j_query(query, victim_data)
@@ -145,7 +149,8 @@ async def sync_location_to_neo4j(location_data: Dict[str, Any]):
     SET l.name = $name,
         l.location_type = $location_type,
         l.risk_score = $risk_score,
-        l.is_hotspot = $is_hotspot
+        l.is_hotspot = $is_hotspot,
+        l.district_id = $district_id
     RETURN l
     """
     await run_neo4j_query(query, location_data)
@@ -339,6 +344,15 @@ async def get_network_graph(
                 "crime_count": len(rel.get("crime_ids", [])) if rel else 0,
                 "crime_types": rel.get("crime_types", []) if rel else [],
             })
+    
+    
+    # Deduplicate edges by order-independent key
+    seen_edges = {}
+    for e in edges:
+        key = tuple(sorted([e["source_node_id"], e["target_node_id"]])) + (e["relationship_type"],)
+        if key not in seen_edges:
+            seen_edges[key] = e
+    edges = list(seen_edges.values())
     
     nodes = list(nodes_map.values())
     

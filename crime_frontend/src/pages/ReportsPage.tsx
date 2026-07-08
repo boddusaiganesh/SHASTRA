@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { FileText, Download, Plus, CheckCircle, Clock, Loader2 } from "lucide-react";
-import { reportService } from "../services/alertService";
+import { reportService } from "../services/reportService";
 import { useDistricts } from "../hooks/useDistricts";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 
@@ -75,7 +75,7 @@ const ReportsPage: React.FC = () => {
   if (loading) return <div className="flex-1 flex items-center justify-center"><LoadingSpinner size="lg" text="Loading reports..." /></div>;
 
   return (
-    <div className="flex-1 min-h-0 w-full overflow-y-auto custom-scrollbar p-6 space-y-6">
+    <div className="flex-1 min-h-0 w-full overflow-y-auto overflow-x-hidden custom-scrollbar p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-white">Executive Reports</h1>

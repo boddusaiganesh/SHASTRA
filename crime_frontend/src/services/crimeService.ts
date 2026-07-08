@@ -51,8 +51,7 @@ export const crimeService = {
   getRecentCrimes: async (limit = 10) => {
     try {
       const res = await api.get(ENDPOINTS.DASHBOARD.RECENT_CRIMES, { params: { limit } });
-      const data = res.data;
-      return Array.isArray(data) ? data : (data?.crimes || data?.data || mockRecentCrimes);
+      return res.data?.data || res.data;
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockRecentCrimes; }
       throw error;
@@ -61,8 +60,7 @@ export const crimeService = {
   getRecentAlerts: async (limit = 8) => {
     try {
       const res = await api.get(ENDPOINTS.DASHBOARD.RECENT_ALERTS, { params: { limit } });
-      const data = res.data;
-      return Array.isArray(data) ? data : (data?.alerts || data?.data || mockRecentAlerts);
+      return res.data?.data || res.data;
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockRecentAlerts; }
       throw error;

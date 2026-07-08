@@ -18,6 +18,9 @@ async def init_redis():
     """Initialize Redis connection"""
     global _redis_client
     try:
+        if settings.ENVIRONMENT == "production" and not settings.REDIS_PASSWORD:
+            raise ValueError("REDIS_PASSWORD is required in production environment.")
+            
         _redis_client = aioredis.from_url(
             settings.REDIS_URL,
             password=settings.REDIS_PASSWORD or None,

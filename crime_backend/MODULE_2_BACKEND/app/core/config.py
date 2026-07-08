@@ -165,8 +165,8 @@ TIME_OF_DAY = {
 
 # Karnataka Districts
 KARNATAKA_DISTRICTS = [
-    {"district_id": "KA-01", "district_name": "Bangalore Urban", "district_code": "BLR", "headquarters": "Bangalore"},
-    {"district_id": "KA-02", "district_name": "Bangalore Rural", "district_code": "BLR-R", "headquarters": "Bangalore"},
+    {"district_id": "KA-01", "district_name": "Bengaluru Urban", "district_code": "BLR", "headquarters": "Bengaluru"},
+    {"district_id": "KA-02", "district_name": "Bengaluru Rural", "district_code": "BLR-R", "headquarters": "Bengaluru"},
     {"district_id": "KA-03", "district_name": "Mysuru", "district_code": "MYS", "headquarters": "Mysuru"},
     {"district_id": "KA-04", "district_name": "Tumakuru", "district_code": "TMK", "headquarters": "Tumakuru"},
     {"district_id": "KA-05", "district_name": "Kolar", "district_code": "KLR", "headquarters": "Kolar"},

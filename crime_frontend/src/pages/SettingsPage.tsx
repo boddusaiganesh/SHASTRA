@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Users, Bell, Database, Plus, Save, ActivitySquare } from "lucide-react";
-import { settingsService } from "../services/alertService";
+import { settingsService } from "../services/settingsService";
 import { useDistricts } from "../hooks/useDistricts";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import DataImport from "../components/settings/DataImport";

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { settingsService } from "../services/alertService";
+import { settingsService } from "../services/settingsService";
 
 export interface DistrictItem {
   district_id: string;

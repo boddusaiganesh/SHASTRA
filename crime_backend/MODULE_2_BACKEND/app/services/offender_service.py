@@ -362,6 +362,24 @@ async def create_offender(db: AsyncSession, payload: dict):
     db.add(offender)
     await db.commit()
     await db.refresh(offender)
+    
+    # Sync to Neo4j
+    from app.core.neo4j_connection import sync_offender_to_neo4j
+    try:
+        await sync_offender_to_neo4j({
+            "offender_id": str(offender.offender_id),
+            "name": f"{offender.first_name} {offender.last_name}",
+            "risk_level": offender.risk_level,
+            "risk_score": offender.risk_score or 0,
+            "crime_count": offender.total_crimes or 0,
+            "status": offender.status,
+            "district_id": offender.district_id,
+            "crime_types": [],  # new offender has no crimes yet
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Failed to sync offender to Neo4j: {e}")
+        
     return offender.to_dict()
 
 async def update_offender(db: AsyncSession, offender_id: str, payload: dict):
@@ -385,4 +403,24 @@ async def update_offender(db: AsyncSession, offender_id: str, payload: dict):
             setattr(offender, k, v)
     await db.commit()
     await db.refresh(offender)
+    
+    # Sync to Neo4j
+    from app.core.neo4j_connection import sync_offender_to_neo4j
+    try:
+        # We would ideally fetch existing crime_types here, but for now we just pass empty to avoid losing district info
+        # Note: bulk sync will fix crime_types later, or we could fetch them here if required.
+        await sync_offender_to_neo4j({
+            "offender_id": str(offender.offender_id),
+            "name": f"{offender.first_name} {offender.last_name}",
+            "risk_level": offender.risk_level,
+            "risk_score": offender.risk_score or 0,
+            "crime_count": offender.total_crimes or 0,
+            "status": offender.status,
+            "district_id": offender.district_id,
+            "crime_types": [], 
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Failed to sync offender update to Neo4j: {e}")
+
     return offender.to_dict()

@@ -4,23 +4,26 @@ import json
 
 class ConnectionManager:
     def __init__(self):
-        self.active_connections: List[WebSocket] = []
+        self.active_connections: dict[WebSocket, dict] = {}
 
-    async def connect(self, websocket: WebSocket):
+    async def connect(self, websocket: WebSocket, user: dict):
         await websocket.accept()
-        self.active_connections.append(websocket)
+        self.active_connections[websocket] = user
 
     def disconnect(self, websocket: WebSocket):
         if websocket in self.active_connections:
-            self.active_connections.remove(websocket)
+            del self.active_connections[websocket]
 
-    async def broadcast(self, data: dict):
+    async def broadcast(self, data: dict, target_district: str | None = None):
         dead_connections = []
-        for connection in self.active_connections:
+        for ws, user in self.active_connections.items():
+            if target_district and target_district != "ALL" and user.get("role") == "DISTRICT_OFFICER" \
+               and user.get("district_id") != target_district:
+                continue
             try:
-                await connection.send_text(json.dumps(data))
+                await ws.send_text(json.dumps(data))
             except Exception:
-                dead_connections.append(connection)
+                dead_connections.append(ws)
         for dead in dead_connections:
             self.disconnect(dead)
 
