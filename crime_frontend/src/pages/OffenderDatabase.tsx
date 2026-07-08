@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Users, Search, Shield, ChevronRight, MapPin, AlertTriangle } from "lucide-react";
+import { Users, Search, Shield, ChevronRight, MapPin, AlertTriangle, UserPlus } from "lucide-react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { offenderService } from "../services/offenderService";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import ExplainabilityPanel from "../components/common/ExplainabilityPanel";
+import { useSelector } from 'react-redux';
+import { RootState } from '../store/store';
 
 interface Offender {
   offender_id: string; offender_name: string; age: number; offender_age?: number; district: string;
@@ -25,6 +27,22 @@ const OffenderDatabase: React.FC = () => {
 
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+
+  const { user_role } = useSelector((state: RootState) => state.auth);
+  const isScrbOrInvestigator = user_role === 'SCRB_OFFICER' || user_role === 'INVESTIGATOR';
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [newOffender, setNewOffender] = useState({ first_name: "", last_name: "", age: "", status: "", district_id: "" });
+
+  const handleRegisterOffender = async () => {
+    try {
+      await offenderService.create(newOffender);
+      setShowRegisterModal(false);
+      setNewOffender({ first_name: "", last_name: "", age: "", status: "", district_id: "" });
+      handleSearch(search);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   useEffect(() => {
     offenderService.searchOffenders("").then((d: any) => {
@@ -86,6 +104,12 @@ const OffenderDatabase: React.FC = () => {
             <h1 className="text-xl font-bold text-white">Offender Database</h1>
             <p className="text-sm text-slate-400">{offenders.length} records · Active monitoring</p>
           </div>
+          {isScrbOrInvestigator && (
+            <button onClick={() => setShowRegisterModal(true)} className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition-colors">
+              <UserPlus className="h-4 w-4" />
+              Add Offender
+            </button>
+          )}
         </div>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
@@ -204,6 +228,31 @@ const OffenderDatabase: React.FC = () => {
           </motion.div>
         )}
       </div>
+
+      {showRegisterModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-xl w-full max-w-md space-y-4">
+            <h2 className="text-lg font-bold text-white mb-2">Register Offender</h2>
+            <div className="grid grid-cols-2 gap-4">
+              <input type="text" placeholder="First Name" value={newOffender.first_name} onChange={(e) => setNewOffender({...newOffender, first_name: e.target.value})} className="col-span-1 px-3 py-2 bg-slate-800 text-white rounded border border-slate-700 focus:border-purple-500 outline-none" />
+              <input type="text" placeholder="Last Name" value={newOffender.last_name} onChange={(e) => setNewOffender({...newOffender, last_name: e.target.value})} className="col-span-1 px-3 py-2 bg-slate-800 text-white rounded border border-slate-700 focus:border-purple-500 outline-none" />
+              <input type="number" placeholder="Age" value={newOffender.age} onChange={(e) => setNewOffender({...newOffender, age: e.target.value})} className="col-span-1 px-3 py-2 bg-slate-800 text-white rounded border border-slate-700 focus:border-purple-500 outline-none" />
+              <select value={newOffender.status} onChange={(e) => setNewOffender({...newOffender, status: e.target.value})} className="col-span-1 px-3 py-2 bg-slate-800 text-white rounded border border-slate-700 focus:border-purple-500 outline-none">
+                <option value="">Status...</option>
+                <option value="ACTIVE">Active</option>
+                <option value="IMPRISONED">Imprisoned</option>
+                <option value="ABSCONDING">Absconding</option>
+                <option value="DECEASED">Deceased</option>
+              </select>
+              <input type="text" placeholder="District ID (e.g. KA-01)" value={newOffender.district_id} onChange={(e) => setNewOffender({...newOffender, district_id: e.target.value})} className="col-span-2 px-3 py-2 bg-slate-800 text-white rounded border border-slate-700 focus:border-purple-500 outline-none" />
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
+              <button onClick={() => setShowRegisterModal(false)} className="px-4 py-2 bg-slate-700 text-white rounded hover:bg-slate-600 transition-colors">Cancel</button>
+              <button onClick={handleRegisterOffender} className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-500 transition-colors">Save</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

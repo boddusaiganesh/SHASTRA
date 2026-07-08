@@ -92,4 +92,12 @@ export const offenderService = {
       return null;
     }
   },
+  create: async (payload: Record<string, unknown>) => {
+    const res = await api.post(ENDPOINTS.OFFENDERS.CREATE, payload);
+    return res.data;
+  },
+  update: async (id: string, payload: Record<string, unknown>) => {
+    const res = await api.put(ENDPOINTS.OFFENDERS.UPDATE(id), payload);
+    return res.data;
+  },
 };

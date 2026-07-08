@@ -46,6 +46,8 @@ export const ENDPOINTS = {
     MODUS_OPERANDI: (id: string) => `/offenders/${id}/modus-operandi`,
     NETWORK: (id: string) => `/offenders/${id}/network`,
     RISK: (id: string) => `/offenders/${id}/risk`,
+    CREATE: "/offenders",
+    UPDATE: (id: string) => `/offenders/${id}`,
   },
   // Predictions
   PREDICTIONS: {
