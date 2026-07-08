@@ -462,7 +462,6 @@ const CriminalNetwork: React.FC = () => {
             ))}
           </div>
         </div>
-        </div>
       </div>
 
       {(districtFilter !== "all" || crimeTypeLens !== "all" || nodeTypeFilter !== "all") && (
