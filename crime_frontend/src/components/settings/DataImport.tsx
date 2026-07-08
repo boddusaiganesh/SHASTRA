@@ -6,7 +6,7 @@ import { ENDPOINTS } from '../../constants/apiEndpoints';
 import { RootState } from '../../store/store';
 
 export default function DataImport() {
-  const { user } = useSelector((state: RootState) => state.auth);
+  const { user_role } = useSelector((state: RootState) => state.auth);
   const [file, setFile] = useState<File | null>(null);
   const [modelType, setModelType] = useState('crimes');
   const [loading, setLoading] = useState(false);
@@ -14,7 +14,7 @@ export default function DataImport() {
   const [error, setError] = useState<string | null>(null);
 
   // Gate this component to SCRB_OFFICERs only
-  if (user?.role !== 'SCRB_OFFICER') {
+  if (user_role !== 'SCRB_OFFICER') {
     return null;
   }
 
