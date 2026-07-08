@@ -97,6 +97,7 @@ export const ENDPOINTS = {
   // Evidence
   EVIDENCE: {
     BY_CRIME: (crimeId: string) => `/evidence/${crimeId}`,
+    DOWNLOAD: (evidenceId: string) => `/evidence/download/${evidenceId}`,
   },
   // Assistant
   ASSISTANT: {

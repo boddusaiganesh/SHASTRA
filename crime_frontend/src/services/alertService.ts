@@ -14,19 +14,11 @@ export const alertService = {
     }
   },
   markRead: async (id: string) => {
-    try {
-      const res = await api.put(ENDPOINTS.ALERTS.MARK_READ(id));
-      return res.data;
-    } catch {
-      return { success: true, alert_id: id };
-    }
+    const res = await api.put(ENDPOINTS.ALERTS.MARK_READ(id));
+    return res.data;
   },
   dismiss: async (id: string) => {
-    try {
-      const res = await api.delete(ENDPOINTS.ALERTS.DISMISS(id));
-      return res.data;
-    } catch {
-      return { success: true, alert_id: id };
-    }
+    const res = await api.delete(ENDPOINTS.ALERTS.DISMISS(id));
+    return res.data;
   },
 };

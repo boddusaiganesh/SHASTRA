@@ -1,14 +1,22 @@
 import React, { useState } from 'react';
+import { useSelector } from 'react-redux';
 import { UploadCloud, FileText, AlertCircle, CheckCircle } from 'lucide-react';
 import api from '../../services/api';
 import { ENDPOINTS } from '../../constants/apiEndpoints';
+import { RootState } from '../../store/store';
 
 export default function DataImport() {
+  const { user } = useSelector((state: RootState) => state.auth);
   const [file, setFile] = useState<File | null>(null);
   const [modelType, setModelType] = useState('crimes');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Gate this component to SCRB_OFFICERs only
+  if (user?.role !== 'SCRB_OFFICER') {
+    return null;
+  }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {

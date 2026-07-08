@@ -12,7 +12,6 @@ from slowapi.util import get_remote_address
 limiter = Limiter(key_func=get_remote_address)
 router = APIRouter()
 
-@router.get("/")
 @router.get("/list")
 @limiter.limit("30/minute")
 async def get_anomalies(

@@ -110,14 +110,18 @@ async def init_db():
         logger.warning(f"Optional PostgreSQL extensions not available: {ext_e}")
 
     try:
-        logger.info("Database tables initialized via Alembic migrations")
-        
+        async with AsyncSessionLocal() as session:
+            await session.execute(text("SELECT 1 FROM users LIMIT 1"))
+    except Exception:
+        logger.critical("Required tables not found. Run `alembic upgrade head` before starting the app.")
+        return False
+
+    try:
         # Seed initial data
         await seed_initial_data()
         return True
-        
     except Exception as e:
-        logger.error(f"Database initialization error: {e}")
+        logger.error(f"Database initialization error during seeding: {e}")
         raise
 
 

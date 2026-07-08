@@ -43,6 +43,15 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     if (isAuthenticated) {
+      // Validate session on mount
+      import("./services/authService").then(({ authService }) => {
+        authService.verifyToken().catch(() => {
+          import("./store/authSlice").then(({ logout }) => {
+            dispatch(logout());
+          });
+        });
+      });
+
       alertService.getAlerts().then((data) => dispatch(setAlerts(data)));
       
       let ws: WebSocket;

@@ -17,5 +17,10 @@ export const evidenceService = {
       },
     });
     return res.data;
+  },
+  
+  downloadEvidence: async (evidenceId: string) => {
+    const res = await api.get(ENDPOINTS.EVIDENCE.DOWNLOAD(evidenceId), { responseType: 'blob' });
+    return res.data;
   }
 };

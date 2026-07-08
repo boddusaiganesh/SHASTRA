@@ -18,7 +18,7 @@ async def bulk_import(
     file: UploadFile = File(...),
     model_type: str = Form(...),
     db: AsyncSession = Depends(get_db),
-    current_user=Depends(require_role(["SUPER_ADMIN", "SCRB_OFFICER"])),
+    current_user=Depends(require_role(["SCRB_OFFICER"])),
 ):
     if model_type not in ["crimes", "offenders", "victims"]:
         raise HTTPException(status_code=400, detail="Invalid model_type. Must be crimes, offenders, or victims")
