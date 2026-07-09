@@ -1,11 +1,25 @@
 version: '3.8'
 
 services:
+  frontend:
+    build:
+      context: ./crime_frontend
+      args:
+        VITE_API_URL: http://localhost:8000/api/v1
+        VITE_WS_URL: ws://localhost:8000/api/v1/ws
+    ports:
+      - "80:80"
+    restart: unless-stopped
+    depends_on:
+      - backend
+    networks:
+      - crime_intelligence_network
+
   backend:
-    build: .
+    build: ./crime_backend/MODULE_2_BACKEND
     restart: unless-stopped
     env_file:
-      - .env
+      - ./crime_backend/MODULE_2_BACKEND/.env
     environment:
       DATABASE_HOST: postgres
       DATABASE_URL: postgresql+asyncpg://${DATABASE_USER}:${DATABASE_PASSWORD}@postgres:5432/${DATABASE_NAME}
@@ -15,7 +29,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./local_data/uploads:/app/uploads
+      - ./crime_backend/MODULE_2_BACKEND/local_data/uploads:/app/uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -27,11 +41,11 @@ services:
       - crime_intelligence_network
 
   scheduler:
-    build: .
+    build: ./crime_backend/MODULE_2_BACKEND
     restart: unless-stopped
     command: ["python", "-m", "app.scheduler.run_standalone"]
     env_file:
-      - .env
+      - ./crime_backend/MODULE_2_BACKEND/.env
     environment:
       DATABASE_HOST: postgres
       DATABASE_URL: postgresql+asyncpg://${DATABASE_USER}:${DATABASE_PASSWORD}@postgres:5432/${DATABASE_NAME}
@@ -55,6 +69,8 @@ services:
       POSTGRES_USER: ${DATABASE_USER}
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
       POSTGRES_DB: ${DATABASE_NAME}
+    env_file:
+      - ./crime_backend/MODULE_2_BACKEND/.env
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER} -d ${DATABASE_NAME}"]
       interval: 5s
@@ -63,7 +79,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - ./local_data/postgres:/var/lib/postgresql/data
+      - ./crime_backend/MODULE_2_BACKEND/local_data/postgres:/var/lib/postgresql/data
     networks:
       - crime_intelligence_network
 
@@ -74,6 +90,8 @@ services:
       NEO4J_AUTH: ${NEO4J_USER}/${NEO4J_PASSWORD}
       NEO4J_PLUGINS: '["apoc"]'
       NEO4J_dbms_security_procedures_unrestricted: apoc.*
+    env_file:
+      - ./crime_backend/MODULE_2_BACKEND/.env
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:7474 || exit 1"]
       interval: 10s
@@ -83,7 +101,7 @@ services:
       - "7474:7474"
       - "7687:7687"
     volumes:
-      - ./local_data/neo4j:/data
+      - ./crime_backend/MODULE_2_BACKEND/local_data/neo4j:/data
     networks:
       - crime_intelligence_network
 
@@ -92,7 +110,7 @@ services:
     restart: unless-stopped
     command: /bin/sh -c 'redis-server --requirepass "$$REDIS_PASSWORD"'
     env_file:
-      - .env
+      - ./crime_backend/MODULE_2_BACKEND/.env
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "$$REDIS_PASSWORD", "ping"]
       interval: 5s
@@ -100,25 +118,8 @@ services:
       retries: 10
     ports:
       - "6379:6379"
-    volumes:
-      - ./local_data/redis:/data
     networks:
       - crime_intelligence_network
-
-  frontend:
-    build:
-      context: ../../crime_frontend
-      dockerfile: Dockerfile
-      args:
-        VITE_API_URL: ${FRONTEND_VITE_API_URL}
-        VITE_WS_URL: ${FRONTEND_VITE_WS_URL}
-    restart: unless-stopped
-    ports:
-      - "80:80"
-    networks:
-      - crime_intelligence_network
-
-
 
 networks:
   crime_intelligence_network:
