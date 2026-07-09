@@ -12,7 +12,7 @@ limiter = Limiter(key_func=get_remote_address)
 router = APIRouter()
 
 @router.post("/ask")
-@limiter.limit("5/minute")
+@limiter.limit("20/minute")
 async def ask_assistant(
     request: Request,
     question: str = Body(..., embed=True),

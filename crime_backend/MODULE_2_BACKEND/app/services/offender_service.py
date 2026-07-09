@@ -364,7 +364,7 @@ async def create_offender(db: AsyncSession, payload: dict):
     await db.refresh(offender)
     
     # Sync to Neo4j
-    from app.core.neo4j_connection import sync_offender_to_neo4j
+    from app.core.neo4j_connection import sync_offender_to_neo4j, create_criminal_relationship
     try:
         await sync_offender_to_neo4j({
             "offender_id": str(offender.offender_id),
@@ -376,6 +376,17 @@ async def create_offender(db: AsyncSession, payload: dict):
             "district_id": offender.district_id,
             "crime_types": [],  # new offender has no crimes yet
         })
+        if offender.known_associates:
+            for associate_id in offender.known_associates:
+                await create_criminal_relationship(
+                    offender_id_1=str(offender.offender_id),
+                    offender_id_2=str(associate_id),
+                    relationship_type="KNOWS",
+                    strength_score=50.0,
+                    confidence_level="SUSPECTED",
+                    crime_ids=[],
+                    crime_types=[]
+                )
     except Exception as e:
         import logging
         logging.getLogger(__name__).warning(f"Failed to sync offender to Neo4j: {e}")
@@ -405,7 +416,7 @@ async def update_offender(db: AsyncSession, offender_id: str, payload: dict):
     await db.refresh(offender)
     
     # Sync to Neo4j
-    from app.core.neo4j_connection import sync_offender_to_neo4j
+    from app.core.neo4j_connection import sync_offender_to_neo4j, create_criminal_relationship
     try:
         # We would ideally fetch existing crime_types here, but for now we just pass empty to avoid losing district info
         # Note: bulk sync will fix crime_types later, or we could fetch them here if required.
@@ -419,6 +430,17 @@ async def update_offender(db: AsyncSession, offender_id: str, payload: dict):
             "district_id": offender.district_id,
             "crime_types": [], 
         })
+        if offender.known_associates:
+            for associate_id in offender.known_associates:
+                await create_criminal_relationship(
+                    offender_id_1=str(offender.offender_id),
+                    offender_id_2=str(associate_id),
+                    relationship_type="KNOWS",
+                    strength_score=50.0,
+                    confidence_level="SUSPECTED",
+                    crime_ids=[],
+                    crime_types=[]
+                )
     except Exception as e:
         import logging
         logging.getLogger(__name__).warning(f"Failed to sync offender update to Neo4j: {e}")

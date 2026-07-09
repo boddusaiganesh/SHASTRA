@@ -13,7 +13,7 @@ export default function SocioEconomicInsights() {
   useEffect(() => {
     api.get(ENDPOINTS.PREDICTIONS.SOCIOECONOMIC)
       .then((res) => {
-        setData(res.data);
+        setData(res.data?.data || res.data);
         setLoading(false);
       })
       .catch((err) => {
@@ -33,10 +33,10 @@ export default function SocioEconomicInsights() {
   // Generate some chart data for demonstration based on the correlations
   const chartData = overlayData.map((d: any) => ({
     district: d.district_name || d.district_id,
-    crimeRate: d.crime_rate || Math.random() * 50 + 10,
-    urbanization: d.urbanization_index || Math.random() * 80 + 20,
-    unemployment: d.unemployment_rate || Math.random() * 15 + 2,
-    population: d.population_density || Math.random() * 1000 + 100,
+    crimeRate: d.crime_rate || 0,
+    urbanization: d.urbanization_index || 0,
+    unemployment: d.unemployment_rate || 0,
+    population: d.population_density || 0,
   }));
 
   const metrics = [

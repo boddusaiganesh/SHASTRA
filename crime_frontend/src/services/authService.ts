@@ -18,7 +18,7 @@ export const authService = {
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
     // Let errors propagate — the Login page should show a real error message.
     const res = await api.post(ENDPOINTS.AUTH.LOGIN, credentials);
-    return res.data;
+    return res.data?.data || res.data;
   },
 
   logout: async (): Promise<void> => {

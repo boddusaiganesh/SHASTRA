@@ -160,6 +160,12 @@ const CrimeMapPage: React.FC = () => {
               {filteredCrimes.length - MAX_RENDERABLE_PINS} additional points hidden — switch to Heatmap or Cluster view, or narrow your date range.
             </div>
           )}
+          {(!filters.dateFrom && !filters.dateTo) && (
+            <div className={`absolute left-1/2 -translate-x-1/2 z-[1000] bg-blue-500/90 text-blue-50 px-4 py-2 rounded-full shadow-lg text-sm font-medium flex items-center gap-2 ${pinsTruncated ? 'top-16' : 'top-4'}`}>
+              <Info size={16} />
+              Showing crimes from the last 180 days. Use the date filter to see older records.
+            </div>
+          )}
           {loading ? (
             <div className="h-full flex items-center justify-center bg-slate-900">
               <LoadingSpinner size="lg" text="Loading crime map data..." />

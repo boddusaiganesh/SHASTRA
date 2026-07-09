@@ -57,8 +57,32 @@ async def upload_evidence(
     filename = f"{crime_id}_{uuid.uuid4().hex[:8]}.{ext}"
     filepath = os.path.join(UPLOAD_DIR, filename)
     
-    size = 0
+    first_chunk = await file.read(2048)
+    if not first_chunk:
+        raise HTTPException(status_code=400, detail="File is empty")
+        
+    # Basic magic byte validation to prevent extension spoofing
+    magic_signatures = {
+        "jpg": [b"\xff\xd8\xff"], "jpeg": [b"\xff\xd8\xff"],
+        "png": [b"\x89PNG\r\n\x1a\n"], "pdf": [b"%PDF-"],
+        "docx": [b"PK\x03\x04"], 
+        "mp3": [b"ID3", b"\xff\xfb", b"\xff\xf3", b"\xff\xfa", b"\xff\xf2"],
+    }
+    
+    is_valid = True
+    if ext in magic_signatures:
+        is_valid = any(first_chunk.startswith(sig) for sig in magic_signatures[ext])
+    elif ext == "mp4":
+        is_valid = b"ftyp" in first_chunk[:32] or b"moov" in first_chunk[:32] or b"mdat" in first_chunk[:32]
+    elif ext == "wav":
+        is_valid = first_chunk.startswith(b"RIFF") and b"WAVE" in first_chunk[:16]
+        
+    if not is_valid:
+        raise HTTPException(status_code=400, detail="File content does not match its extension (magic bytes mismatch)")
+        
+    size = len(first_chunk)
     with open(filepath, "wb") as f:
+        f.write(first_chunk)
         while chunk := await file.read(1024 * 1024):
             size += len(chunk)
             if size > MAX_UPLOAD_BYTES:

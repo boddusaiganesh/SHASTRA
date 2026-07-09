@@ -6,6 +6,7 @@ import { Bell, X } from "lucide-react";
 import { RootState } from "./store/store";
 import { setAlerts, addAlert } from "./store/alertsSlice";
 import { alertService } from "./services/alertService";
+import { API_BASE_URL } from "./constants/apiEndpoints";
 
 import Navbar from "./components/common/Navbar";
 import Sidebar from "./components/common/Sidebar";
@@ -60,7 +61,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
       const connect = () => {
         const token = localStorage.getItem("auth_token");
-        const base = import.meta.env.VITE_WS_URL || "ws://localhost:8000/api/alerts/ws";
+        const base = import.meta.env.VITE_WS_URL || API_BASE_URL.replace(/^http/, "ws") + "/alerts/ws";
         ws = new WebSocket(`${base}?token=${encodeURIComponent(token || "")}`);
 
         ws.onopen = () => { retryDelay = 1000; };

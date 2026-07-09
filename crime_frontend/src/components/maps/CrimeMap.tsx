@@ -34,6 +34,7 @@ const CrimeMap: React.FC<Props> = ({ crimes, viewMode, onCrimeSelect }) => {
       zoom={7}
       className="h-full w-full"
       style={{ background: "#0f172a" }}
+      preferCanvas={true}
     >
       <TileLayer
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

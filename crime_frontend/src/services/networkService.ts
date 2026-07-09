@@ -5,7 +5,7 @@ export const networkService = {
   getNodeDetail: async (nodeId: string) => {
     try {
       const response = await api.get(ENDPOINTS.NETWORK.NODE_DETAIL(nodeId));
-      return response.data || null;
+      return response.data?.data || null;
     } catch (error) {
       console.error("Error fetching node detail:", error);
       return null;
@@ -24,7 +24,7 @@ export const networkService = {
         params: { search_query: searchQuery, crime_type: crimeType, district_id: districtId, node_type: nodeType },
         signal: opts?.signal,
       });
-      return response.data || null;
+      return response.data?.data || null;
     } catch (error: any) {
       if (error.name === "CanceledError") throw error;
       console.error("Error fetching network graph:", error);
@@ -37,17 +37,17 @@ export const networkService = {
       const response = await api.get(ENDPOINTS.NETWORK.SHORTEST_PATH, {
         params: { node_a: nodeA, node_b: nodeB },
       });
-      return response.data || null;
+      return response.data?.data || null;
     } catch (error) {
       console.error("Error fetching shortest path:", error);
       return null;
     }
   },
 
-  expandNode: async (nodeId: string) => {
+  expandNode: async (nodeId: string, nodeType?: string) => {
     try {
-      const response = await api.get(ENDPOINTS.NETWORK.EXPAND(nodeId));
-      return response.data || null;
+      const response = await api.get(ENDPOINTS.NETWORK.EXPAND(nodeId), { params: { node_type: nodeType } });
+      return response.data?.data || response.data || null;
     } catch (error) {
       console.error("Error expanding node:", error);
       return null;
@@ -57,7 +57,7 @@ export const networkService = {
   getAiSummary: async (districtId?: string, crimeType?: string) => {
     try {
       const response = await api.get(ENDPOINTS.NETWORK.AI_SUMMARY, { params: { district_id: districtId, crime_type: crimeType } });
-      return response.data || null;
+      return response.data?.data || null;
     } catch (error) {
       console.error("Error fetching AI summary:", error);
       return null;
@@ -67,9 +67,19 @@ export const networkService = {
   getEdgeInsight: async (nodeA: any, nodeB: any, edge: any) => {
     try {
       const response = await api.post(ENDPOINTS.NETWORK.EDGE_INSIGHT, { node_a: nodeA, node_b: nodeB, edge });
-      return response.data?.insight ?? null;
+      return response.data?.data?.insight ?? null;
     } catch (error) {
       console.error("Error fetching edge insight:", error);
+      return null;
+    }
+  },
+
+  getNodeAiAnalysis: async (nodeId: string) => {
+    try {
+      const response = await api.get(`${ENDPOINTS.NETWORK.NODE_DETAIL(nodeId)}/ai-analysis`);
+      return response.data?.data?.ai_analysis || null;
+    } catch (error) {
+      console.error("Error fetching node AI analysis:", error);
       return null;
     }
   },

@@ -14,7 +14,7 @@ export const predictionService = {
   getPredictions: async (filters?: any) => {
     try {
       const res = await api.get(ENDPOINTS.PREDICTIONS.FORECAST, { params: filters });
-      return res.data;
+      return res.data?.data || res.data;
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockCrimeForecast; }
       throw error;
@@ -32,7 +32,7 @@ export const predictionService = {
   getRiskMap: async () => {
     try {
       const res = await api.get(ENDPOINTS.PREDICTIONS.RISK_MAP);
-      return res.data;
+      return res.data?.data || res.data;
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockDistrictRiskScores; }
       throw error;
@@ -41,7 +41,7 @@ export const predictionService = {
   getHighRiskAreas: async () => {
     try {
       const res = await api.get(ENDPOINTS.PREDICTIONS.HIGH_RISK_AREAS);
-      return res.data;
+      return res.data?.data || res.data;
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockHighRiskPredictions; }
       throw error;
@@ -50,7 +50,7 @@ export const predictionService = {
   getForecast: async () => {
     try {
       const res = await api.get(ENDPOINTS.PREDICTIONS.FORECAST);
-      return res.data;
+      return res.data?.data || res.data;
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockCrimeForecast; }
       throw error;
@@ -59,7 +59,7 @@ export const predictionService = {
   getEmergingTypologies: async () => {
     try {
       const res = await api.get(ENDPOINTS.PREDICTIONS.EMERGING_TYPOLOGIES);
-      return res.data;
+      return res.data?.data || res.data;
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockEmergingTypologies; }
       throw error;
@@ -68,7 +68,7 @@ export const predictionService = {
   getSocioeconomicData: async (filters?: any) => {
     try {
       const res = await api.get(ENDPOINTS.PREDICTIONS.SOCIOECONOMIC, { params: filters });
-      return res.data;
+      return res.data?.data || res.data;
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockSocioeconomicData; }
       throw error;
@@ -89,7 +89,7 @@ export const anomalyService = {
   getDetail: async (id: string) => {
     try {
       const res = await api.get(ENDPOINTS.ANOMALIES.DETAIL(id));
-      return res.data;
+      return res.data?.data || res.data;
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockAnomalies.find((a) => a.anomaly_id === id) || null; }
       throw error;
@@ -98,7 +98,7 @@ export const anomalyService = {
   updateStatus: async (id: string, status: string) => {
     try {
       const res = await api.patch(ENDPOINTS.ANOMALIES.UPDATE_STATUS(id), { status });
-      return res.data;
+      return res.data?.data || res.data;
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return { success: true, anomaly_id: id, status }; }
       throw error;

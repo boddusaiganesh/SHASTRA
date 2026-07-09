@@ -41,7 +41,7 @@ export const offenderService = {
   getProfile: async (id: string) => {
     try {
       const res = await api.get(ENDPOINTS.OFFENDERS.PROFILE(id));
-      return normalizeOffender(res.data);
+      return normalizeOffender(res.data?.data || res.data);
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') {
       flagMockDataUsed();
@@ -53,7 +53,7 @@ export const offenderService = {
   getModusOperandi: async (id: string) => {
     try {
       const res = await api.get(ENDPOINTS.OFFENDERS.MODUS_OPERANDI(id));
-      const mo = res.data;
+      const mo = res.data?.data || res.data;
       if (mo) {
         return {
           ai_mo_summary: mo.ai_mo_summary || "N/A",
@@ -79,7 +79,7 @@ export const offenderService = {
   getRisk: async (id: string) => {
     try {
       const res = await api.get(ENDPOINTS.OFFENDERS.RISK(id));
-      return res.data;
+      return res.data?.data || res.data;
     } catch {
       return null;
     }
@@ -87,7 +87,7 @@ export const offenderService = {
   getNetwork: async (id: string) => {
     try {
       const res = await api.get(ENDPOINTS.OFFENDERS.NETWORK(id));
-      return res.data;
+      return res.data?.data || res.data;
     } catch {
       return null;
     }

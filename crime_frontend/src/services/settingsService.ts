@@ -34,7 +34,7 @@ export const settingsService = {
   getAlertThresholds: async () => {
     try {
       const res = await api.get(ENDPOINTS.SETTINGS.ALERT_THRESHOLDS);
-      return res.data;
+      return res.data?.data || res.data;
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockAlertThresholds; }
       throw error;
@@ -43,7 +43,7 @@ export const settingsService = {
   updateAlertThresholds: async (thresholds: Record<string, unknown>) => {
     try {
       const res = await api.put(ENDPOINTS.SETTINGS.ALERT_THRESHOLDS, thresholds);
-      return res.data;
+      return res.data?.data || res.data;
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return { success: true, thresholds }; }
       throw error;
@@ -79,7 +79,7 @@ export const settingsService = {
   getAuditLogs: async () => {
     try {
       const res = await api.get(ENDPOINTS.SETTINGS.AUDIT_LOGS);
-      return res.data || [];
+      return res.data?.data || res.data || [];
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return []; }
       throw error;

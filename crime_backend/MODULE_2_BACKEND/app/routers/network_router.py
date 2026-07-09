@@ -41,8 +41,20 @@ async def fetch_node_detail(
         raise HTTPException(status_code=404, detail="Node not found")
     return {"success": True, "data": data}
 
+@router.get("/node-detail/{node_id}/ai-analysis")
+@limiter.limit("20/minute")
+async def fetch_node_ai_analysis(
+    request: Request,
+    node_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    from app.services.network_service import get_node_ai_analysis
+    data = await get_node_ai_analysis(db, node_id)
+    return {"success": True, "data": data}
+
 @router.get("/ai-summary")
-@limiter.limit("5/minute")
+@limiter.limit("20/minute")
 async def fetch_ai_summary(
     request: Request,
     district_id: Optional[str] = Query(None),
@@ -69,19 +81,31 @@ async def shortest_path(
     return {"success": True, "data": data}
 
 @router.get("/expand/{node_id}")
-@limiter.limit("20/minute")
+@limiter.limit("50/minute")
 async def expand_node(
     request: Request,
     node_id: str,
+    node_type: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
     """Return only the immediate neighbors of one node — for incremental graph expansion."""
     from app.core.neo4j_connection import run_neo4j_query, normalize_node
     
-    query = """
-    MATCH (n)-[r]-(connected)
-    WHERE n.offender_id = $id OR n.victim_id = $id OR n.location_id = $id OR n.org_id = $id OR elementId(n) = $id
+    match_clause = "MATCH (n)-[r]-(connected)"
+    if node_type == "criminal":
+        match_clause = "MATCH (n:Criminal {offender_id: $id})-[r]-(connected)"
+    elif node_type == "victim":
+        match_clause = "MATCH (n:Victim {victim_id: $id})-[r]-(connected)"
+    elif node_type == "location":
+        match_clause = "MATCH (n:Location {location_id: $id})-[r]-(connected)"
+    elif node_type == "organization":
+        match_clause = "MATCH (n:Organization {org_id: $id})-[r]-(connected)"
+    else:
+        match_clause = "MATCH (n)-[r]-(connected) WHERE n.offender_id = $id OR n.victim_id = $id OR n.location_id = $id OR n.org_id = $id OR elementId(n) = $id"
+
+    query = f"""
+    {match_clause}
     RETURN n, elementId(n) AS n_eid, labels(n) AS labels_n,
            connected, elementId(connected) AS connected_eid, labels(connected) AS labels_connected,
            type(r) AS rel_type, properties(r) AS r_props

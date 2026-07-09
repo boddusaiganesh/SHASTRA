@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo, useRef } from "react";
 import { motion } from "framer-motion";
-import { Network, AlertTriangle, Search, ChevronRight, Users, MapPin, Building, Brain, ChevronLeft, Grid } from "lucide-react";
+import { Network, AlertTriangle, Search, ChevronRight, Users, MapPin, Building, Brain, ChevronLeft, Grid, Loader2 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import ReactMarkdown from 'react-markdown';
 import { useDistricts } from "../hooks/useDistricts";
@@ -45,6 +45,7 @@ const CriminalNetwork: React.FC = () => {
   const [selectedNode, setSelectedNode] = useState<NetworkNode | null>(null);
   const [selectedEdge, setSelectedEdge] = useState<any>(null);
   const [edgeInsight, setEdgeInsight] = useState<{ text: string; loading: boolean } | null>(null);
+  const [nodeDetailLoading, setNodeDetailLoading] = useState(false);
   
   const [searchQuery, setSearchQuery] = useState("");
   const [nodeTypeFilter, setNodeTypeFilter] = useState("all");
@@ -168,20 +169,29 @@ const CriminalNetwork: React.FC = () => {
     }
     
     setSelectedNode(node);
+    setNodeDetailLoading(true);
     
-    const detail = await networkService.getNodeDetail(node.node_id);
+    const alreadyLoaded = edges.some(e => e.source_node_id === node.node_id || e.target_node_id === node.node_id);
+    
+    const [detail] = await Promise.all([
+      networkService.getNodeDetail(node.node_id),
+      !alreadyLoaded ? handleNodeExpand(node) : Promise.resolve()
+    ]);
+    
     if (detail) {
       setSelectedNode(prev => prev && prev.node_id === node.node_id ? { ...prev, ...detail } : prev);
     }
     
-    const alreadyLoaded = edges.some(e => e.source_node_id === node.node_id || e.target_node_id === node.node_id);
-    if (!alreadyLoaded) {
-      await handleNodeExpand(node);
-    }
+    setNodeDetailLoading(false);
+    graphRef.current?.focusOnNode(node.node_id);
     
-    setTimeout(() => {
-      graphRef.current?.focusOnNode(node.node_id);
-    }, 100);
+    if (node.node_type === "criminal") {
+      networkService.getNodeAiAnalysis(node.node_id).then(aiRes => {
+         if (aiRes) {
+            setSelectedNode(prev => prev && prev.node_id === node.node_id ? { ...prev, ai_analysis: aiRes } : prev);
+         }
+      });
+    }
   };
 
   useEffect(() => {
@@ -428,7 +438,7 @@ const CriminalNetwork: React.FC = () => {
               className="bg-slate-800 border border-slate-700 text-slate-300 text-xs rounded-lg px-2 py-1 outline-none"
             >
               <option value="all">All Crimes Lens</option>
-              {CRIME_TYPES.map((type) => (
+              {CRIME_TYPES.filter(t => t !== "All").map((type) => (
                 <option key={type} value={type}>{type}</option>
               ))}
             </select>
@@ -649,7 +659,10 @@ const CriminalNetwork: React.FC = () => {
                   <NodeIcon className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-white">{selectedNode.label}</p>
+                  <p className="text-sm font-bold text-white flex items-center gap-2">
+                    {selectedNode.label}
+                    {nodeDetailLoading && <Loader2 className="h-3 w-3 animate-spin text-slate-400" />}
+                  </p>
                   <span className="text-xs capitalize" style={{ color: NODE_COLORS[selectedNode.node_type] }}>{selectedNode.node_type}</span>
                 </div>
               </div>

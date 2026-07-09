@@ -3,9 +3,9 @@ import { ENDPOINTS } from "../constants/apiEndpoints";
 
 export const victimService = {
   search: (q?: string, districtId?: string) =>
-    api.get(ENDPOINTS.VICTIMS.SEARCH, { params: { q, district_id: districtId } }).then((r) => r.data),
+    api.get(ENDPOINTS.VICTIMS.SEARCH, { params: { q, district_id: districtId } }).then((r) => r.data?.data || []),
   getProfile: (victimId: string) =>
-    api.get(ENDPOINTS.VICTIMS.PROFILE(victimId)).then((r) => r.data),
+    api.get(ENDPOINTS.VICTIMS.PROFILE(victimId)).then((r) => r.data?.data || null),
   register: (payload: any) =>
-    api.post(ENDPOINTS.VICTIMS.REGISTER, payload).then((r) => r.data),
+    api.post(ENDPOINTS.VICTIMS.REGISTER, payload).then((r) => r.data?.data || r.data),
 };

@@ -247,7 +247,7 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNo
       cy.add(buildElements(newNodes, newEdges));
       const totalNodes = cy.nodes().length;
       const totalEdges = cy.edges().length;
-      cy.layout({ ...getDynamicLayoutOptions(totalNodes, totalEdges), randomize: false, fit: false } as any).run();
+      cy.layout({ ...getDynamicLayoutOptions(totalNodes, totalEdges), randomize: false, fit: false, numIter: 150, animationDuration: 300 } as any).run();
     }
 
     prevIdsRef.current = currentIds;

@@ -14,7 +14,7 @@ export const reportService = {
       const res = await api.post(
         `${ENDPOINTS.REPORTS.GENERATE}?${new URLSearchParams(queryParams).toString()}`
       );
-      return res.data;
+      return res.data?.data || res.data;
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') {
       flagMockDataUsed();

@@ -401,8 +401,6 @@ async def get_node_detail(
     node_id: str,
 ) -> Optional[Dict[str, Any]]:
     """Get detailed information about a specific network node"""
-    from app.services.gemini_service import get_offender_ai_analysis
-    
     try:
         import uuid
         parsed_id = uuid.UUID(node_id)
@@ -426,20 +424,16 @@ async def get_node_detail(
             
             crime_ids = [link.crime_id for link in links]
             crimes = []
-            for cid in crime_ids[:10]:
-                cr = await db.execute(select(Crime).where(Crime.crime_id == cid))
-                crime = cr.scalar_one_or_none()
-                if crime:
-                    crimes.append({
-                        "crime_id": str(crime.crime_id),
-                        "crime_type": crime.crime_type,
-                        "date": str(crime.date_of_occurrence),
-                        "status": crime.status,
-                        "severity": crime.severity,
-                    })
-            
-            # Get AI analysis
-            ai_analysis = await get_offender_ai_analysis(offender.to_dict(), crimes)
+            if crime_ids:
+                cr_result = await db.execute(select(Crime).where(Crime.crime_id.in_(crime_ids[:10])))
+                crimes_list = cr_result.scalars().all()
+                crimes = [{
+                    "crime_id": str(crime.crime_id),
+                    "crime_type": crime.crime_type,
+                    "date": str(crime.date_of_occurrence),
+                    "status": crime.status,
+                    "severity": crime.severity,
+                } for crime in crimes_list]
             
             return {
                 "node_id": node_id,
@@ -451,7 +445,7 @@ async def get_node_detail(
                 "profile_data": offender.to_dict(),
                 "connected_nodes": offender.known_associates or [],
                 "timeline": crimes,
-                "ai_analysis": ai_analysis,
+                "ai_analysis": None,
             }
 
         # Try Victim next
@@ -491,6 +485,38 @@ async def get_node_detail(
     except Exception as e:
         logger.error(f"Error getting node detail: {e}", exc_info=True)
         return None
+
+
+async def get_node_ai_analysis(db: AsyncSession, node_id: str) -> Dict[str, Any]:
+    from app.services.gemini_service import get_offender_ai_analysis
+    
+    cache_key = f"node_ai:{node_id}"
+    cached = await cache_get(cache_key)
+    if cached: return cached
+    
+    try:
+        import uuid
+        parsed_id = uuid.UUID(node_id)
+        
+        result = await db.execute(select(Offender).where(Offender.offender_id == parsed_id))
+        offender = result.scalar_one_or_none()
+        if not offender: return {"ai_analysis": None}
+        
+        from app.models.database_models.crime_model import CrimeOffenderLink, Crime
+        links = await db.execute(select(CrimeOffenderLink).where(CrimeOffenderLink.offender_id == parsed_id))
+        crime_ids = [l.crime_id for l in links.scalars().all()]
+        crimes = []
+        if crime_ids:
+            cr = await db.execute(select(Crime).where(Crime.crime_id.in_(crime_ids[:10])))
+            crimes = [{"crime_type": c.crime_type, "status": c.status} for c in cr.scalars().all()]
+            
+        analysis = await get_offender_ai_analysis(offender.to_dict(), crimes)
+        res = {"ai_analysis": analysis}
+        await cache_set(cache_key, res, expiry=3600)
+        return res
+    except Exception as e:
+        logger.error(f"Error generating AI analysis: {e}", exc_info=True)
+        return {"ai_analysis": None}
 
 
 async def get_network_ai_summary(

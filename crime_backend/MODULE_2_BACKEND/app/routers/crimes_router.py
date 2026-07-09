@@ -6,6 +6,7 @@ import logging
 
 from app.core.database import get_db
 from app.core.security import get_current_user, scope_district_filter, require_role
+from app.core.redis_connection import cache_get, cache_set
 from app.models.database_models.crime_model import Crime, District, PoliceStation, CrimeVictimLink, CrimeOffenderLink
 from app.models.response_models.crime_response import CreateCrimeRequest
 from app.services.crime_service import create_crime
@@ -37,6 +38,26 @@ async def get_map_data(
         from sqlalchemy import func
         
         resolved_district = await resolve_district_id(db, district_id)
+        
+        cache_key = f"crimes_map_data:{file_format}:{crime_type}:{resolved_district}:{date_from}:{date_to}:{limit}:{min_lat}:{max_lat}:{min_lng}:{max_lng}"
+        cached_data = await cache_get(cache_key)
+        if cached_data:
+            if file_format == "csv":
+                import csv
+                from io import StringIO
+                from fastapi.responses import StreamingResponse
+                output = StringIO()
+                if cached_data.get("data"):
+                    writer = csv.DictWriter(output, fieldnames=list(cached_data["data"][0].keys()))
+                    writer.writeheader()
+                    writer.writerows(cached_data["data"])
+                output.seek(0)
+                return StreamingResponse(
+                    iter([output.getvalue()]),
+                    media_type="text/csv",
+                    headers={"Content-Disposition": 'attachment; filename="crimes_export.csv"'}
+                )
+            return cached_data
 
         # Base statements
         stmt = select(Crime, District, PoliceStation).join(
@@ -134,7 +155,10 @@ async def get_map_data(
                 headers={"Content-Disposition": 'attachment; filename="crimes_export.csv"'}
             )
             
-        return {"success": True, "data": formatted_data, "total_count": total_count, "limit": limit}
+        response_data = {"success": True, "data": formatted_data, "total_count": total_count, "limit": limit}
+        await cache_set(cache_key, response_data, expiry=300)
+        return response_data
+        
     except Exception as e:
         logger.error(f"Error fetching map data: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")

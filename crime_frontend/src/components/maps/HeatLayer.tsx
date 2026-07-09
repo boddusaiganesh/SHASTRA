@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import React, { useEffect } from "react";
 import { useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet.heat";
@@ -25,4 +25,6 @@ const HeatLayer: React.FC<Props> = ({ points }) => {
   return null;
 };
 
-export default HeatLayer;
+export default React.memo(HeatLayer, (prev, next) => {
+  return prev.points.length === next.points.length;
+});
