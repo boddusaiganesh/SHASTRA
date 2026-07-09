@@ -3,6 +3,7 @@ import { MessageSquare, X, Send, Bot, User, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../../services/api';
 import { ENDPOINTS } from '../../constants/apiEndpoints';
+import AIMarkdown from './AIMarkdown';
 
 interface Message {
   id: string;
@@ -73,7 +74,7 @@ export default function AIChatWidget() {
                     {m.type === 'user' ? <User className="h-4 w-4 text-white" /> : <Bot className="h-4 w-4 text-blue-400" />}
                   </div>
                   <div className={`max-w-[75%] rounded-2xl p-3 text-sm ${m.type === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-slate-800 text-slate-200 rounded-tl-none border border-slate-700/50'}`}>
-                    {m.text}
+                    {m.type === 'user' ? m.text : <AIMarkdown text={m.text} />}
                     {m.isFallback && (
                       <div className="mt-2 text-[10px] text-amber-500 flex items-center gap-1 bg-amber-500/10 px-2 py-1 rounded w-max">
                         <AlertTriangle className="h-3 w-3" /> Offline Mode Response

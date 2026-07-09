@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo, useRef } from "react";
 import { motion } from "framer-motion";
 import { Network, AlertTriangle, Search, ChevronRight, Users, MapPin, Building, Brain, ChevronLeft, Grid, Loader2 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import ReactMarkdown from 'react-markdown';
+import AIMarkdown from "../components/common/AIMarkdown";
 import { useDistricts } from "../hooks/useDistricts";
 import { networkService } from "../services/networkService";
 import NetworkGraph, { NetworkGraphHandle } from "../components/network/NetworkGraph";
@@ -687,7 +687,7 @@ const CriminalNetwork: React.FC = () => {
                     <h3 className="text-sm font-semibold text-white">AI Profile Analysis</h3>
                   </div>
                   <div className="text-xs text-blue-200 leading-relaxed">
-                    <ReactMarkdown>{selectedNode.ai_analysis}</ReactMarkdown>
+                    <AIMarkdown text={selectedNode.ai_analysis} />
                   </div>
                 </div>
               )}
@@ -736,19 +736,7 @@ const CriminalNetwork: React.FC = () => {
                 <span className="text-xs bg-blue-900/40 text-blue-400 px-1.5 py-0.5 rounded-full">Gemini</span>
               </div>
               <div className="bg-blue-950/30 border border-blue-500/20 rounded-lg p-3 mb-3 text-xs text-blue-200 leading-relaxed">
-                <ReactMarkdown
-                  components={{
-                    strong: ({node, ...props}) => <span className="font-bold text-blue-100" {...props} />,
-                    h1: ({node, ...props}) => <h1 className="font-bold text-sm text-white mb-2 mt-4" {...props} />,
-                    h2: ({node, ...props}) => <h2 className="font-bold text-sm text-white mb-2 mt-3" {...props} />,
-                    h3: ({node, ...props}) => <h3 className="font-semibold text-white mb-1 mt-2" {...props} />,
-                    ul: ({node, ...props}) => <ul className="list-disc pl-4 space-y-1 my-2" {...props} />,
-                    ol: ({node, ...props}) => <ol className="list-decimal pl-4 space-y-1 my-2" {...props} />,
-                    p: ({node, ...props}) => <p className="mb-2 last:mb-0" {...props} />
-                  }}
-                >
-                  {aiSummary.summary_text}
-                </ReactMarkdown>
+                <AIMarkdown text={aiSummary.summary_text} />
               </div>
 
               <h4 className="text-xs font-semibold text-blue-400 mb-2 flex items-center gap-1">

@@ -6,6 +6,7 @@ import HotspotMap from "../components/maps/HotspotMap";
 import TimePatternChart from "../components/charts/TimePatternChart";
 import HotspotsTable from "../components/tables/HotspotsTable";
 import LoadingSpinner from "../components/common/LoadingSpinner";
+import AIMarkdown from "../components/common/AIMarkdown";
 import { CRIME_TYPES } from "../constants/crimeTypes";
 import { useDistricts } from "../hooks/useDistricts";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
@@ -201,7 +202,7 @@ const HotspotAnalysis: React.FC = () => {
             <span className="text-xs bg-blue-900/40 text-blue-400 px-2 py-0.5 rounded-full border border-blue-500/30">Gemini AI</span>
           </div>
           <div className="bg-blue-950/30 border border-blue-500/20 rounded-lg p-3 mb-4">
-            <p className="text-xs text-blue-200 leading-relaxed">{dep.ai_summary}</p>
+            <AIMarkdown text={dep.ai_summary} />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {(Array.isArray(dep?.suggestions) ? dep.suggestions : []).map((s, i) => (

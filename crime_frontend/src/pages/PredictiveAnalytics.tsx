@@ -5,6 +5,7 @@ import { predictionService } from "../services/predictionService";
 import ForecastChart from "../components/charts/ForecastChart";
 import RiskMap from "../components/maps/RiskMap";
 import LoadingSpinner from "../components/common/LoadingSpinner";
+import AIMarkdown from "../components/common/AIMarkdown";
 
 const PredictiveAnalytics: React.FC = () => {
   const [forecast, setForecast] = useState<unknown[]>([]);
@@ -105,15 +106,19 @@ const PredictiveAnalytics: React.FC = () => {
         <div className="space-y-3">
           {(typologies as { crime_type?: string; typology?: string; pattern_description?: string; description?: string; warning_level?: string; trend?: string; growth_rate?: number | string; affected_districts?: string[]; districts?: string[]; ai_explanation?: string }[]).map((t, i) => (
             <div key={i} className="flex items-start gap-3 p-3 bg-slate-900/60 rounded-lg border border-slate-700/50">
-              <Brain className="h-4 w-4 text-purple-400 mt-0.5 flex-shrink-0" />
-              <div>
+              <div className="flex items-start gap-2">
+                <Brain className="h-4 w-4 text-purple-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-white">{t.typology || t.crime_type}</p>
+                  {t.ai_explanation && <div className="text-xs text-purple-300 mt-1 italic"><AIMarkdown text={t.ai_explanation} /></div>}
+                </div>
+              </div>
+              <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <p className="text-sm font-medium text-white">{t.crime_type || t.typology}</p>
                   <span className="text-xs bg-red-900/40 text-red-400 px-2 py-0.5 rounded-full">{t.warning_level || t.trend || t.growth_rate}{t.growth_rate && typeof t.growth_rate === 'number' ? ` · +${t.growth_rate}%` : ''}</span>
                 </div>
                 <p className="text-xs text-slate-400">{t.pattern_description || t.description}</p>
                 {(t.affected_districts || t.districts) && <p className="text-xs text-slate-500 mt-1">Districts: {(t.affected_districts || t.districts)?.join(", ")}</p>}
-                {t.ai_explanation && <p className="text-xs text-purple-300 mt-1 italic">{t.ai_explanation}</p>}
               </div>
             </div>
           ))}

@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ZAxis } from "recharts";
-import { Building2, Users, Briefcase, TrendingUp } from "lucide-react";
+import { Building2, Users, Briefcase, TrendingUp, Brain } from "lucide-react";
 import api from "../services/api";
 import { ENDPOINTS } from "../constants/apiEndpoints";
 import LoadingSpinner from "../components/common/LoadingSpinner";
+import AIMarkdown from "../components/common/AIMarkdown";
 
 export default function SocioEconomicInsights() {
   const [data, setData] = useState<any>(null);
@@ -106,12 +107,12 @@ export default function SocioEconomicInsights() {
         {/* Narrative & Correlations */}
         <div className="space-y-6">
           <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5">
-            <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-purple-400" />
+            <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+              <Brain className="h-4 w-4 text-purple-400" />
               AI Intelligence Brief
             </h3>
-            <div className="text-sm text-slate-300 leading-relaxed space-y-3 whitespace-pre-wrap">
-              {narrative}
+            <div className="text-sm text-slate-300 leading-relaxed">
+              <AIMarkdown text={narrative} />
             </div>
           </div>
 
