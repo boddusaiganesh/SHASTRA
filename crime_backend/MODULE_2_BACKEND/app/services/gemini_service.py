@@ -19,7 +19,8 @@ async def get_network_analysis_summary(
     """Generate AI network analysis summary"""
     
     prompt = f"""
-Analyze the following criminal network data for Karnataka State Police:
+You are an expert Criminal Intelligence Analyst for the Karnataka State Police (KSP) SHASTRA system.
+Analyze the following criminal network data. This data represents a graph of interconnected entities such as criminals, victims, and locations.
 
 NETWORK STATISTICS:
 - Total Criminals in Network: {network_stats.get('total_criminals', 0)}
@@ -27,22 +28,22 @@ NETWORK STATISTICS:
 - Currently Active: {network_stats.get('active_count', 0)}
 - Network Density: {network_stats.get('network_density', 0)}
 
-TOP ACTIVE OFFENDERS:
-{chr(10).join([f"- {o.get('full_name', 'Unknown')}: {o.get('total_crimes', 0)} crimes, Risk: {o.get('risk_level', 'UNKNOWN')}, Status: {o.get('status', 'UNKNOWN')}" for o in offenders[:10]])}
+TOP CENTRAL ENTITIES (Potential Key Players):
+{chr(10).join([f"- {o.get('full_name', o.get('label', 'Unknown'))}: {o.get('total_crimes', o.get('crime_count', 0))} known incidents, Risk: {o.get('risk_level', o.get('risk_score', 'UNKNOWN'))}, Status: {o.get('status', 'UNKNOWN')}. MO: {o.get('modus_operandi_summary', 'None')}" for o in offenders[:15]])}
 
-SUSPICIOUS ASSOCIATIONS DETECTED:
-{chr(10).join([f"- {p.get('offender_1', '')} <-> {p.get('offender_2', '')} ({p.get('connection_type', '')})" for p in suspicious_pairs[:5]])}
+SUSPICIOUS CONNECTIONS DETECTED:
+{chr(10).join([f"- {p.get('offender_1', '')} & {p.get('offender_2', '')} share a direct connection or associate. Type: {p.get('connection_type', 'ASSOCIATION')}" for p in suspicious_pairs[:10]])}
 
-FOCUS AREA: {focus_area or 'General Network Analysis'}
+FOCUS AREA / ACTIVE FILTER: {focus_area or 'General State-Wide Network'}
 
-Provide a professional criminal network intelligence briefing as a raw JSON object (do not wrap in markdown tags like ```json) with the following structure:
+Based on this raw intelligence, provide a professional criminal network briefing as a JSON object (do not wrap in markdown tags like ```json, just raw JSON text) with the following structure:
 {{
-  "summary_text": "3-4 paragraphs covering overall network structure, key players, risk assessment, and emerging threats.",
-  "key_findings": ["5 concise bullet points of key findings"],
-  "recommended_actions": ["5 actionable recommendations for investigation"]
+  "summary_text": "3-4 concise, professional paragraphs covering overall network structure, key players, geographical concentration if any, risk assessment, and emerging threats based strictly on the provided data.",
+  "key_findings": ["5 concise, bulleted key findings highlighting the most critical intelligence."],
+  "recommended_actions": ["5 actionable, tactical recommendations for investigators or patrol officers to disrupt this network."]
 }}
 
-Keep the analysis factual and actionable.
+Ensure the analysis is highly professional, uses standard law enforcement terminology (e.g. 'subjects', 'nodes', 'nexus', 'modus operandi'), and does not hallucinate facts outside the provided context.
 """
     
     result = await call_gemini(prompt)
