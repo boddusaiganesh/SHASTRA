@@ -9,6 +9,15 @@ interface AIMarkdownProps {
 }
 
 const AIMarkdown: React.FC<AIMarkdownProps> = ({ text, className = "" }) => {
+  // Fix cases where the text was double JSON stringified or contains literal escaped newlines
+  let processedText = text || "";
+  if (typeof processedText === 'string') {
+    processedText = processedText.replace(/^["']+|["']+$/g, '');
+    processedText = processedText.replace(/\\n/g, '\n');
+    processedText = processedText.replace(/\\"/g, '"');
+    processedText = processedText.replace(/\\\*/g, '*');
+  }
+
   return (
     <div className={`ai-markdown-container ${className}`}>
       <ReactMarkdown
@@ -34,7 +43,7 @@ const AIMarkdown: React.FC<AIMarkdownProps> = ({ text, className = "" }) => {
           td: ({ node, ...props }) => <td className="border-b border-slate-700/50 px-3 py-2 text-sm text-slate-300" {...props} />,
         }}
       >
-        {text}
+        {processedText}
       </ReactMarkdown>
     </div>
   );
