@@ -10,23 +10,23 @@ interface Alert {
 interface Props { alerts: Alert[]; onMarkRead?: (id: string) => void; onDismiss?: (id: string) => void; compact?: boolean }
 
 const severityConfig: Record<string, { icon: React.FC<{ className?: string }>, cls: string }> = {
-  Critical: { icon: AlertTriangle, cls: "text-red-400" },
-  High: { icon: AlertCircle, cls: "text-orange-400" },
-  Medium: { icon: Info, cls: "text-yellow-400" },
-  Low: { icon: CheckCircle, cls: "text-blue-400" },
+  CRITICAL: { icon: AlertTriangle, cls: "text-red-400" },
+  HIGH: { icon: AlertCircle, cls: "text-orange-400" },
+  MEDIUM: { icon: Info, cls: "text-yellow-400" },
+  LOW: { icon: CheckCircle, cls: "text-blue-400" },
 };
 
 const severityBg: Record<string, string> = {
-  Critical: "bg-red-900/20 border-l-2 border-red-500",
-  High: "bg-orange-900/20 border-l-2 border-orange-500",
-  Medium: "bg-yellow-900/20 border-l-2 border-yellow-500",
-  Low: "bg-blue-900/20 border-l-2 border-blue-500",
+  CRITICAL: "bg-red-900/20 border-l-2 border-red-500",
+  HIGH: "bg-orange-900/20 border-l-2 border-orange-500",
+  MEDIUM: "bg-yellow-900/20 border-l-2 border-yellow-500",
+  LOW: "bg-blue-900/20 border-l-2 border-blue-500",
 };
 
 const AlertsTable: React.FC<Props> = ({ alerts, onMarkRead, onDismiss, compact }) => (
   <div className="space-y-2">
     {alerts.map((a) => {
-      const cfg = severityConfig[a.severity] || severityConfig.Low;
+      const cfg = severityConfig[a.severity] || severityConfig.LOW;
       const Icon = cfg.icon;
       return (
         <div key={a.alert_id} className={`flex items-start gap-3 p-3 rounded-lg ${severityBg[a.severity] || ""} ${!a.is_read ? "ring-1 ring-white/10" : "opacity-70"}`}>

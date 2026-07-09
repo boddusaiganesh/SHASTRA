@@ -73,9 +73,9 @@ const AlertsPage: React.FC = () => {
 
       {/* Summary */}
       <div className="grid grid-cols-4 gap-3">
-        {["Critical", "High", "Medium", "Low"].map((sev) => {
+        {["CRITICAL", "HIGH", "MEDIUM", "LOW"].map((sev) => {
           const count = (alerts as { severity: string }[]).filter((a) => a.severity === sev).length;
-          const colors: Record<string, string> = { Critical: "border-red-500/40 text-red-400", High: "border-orange-500/40 text-orange-400", Medium: "border-yellow-500/40 text-yellow-400", Low: "border-blue-500/40 text-blue-400" };
+          const colors: Record<string, string> = { CRITICAL: "border-red-500/40 text-red-400", HIGH: "border-orange-500/40 text-orange-400", MEDIUM: "border-yellow-500/40 text-yellow-400", LOW: "border-blue-500/40 text-blue-400" };
           return (
             <div key={sev} className={`bg-slate-800/50 border rounded-xl p-3 text-center ${colors[sev]}`}>
               <p className="text-2xl font-bold text-white">{count}</p>
@@ -89,7 +89,7 @@ const AlertsPage: React.FC = () => {
       <div className="flex items-center gap-3 flex-wrap">
         <Filter className="h-4 w-4 text-slate-500" />
         <div className="flex gap-2">
-          {["All", "Critical", "High", "Medium", "Low"].map((s) => (
+          {["All", "CRITICAL", "HIGH", "MEDIUM", "LOW"].map((s) => (
             <button key={s} onClick={() => setSeverityFilter(s)}
               className={`px-3 py-1 text-xs rounded-lg transition-colors ${severityFilter === s ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}>
               {s}

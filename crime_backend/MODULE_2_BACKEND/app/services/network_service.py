@@ -405,6 +405,20 @@ async def get_node_detail(
         import uuid
         parsed_id = uuid.UUID(node_id)
     except ValueError:
+        from app.core.neo4j_connection import run_neo4j_query
+        query = "MATCH (n) WHERE elementId(n) = $node_id RETURN labels(n)[0] AS label, properties(n) AS props"
+        res = await run_neo4j_query(query, {"node_id": node_id})
+        if res and res[0]:
+            label = res[0].get("label", "Unknown")
+            props = res[0].get("props", {})
+            return {
+                "node_id": node_id,
+                "label": props.get("name", "Unknown Node"),
+                "title": props.get("name", "Unknown Node"),
+                "type": label.upper(),
+                "details": {k: v for k, v in props.items() if k not in ["name", "offender_id", "victim_id", "location_id"]},
+                "recent_activity": []
+            }
         return None
         
     try:
@@ -497,7 +511,17 @@ async def get_node_ai_analysis(db: AsyncSession, node_id: str) -> Dict[str, Any]
     try:
         import uuid
         parsed_id = uuid.UUID(node_id)
+    except ValueError:
+        from app.core.neo4j_connection import run_neo4j_query
+        query = "MATCH (n) WHERE elementId(n) = $node_id RETURN properties(n) AS props"
+        res = await run_neo4j_query(query, {"node_id": node_id})
+        if res and res[0]:
+            return {
+                "ai_analysis": "This entity was sourced directly from the graph database and does not have a detailed PostgreSQL record available for deep AI analysis."
+            }
+        return {"ai_analysis": None}
         
+    try:
         result = await db.execute(select(Offender).where(Offender.offender_id == parsed_id))
         offender = result.scalar_one_or_none()
         if not offender: return {"ai_analysis": None}

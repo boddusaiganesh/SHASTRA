@@ -86,7 +86,7 @@ const HotspotAnalysis: React.FC = () => {
         <div className="flex flex-wrap gap-3">
           <select value={district} onChange={(e) => setDistrict(e.target.value)} className={selectClass}>
             <option value="All Districts">All Districts</option>
-            {districts.map((d) => <option key={d.district_id} value={d.district_name}>{d.district_name}</option>)}
+            {districts.map((d) => <option key={d.district_id} value={d.district_id}>{d.district_name}</option>)}
           </select>
           <select value={crimeType} onChange={(e) => setCrimeType(e.target.value)} className={selectClass}>
             {CRIME_TYPES.map((t) => <option key={t}>{t}</option>)}

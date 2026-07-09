@@ -34,7 +34,7 @@ export default function SocioEconomicInsights() {
   const chartData = overlayData.map((d: any) => ({
     district: d.district_name || d.district_id,
     crimeRate: d.crime_rate || 0,
-    urbanization: d.urbanization_index || 0,
+    urbanization: d.urbanization_rate || 0,
     unemployment: d.unemployment_rate || 0,
     population: d.population_density || 0,
   }));
@@ -122,8 +122,8 @@ export default function SocioEconomicInsights() {
                 <div key={i} className="p-3 bg-slate-900/60 rounded-lg border border-slate-700/50">
                   <div className="flex justify-between items-center mb-1">
                     <span className="text-sm text-white font-medium">{c.factor_name}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${c.correlation_score > 0.5 ? 'bg-red-900/40 text-red-400' : 'bg-yellow-900/40 text-yellow-400'}`}>
-                      {(c.correlation_score * 100).toFixed(0)}% Match
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${Math.abs(c.correlation_score) > 0.5 ? 'bg-red-900/40 text-red-400' : 'bg-yellow-900/40 text-yellow-400'}`}>
+                      {(Math.abs(c.correlation_score) * 100).toFixed(0)}% {c.correlation_score < 0 ? 'Inverse Match' : 'Match'}
                     </span>
                   </div>
                   <p className="text-xs text-slate-400">Linked to {c.crime_type}</p>

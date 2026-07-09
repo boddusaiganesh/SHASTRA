@@ -4,6 +4,7 @@ from typing import Optional
 
 from app.core.database import get_db
 from app.core.security import get_current_user, decode_access_token, scope_district_param
+from app.utils.district_resolver import resolve_district_id
 from app.core.redis_connection import is_token_blacklisted
 from app.services.alert_service import (
     get_active_alerts,
@@ -19,7 +20,8 @@ async def active_alerts(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user)
 ):
-    effective_district = scope_district_param(district_id, current_user)
+    resolved_district = await resolve_district_id(db, district_id)
+    effective_district = scope_district_param(resolved_district, current_user)
     data = await get_active_alerts(db, effective_district)
     return {"success": True, "data": data}
 

@@ -5,7 +5,7 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 from app.core.database import get_db
-from app.core.security import get_current_user, require_role
+from app.core.security import get_current_user, require_role, scope_district_param
 from app.services.report_service import (
     generate_report,
     get_saved_reports,
@@ -30,6 +30,8 @@ async def generate_report_endpoint(
 ):
     from datetime import datetime
     resolved_district_id = await resolve_district_id(db, district_id)
+    if current_user["role"] == "DISTRICT_OFFICER" and resolved_district_id != current_user.get("district_id"):
+        raise HTTPException(status_code=403, detail="Access denied. District officers can only access their own district data.")
     name = report_name or f"{report_type}_{datetime.now().strftime('%Y%m%d_%H%M')}"
     data = await generate_report(
         db, report_type, name,
@@ -52,11 +54,16 @@ async def download(
     report_id: str,
     format: str = Query("pdf"),
     db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_user)
+    current_user=Depends(require_role(["SCRB_OFFICER", "INVESTIGATOR", "DISTRICT_OFFICER"]))
 ):
     data = await get_report_by_id(db, report_id)
     if not data:
         raise HTTPException(status_code=404, detail="Report not found")
+        
+    if current_user["role"] == "DISTRICT_OFFICER":
+        report_district = data.get("parameters", {}).get("district_id")
+        if report_district and report_district != current_user.get("district_id"):
+            raise HTTPException(status_code=403, detail="Access denied. District officers can only download reports for their own district.")
         
     from app.services.report_service import export_report_pdf, export_report_csv
     if format.lower() == "csv":

@@ -76,8 +76,8 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
             console.error("WS message parse error", e);
           }
         };
-        ws.onclose = () => {
-          if (closedByUs) return;
+        ws.onclose = (event) => {
+          if (closedByUs || event.code === 1008) return;
           setTimeout(connect, retryDelay);
           retryDelay = Math.min(retryDelay * 2, 30000);
         };

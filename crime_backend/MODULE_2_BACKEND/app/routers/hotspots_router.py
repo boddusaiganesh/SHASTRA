@@ -27,8 +27,8 @@ async def hotspot_clusters(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    district_id = scope_district_param(district_id, current_user)
     resolved_id = await resolve_district_id(db, district_id)
+    district_id = scope_district_param(resolved_id, current_user)
     data = await get_hotspot_clusters(db, resolved_id)
     
     if file_format == "csv":
@@ -60,8 +60,8 @@ async def time_patterns(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    district_id = scope_district_param(district_id, current_user)
     resolved_id = await resolve_district_id(db, district_id)
+    district_id = scope_district_param(resolved_id, current_user)
     data = await get_time_patterns(db, resolved_id, crime_type)
     return {"success": True, "data": data}
 
@@ -74,8 +74,8 @@ async def top_hotspots(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    district_id = scope_district_param(district_id, current_user)
     resolved_id = await resolve_district_id(db, district_id)
+    district_id = scope_district_param(resolved_id, current_user)
     data = await get_top_hotspots(db, limit, resolved_id)
     return {"success": True, "data": data}
 
@@ -88,7 +88,7 @@ async def deployment_suggestions(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    district_id = scope_district_param(district_id, current_user)
     resolved_id = await resolve_district_id(db, district_id)
+    district_id = scope_district_param(resolved_id, current_user)
     data = await get_deployment_suggestions(db, resolved_id, target_date)
     return {"success": True, "data": data}

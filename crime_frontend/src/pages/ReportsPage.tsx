@@ -107,7 +107,7 @@ const ReportsPage: React.FC = () => {
             >
               <option value="All Districts">All Districts (State Wide)</option>
               {districts.map((d) => (
-                <option key={d.district_id} value={d.district_name}>{d.district_name}</option>
+                <option key={d.district_id} value={d.district_id}>{d.district_name}</option>
               ))}
             </select>
           </div>

@@ -49,6 +49,7 @@ async def get_audit_logs(
                 "log_id": str(log.log_id),
                 "user_id": str(log.user_id) if log.user_id else None,
                 "action": log.action,
+                "resource_type": log.resource_type,
                 "resource_id": log.resource_id,
                 "details": log.details,
                 "timestamp": log.timestamp.isoformat() if log.timestamp else None

@@ -42,7 +42,7 @@ export const reportService = {
       const res = await api.get(ENDPOINTS.REPORTS.DOWNLOAD(id), { responseType: 'blob' });
       return res.data;
     } catch {
-      return [];
+      return null;
     }
   },
 };

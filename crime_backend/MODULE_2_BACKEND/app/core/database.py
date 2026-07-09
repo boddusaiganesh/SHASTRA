@@ -146,7 +146,15 @@ async def seed_initial_data():
             # Import and run seeder
             from app.utils.data_seeder import seed_all_data
             await seed_all_data(session)
-            logger.info("Initial data seeded successfully")
+            logger.info("Initial Postgres data seeded successfully")
+            
+            # Now sync to Neo4j
+            try:
+                from sync_neo4j import sync as sync_neo4j_graph
+                await sync_neo4j_graph()
+                logger.info("Initial Neo4j graph synced successfully")
+            except Exception as e:
+                logger.error(f"Failed to sync initial data to Neo4j: {e}")
             
     except Exception as e:
         logger.warning(f"Data seeding skipped: {e}")

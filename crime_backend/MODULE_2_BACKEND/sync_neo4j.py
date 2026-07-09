@@ -14,6 +14,7 @@ from app.core.neo4j_connection import (
 from app.models.database_models.offender_model import Offender
 from app.models.database_models.victim_model import Victim
 from app.models.database_models.crime_model import CrimeOffenderLink, CrimeVictimLink, District, Crime
+from app.models.database_models.location_model import Location
 from collections import defaultdict
 
 logging.basicConfig(level=logging.INFO)
@@ -88,7 +89,7 @@ async def sync():
                         
         logger.info(f"Created {links_created} criminal network links based on shared crimes.")
         
-        logger.info("Syncing locations and discovering OPERATES_IN networks...")
+        logger.info("Syncing districts (macro locations) and discovering OPERATES_IN networks...")
         result = await session.execute(select(District))
         districts = result.scalars().all()
         for d in districts:
@@ -98,6 +99,19 @@ async def sync():
                 "location_type": "DISTRICT",
                 "risk_score": 50,
                 "is_hotspot": False
+            })
+            
+        logger.info("Syncing granular locations...")
+        result = await session.execute(select(Location))
+        locations = result.scalars().all()
+        for l in locations:
+            await sync_location_to_neo4j({
+                "location_id": str(l.location_id),
+                "name": l.location_name,
+                "location_type": l.location_type,
+                "risk_score": l.risk_score or 0,
+                "is_hotspot": l.is_hotspot,
+                "district_id": l.district_id,
             })
             
         district_groups = defaultdict(list)

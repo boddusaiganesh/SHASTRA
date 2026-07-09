@@ -4,6 +4,7 @@ from typing import Optional
 
 from app.core.database import get_db
 from app.core.security import get_current_user, scope_district_param
+from app.utils.district_resolver import resolve_district_id
 from app.services.prediction_service import (
     get_risk_map,
     get_high_risk_areas,
@@ -33,7 +34,8 @@ async def high_risk_areas(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    district_id = scope_district_param(district_id, current_user)
+    resolved_id = await resolve_district_id(db, district_id)
+    district_id = scope_district_param(resolved_id, current_user)
     data = await get_high_risk_areas(db, days_ahead, district_id)
     return {"success": True, "data": data}
 
@@ -47,7 +49,8 @@ async def forecast(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    district_id = scope_district_param(district_id, current_user)
+    resolved_id = await resolve_district_id(db, district_id)
+    district_id = scope_district_param(resolved_id, current_user)
     data = await get_crime_forecast(db, district_id, crime_type, days_ahead)
     return {"success": True, "data": data}
 
@@ -59,7 +62,8 @@ async def emerging_typologies(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    district_id = scope_district_param(district_id, current_user)
+    resolved_id = await resolve_district_id(db, district_id)
+    district_id = scope_district_param(resolved_id, current_user)
     data = await get_emerging_typologies(db, district_id)
     return {"success": True, "data": data}
 
@@ -72,6 +76,7 @@ async def socioeconomic_correlation(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    district_id = scope_district_param(district_id, current_user)
+    resolved_id = await resolve_district_id(db, district_id)
+    district_id = scope_district_param(resolved_id, current_user)
     data = await get_socioeconomic_correlation(db, district_id, factor)
     return {"success": True, "data": data}

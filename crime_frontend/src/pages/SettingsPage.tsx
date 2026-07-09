@@ -6,7 +6,7 @@ import LoadingSpinner from "../components/common/LoadingSpinner";
 import DataImport from "../components/settings/DataImport";
 import { UploadCloud } from "lucide-react";
 
-interface User { user_id: string; username: string; full_name: string; role: string; district?: string; is_active: boolean; }
+interface User { user_id: string; username: string; full_name: string; role: string; district?: string; district_id?: string; is_active: boolean; }
 interface AlertThresholds { crime_spike_percent: number; anomaly_confidence: number; high_risk_score: number; }
 
 const SettingsPage: React.FC = () => {
@@ -116,7 +116,7 @@ const SettingsPage: React.FC = () => {
                     <td className="py-3 px-4 text-white font-medium">{u.full_name || (u as any).user_name}</td>
                     <td className="py-3 px-4 text-slate-400 font-mono text-xs">{u.username || (u as any).email}</td>
                     <td className="py-3 px-4"><span className="text-xs bg-blue-900/40 text-blue-400 px-2 py-0.5 rounded-full">{u.role}</span></td>
-                    <td className="py-3 px-4 text-slate-400 text-xs">{u.district || "State-Wide"}</td>
+                    <td className="py-3 px-4 text-slate-400 text-xs">{u.district_id || "State-Wide"}</td>
                     <td className="py-3 px-4"><span className={`text-xs px-2 py-0.5 rounded-full ${u.is_active || (u as any).status === 'Active' ? "bg-green-900/40 text-green-400" : "bg-slate-700 text-slate-400"}`}>{u.is_active || (u as any).status === 'Active' ? "Active" : "Inactive"}</span></td>
                   </tr>
                 ))}
@@ -162,7 +162,7 @@ const SettingsPage: React.FC = () => {
                   <span className={`text-xs px-2 py-0.5 rounded-full ${ds.status === "Active" || ds.status === "Connected" ? "bg-green-900/40 text-green-400" : "bg-red-900/40 text-red-400"}`}>
                     {ds.status}
                   </span>
-                  {ds.source_id && (
+                  {ds.source_id && !['postgres', 'neo4j', 'redis', 'gemini'].includes(ds.source_id) && (
                     <button
                       onClick={async () => {
                         try {
