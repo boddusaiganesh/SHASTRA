@@ -5,8 +5,8 @@ services:
     build:
       context: ./crime_frontend
       args:
-        VITE_API_URL: http://localhost:8000/api/v1
-        VITE_WS_URL: ws://localhost:8000/api/v1/ws
+        VITE_API_URL: ${FRONTEND_VITE_API_URL}
+        VITE_WS_URL: ${FRONTEND_VITE_WS_URL}
     ports:
       - "80:80"
     restart: unless-stopped
