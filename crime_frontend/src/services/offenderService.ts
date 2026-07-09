@@ -23,16 +23,30 @@ const normalizeOffender = (o: any) => {
 };
 
 export const offenderService = {
-  searchOffenders: async (query: string = "") => {
+  searchOffenders: async (
+    query: string = "", 
+    filters?: { 
+      crime_type?: string, 
+      district_id?: string, 
+      risk_level?: string, 
+      status?: string, 
+      page?: number, 
+      page_size?: number 
+    }
+  ) => {
     try {
-      const res = await api.get(ENDPOINTS.OFFENDERS.SEARCH, { params: { query } });
+      const res = await api.get(ENDPOINTS.OFFENDERS.SEARCH, { 
+        params: { query, ...filters } 
+      });
       const list = res.data?.data || res.data || [];
       return (Array.isArray(list) ? list : []).map(normalizeOffender).filter(Boolean);
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') {
-      flagMockDataUsed();
+        flagMockDataUsed();
         return mockOffenders.filter((o: any) => 
-          !query || o.offender_name?.toLowerCase().includes(query.toLowerCase())
+          (!query || o.offender_name?.toLowerCase().includes(query.toLowerCase())) &&
+          (!filters?.district_id || o.district === filters.district_id) &&
+          (!filters?.crime_type || o.primary_crime_type === filters.crime_type)
         ).map(normalizeOffender).filter(Boolean);
       }
       throw error;
@@ -72,24 +86,33 @@ export const offenderService = {
         };
       }
       return null;
-    } catch {
-      return null;
+    } catch (error) {
+      if (import.meta.env.VITE_DEMO_MODE === 'true') {
+        return null;
+      }
+      throw error;
     }
   },
   getRisk: async (id: string) => {
     try {
       const res = await api.get(ENDPOINTS.OFFENDERS.RISK(id));
       return res.data?.data || res.data;
-    } catch {
-      return null;
+    } catch (error) {
+      if (import.meta.env.VITE_DEMO_MODE === 'true') {
+        return null;
+      }
+      throw error;
     }
   },
   getNetwork: async (id: string) => {
     try {
       const res = await api.get(ENDPOINTS.OFFENDERS.NETWORK(id));
       return res.data?.data || res.data;
-    } catch {
-      return null;
+    } catch (error) {
+      if (import.meta.env.VITE_DEMO_MODE === 'true') {
+        return null;
+      }
+      throw error;
     }
   },
   create: async (payload: Record<string, unknown>) => {

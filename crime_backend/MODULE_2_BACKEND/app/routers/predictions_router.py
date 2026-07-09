@@ -22,7 +22,11 @@ router = APIRouter()
 @router.get("/risk-map")
 @limiter.limit("30/minute")
 async def risk_map(request: Request, db: AsyncSession = Depends(get_db), current_user=Depends(get_current_user)):
-    data = await get_risk_map(db)
+    district_id = None
+    if current_user["role"] == "DISTRICT_OFFICER":
+        district_id = current_user.get("district_id")
+        
+    data = await get_risk_map(db, district_id=district_id)
     return {"success": True, "data": data}
 
 @router.get("/high-risk-areas")

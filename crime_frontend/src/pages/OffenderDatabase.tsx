@@ -8,6 +8,7 @@ import ExplainabilityPanel from "../components/common/ExplainabilityPanel";
 import { useSelector } from 'react-redux';
 import { RootState } from '../store/store';
 import { useDistricts } from '../hooks/useDistricts';
+import { CRIME_TYPES } from '../constants/crimeTypes';
 
 interface Offender {
   offender_id: string; offender_name: string; age: number; offender_age?: number; district: string;
@@ -20,6 +21,11 @@ export default function OffenderDatabase() {
   const districts = useDistricts();
   const [offenders, setOffenders] = useState<Offender[]>([]);
   const [search, setSearch] = useState("");
+  const [districtFilter, setDistrictFilter] = useState("all");
+  const [crimeTypeFilter, setCrimeTypeFilter] = useState("all");
+  const [riskLevelFilter, setRiskLevelFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+
   const [selected, setSelected] = useState<Offender | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -46,22 +52,38 @@ export default function OffenderDatabase() {
     }
   };
 
-  useEffect(() => {
-    offenderService.searchOffenders("").then((d: any) => {
-      const list = Array.isArray(d) ? d : (d?.offenders || []);
-      setOffenders(list);
+  const executeSearch = async (
+    q: string = search, 
+    d: string = districtFilter, 
+    c: string = crimeTypeFilter, 
+    r: string = riskLevelFilter, 
+    s: string = statusFilter
+  ) => {
+    try {
+      const filters: any = {};
+      if (d !== "all") filters.district_id = d;
+      if (c !== "all") filters.crime_type = c;
+      if (r !== "all") filters.risk_level = r;
+      if (s !== "all") filters.status = s;
+
+      const data: any = await offenderService.searchOffenders(q, filters);
+      setOffenders(Array.isArray(data) ? data : (data?.offenders || []));
       setError(null);
-      
+    } catch (e: any) {
+      console.error(e);
+      setError(e.response?.data?.detail || "Failed to search offenders");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    executeSearch().then(() => {
       const deepLinkId = searchParams.get("offender_id");
-      if (deepLinkId && list.length > 0) {
-        const match = list.find((o: any) => o.offender_id === deepLinkId);
+      if (deepLinkId && offenders.length > 0) {
+        const match = offenders.find((o: any) => o.offender_id === deepLinkId);
         if (match) handleSelectOffender(match);
       }
-    }).catch(e => {
-      console.error(e);
-      setError(e.response?.data?.detail || "Failed to connect to backend");
-    }).finally(() => {
-      setLoading(false);
     });
   }, [searchParams]);
 
@@ -85,14 +107,7 @@ export default function OffenderDatabase() {
 
   const handleSearch = async (q: string) => {
     setSearch(q);
-    try {
-      const data: any = await offenderService.searchOffenders(q);
-      setOffenders(Array.isArray(data) ? data : (data?.offenders || []));
-      setError(null);
-    } catch (e: any) {
-      console.error(e);
-      setError(e.response?.data?.detail || "Failed to search offenders");
-    }
+    executeSearch(q, districtFilter, crimeTypeFilter, riskLevelFilter, statusFilter);
   };
 
   if (loading) return <div className="flex-1 flex items-center justify-center"><LoadingSpinner size="lg" text="Loading offender database..." /></div>;
@@ -116,10 +131,49 @@ export default function OffenderDatabase() {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
           <input
-            type="text" placeholder="Search by name, district, crime type..."
+            type="text" placeholder="Search by name..."
             value={search} onChange={(e) => handleSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-600 text-slate-200 rounded-xl focus:outline-none focus:border-blue-500 text-sm"
           />
+        </div>
+        <div className="flex flex-wrap gap-3 mt-4">
+          <select 
+            value={districtFilter} 
+            onChange={(e) => { setDistrictFilter(e.target.value); executeSearch(search, e.target.value, crimeTypeFilter, riskLevelFilter, statusFilter); }}
+            className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-blue-500 outline-none"
+          >
+            <option value="all">All Districts</option>
+            {districts.map(d => <option key={d.district_id} value={d.district_id}>{d.district_name}</option>)}
+          </select>
+          <select 
+            value={crimeTypeFilter} 
+            onChange={(e) => { setCrimeTypeFilter(e.target.value); executeSearch(search, districtFilter, e.target.value, riskLevelFilter, statusFilter); }}
+            className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-blue-500 outline-none"
+          >
+            <option value="all">All Crime Types</option>
+            {CRIME_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+          <select 
+            value={riskLevelFilter} 
+            onChange={(e) => { setRiskLevelFilter(e.target.value); executeSearch(search, districtFilter, crimeTypeFilter, e.target.value, statusFilter); }}
+            className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-blue-500 outline-none"
+          >
+            <option value="all">All Risk Levels</option>
+            <option value="HIGH">High Risk</option>
+            <option value="MEDIUM">Medium Risk</option>
+            <option value="LOW">Low Risk</option>
+          </select>
+          <select 
+            value={statusFilter} 
+            onChange={(e) => { setStatusFilter(e.target.value); executeSearch(search, districtFilter, crimeTypeFilter, riskLevelFilter, e.target.value); }}
+            className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-blue-500 outline-none"
+          >
+            <option value="all">All Statuses</option>
+            <option value="ACTIVE">Active</option>
+            <option value="IMPRISONED">Imprisoned</option>
+            <option value="ABSCONDING">Absconding</option>
+            <option value="DECEASED">Deceased</option>
+          </select>
         </div>
       </div>
 

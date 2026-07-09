@@ -96,7 +96,17 @@ class Settings(BaseSettings):
                 )
             logging.getLogger(__name__).warning("⚠️ JWT_SECRET_KEY is using the default dev value.")
         return v
-
+    @field_validator("DATABASE_PASSWORD", "NEO4J_PASSWORD")
+    @classmethod
+    def validate_passwords(cls, v):
+        if v in ["securepassword", "neo4jsecurepassword", ""]:
+            env = os.environ.get("ENVIRONMENT", "development")
+            if env == "production":
+                raise ValueError(
+                    "Database passwords must be changed from the default value before running in production."
+                )
+            logging.getLogger(__name__).warning("⚠️ A database password is using a default or insecure value.")
+        return v
 
 settings = Settings()
 

@@ -29,7 +29,7 @@ async def hotspot_clusters(
 ):
     resolved_id = await resolve_district_id(db, district_id)
     district_id = scope_district_param(resolved_id, current_user)
-    data = await get_hotspot_clusters(db, resolved_id)
+    data = await get_hotspot_clusters(db, district_id)
     
     if file_format == "csv":
         import csv
@@ -62,7 +62,7 @@ async def time_patterns(
 ):
     resolved_id = await resolve_district_id(db, district_id)
     district_id = scope_district_param(resolved_id, current_user)
-    data = await get_time_patterns(db, resolved_id, crime_type)
+    data = await get_time_patterns(db, district_id, crime_type)
     return {"success": True, "data": data}
 
 @router.get("/top-list")
@@ -76,7 +76,7 @@ async def top_hotspots(
 ):
     resolved_id = await resolve_district_id(db, district_id)
     district_id = scope_district_param(resolved_id, current_user)
-    data = await get_top_hotspots(db, limit, resolved_id)
+    data = await get_top_hotspots(db, limit, district_id)
     return {"success": True, "data": data}
 
 @router.get("/deployment-suggestions")
@@ -90,5 +90,5 @@ async def deployment_suggestions(
 ):
     resolved_id = await resolve_district_id(db, district_id)
     district_id = scope_district_param(resolved_id, current_user)
-    data = await get_deployment_suggestions(db, resolved_id, target_date)
+    data = await get_deployment_suggestions(db, district_id, target_date)
     return {"success": True, "data": data}

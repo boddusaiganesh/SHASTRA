@@ -26,17 +26,22 @@ RISK_COLORS = {
 
 async def get_risk_map(
     db: AsyncSession,
+    district_id: Optional[str] = None,
     date_target: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Get district-level risk scores for the map"""
     
-    cache_key = f"risk_map:{date_target}"
+    cache_key = f"risk_map:{date_target}:{district_id}"
     cached = await cache_get(cache_key)
     if cached:
         return cached
     
-    # Get all districts
-    district_result = await db.execute(select(District))
+    # Get districts
+    district_query = select(District)
+    if district_id:
+        district_query = district_query.where(District.district_id == district_id)
+        
+    district_result = await db.execute(district_query)
     districts = district_result.scalars().all()
     
     # Get recent predictions or calculate on the fly

@@ -46,7 +46,11 @@ async def history(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user)
 ):
-    data = await get_saved_reports(db, page_size=limit)
+    district_id = None
+    if current_user["role"] == "DISTRICT_OFFICER":
+        district_id = current_user.get("district_id")
+        
+    data = await get_saved_reports(db, district_id=district_id, page_size=limit)
     return {"success": True, "data": data}
 
 @router.get("/{report_id}/download")

@@ -57,6 +57,7 @@ const CriminalNetwork: React.FC = () => {
   const [compareNode1, setCompareNode1] = useState<NetworkNode | null>(null);
   const [compareNode2, setCompareNode2] = useState<NetworkNode | null>(null);
   const [highlightPath, setHighlightPath] = useState<string[]>([]);
+  const [isFallbackMode, setIsFallbackMode] = useState(false);
   const navigate = useNavigate();
 
   const [districtFilter, setDistrictFilter] = useState("all");
@@ -85,7 +86,8 @@ const CriminalNetwork: React.FC = () => {
   }, [districtFilter, crimeTypeLens, nodeTypeFilter, setSearchParams]);
 
   useEffect(() => {
-    const fetch = async () => {
+    const controller = new AbortController();
+    const handle = setTimeout(async () => {
       setLoading(true);
       try {
         const [g, ai] = await Promise.all([
@@ -93,25 +95,30 @@ const CriminalNetwork: React.FC = () => {
             searchQuery || undefined,
             crimeTypeLens === "all" ? undefined : crimeTypeLens,
             districtFilter === "all" ? undefined : districtFilter,
-            nodeTypeFilter === "all" ? undefined : nodeTypeFilter
+            nodeTypeFilter === "all" ? undefined : nodeTypeFilter,
+            { signal: controller.signal }
           ),
           networkService.getAiSummary(
             districtFilter === "all" ? undefined : districtFilter,
-            crimeTypeLens === "all" ? undefined : crimeTypeLens
+            crimeTypeLens === "all" ? undefined : crimeTypeLens,
+            searchQuery || undefined,
+            nodeTypeFilter === "all" ? undefined : nodeTypeFilter,
+            { signal: controller.signal }
           ),
         ]);
         
-        if (g.status === "offline") {
+        if (g && g.status === "offline") {
           setStatus("offline");
           setErrorMessage(g.error || "Graph database is disconnected");
-        } else if (g.status === "no_data") {
+        } else if (g && g.status === "no_data") {
           setStatus("no_data");
           setErrorMessage("No graph data available");
-        } else {
+        } else if (g) {
           setStatus("ok");
           setNodes(g.nodes as NetworkNode[]);
           setEdges(g.edges as NetworkEdge[]);
           setKeyPlayers(g.key_players || []);
+          setIsFallbackMode(g.source === "postgres_fallback");
           setAiSummary(ai as typeof aiSummary);
           if (g.warning) {
             setWarningMessage(g.warning);
@@ -120,39 +127,15 @@ const CriminalNetwork: React.FC = () => {
           }
         }
       } catch (e: any) {
-        setStatus("offline");
-        setErrorMessage(e.response?.data?.detail || "Failed to connect to backend");
+        if (e.name !== "CanceledError") {
+          setStatus("offline");
+          setErrorMessage(e.response?.data?.detail || "Failed to connect to backend");
+          console.error(e);
+        }
       }
       setLoading(false);
-    };
-    fetch();
-  }, [crimeTypeLens, districtFilter]);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    const handle = setTimeout(async () => {
-      try {
-        const g = await networkService.getGraphData(
-          searchQuery || undefined,
-          crimeTypeLens === "all" ? undefined : crimeTypeLens,
-          districtFilter === "all" ? undefined : districtFilter,
-          nodeTypeFilter === "all" ? undefined : nodeTypeFilter,
-          { signal: controller.signal }
-        );
-        if (g && g.status !== "offline" && g.status !== "no_data") {
-          setNodes(g.nodes);
-          setEdges(g.edges);
-          setKeyPlayers(g.key_players || []);
-          if (g.warning) {
-            setWarningMessage(g.warning);
-          } else {
-            setWarningMessage("");
-          }
-        }
-      } catch (e: any) {
-        if (e.name !== "CanceledError") console.error(e);
-      }
     }, 400);
+
     return () => {
       clearTimeout(handle);
       controller.abort();
@@ -174,8 +157,8 @@ const CriminalNetwork: React.FC = () => {
     const alreadyLoaded = edges.some(e => e.source_node_id === node.node_id || e.target_node_id === node.node_id);
     
     const [detail] = await Promise.all([
-      networkService.getNodeDetail(node.node_id),
-      !alreadyLoaded ? handleNodeExpand(node) : Promise.resolve()
+      networkService.getNodeDetail(node.node_id).catch(() => null),
+      !alreadyLoaded ? handleNodeExpand(node).catch(() => null) : Promise.resolve()
     ]);
     
     if (detail) {
@@ -245,6 +228,11 @@ const CriminalNetwork: React.FC = () => {
   };
 
   const handleNodeCompare = async (node: NetworkNode) => {
+    if (isFallbackMode) {
+      setWarningMessage("Shortest path comparison is not available in fallback mode (Neo4j is offline).");
+      return;
+    }
+    
     if (!compareNode1) {
       setCompareNode1(node);
     } else if (!compareNode2) {
@@ -264,41 +252,41 @@ const CriminalNetwork: React.FC = () => {
   };
 
   const handleNodeExpand = async (node: NetworkNode) => {
-    const res = await networkService.expandNode(node.node_id);
-    if (res && res.nodes && res.edges) {
-      const newNodes = [...nodes];
-      const newEdges = [...edges];
-      let added = false;
-      
-      res.nodes.forEach((n: any) => {
-        if (!newNodes.find(existing => existing.node_id === n.node_id)) {
-          newNodes.push(n);
-          added = true;
+    try {
+      const res = await networkService.expandNode(node.node_id);
+      if (res && res.nodes && res.edges) {
+        const newNodes = [...nodes];
+        const newEdges = [...edges];
+        let added = false;
+        
+        res.nodes.forEach((n: any) => {
+          if (!newNodes.find(existing => existing.node_id === n.node_id)) {
+            newNodes.push(n);
+            added = true;
+          }
+        });
+        
+        res.edges.forEach((e: any) => {
+          if (!newEdges.find(existing => existing.edge_id === e.edge_id)) {
+            newEdges.push(e);
+            added = true;
+          }
+        });
+        
+        if (added) {
+          setNodes(newNodes);
+          setEdges(newEdges);
+        } else {
+          setWarningMessage("No additional connections found for this node.");
         }
-      });
-      
-      res.edges.forEach((e: any) => {
-        if (!newEdges.find(existing => existing.edge_id === e.edge_id)) {
-          newEdges.push(e);
-          added = true;
-        }
-      });
-      
-      if (added) {
-        setNodes(newNodes);
-        setEdges(newEdges);
       }
-    } else {
-      setWarningMessage(res?.message || "Node expansion requires the Neo4j graph database, which is currently offline.");
+    } catch (e: any) {
+      setWarningMessage(e.response?.data?.detail || "Node expansion failed.");
     }
   };
 
   const filteredNodes = useMemo(() => {
-    let result = nodes.filter((n) => {
-      if (nodeTypeFilter !== "all" && n.node_type !== nodeTypeFilter) return false;
-      if (searchQuery && !n.label.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-      return true;
-    });
+    let result = [...nodes];
     
     if (!showIsolated && edges.length > 0) {
       const connectedNodeIds = new Set(edges.flatMap(e => [e.source_node_id, e.target_node_id]));

@@ -103,7 +103,7 @@ export const crimeService = {
     return response.data;
   },
   updateStatus: async (id: string, status: string) => {
-    const response = await api.patch(ENDPOINTS.CRIMES.UPDATE_STATUS(id), null, { params: { status } });
+    const response = await api.patch(ENDPOINTS.CRIMES.UPDATE_STATUS(id), { status });
     return response.data;
   },
   remove: async (id: string) => {

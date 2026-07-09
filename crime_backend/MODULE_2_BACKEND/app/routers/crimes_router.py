@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Body
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 from typing import List, Any, Optional
@@ -291,10 +292,13 @@ async def update_crime(
     await log_action(db, current_user["user_id"], "UPDATE", "CRIME", crime_id, payload)
     return {"success": True, "data": updated}
 
+class StatusUpdateReq(BaseModel):
+    status: str
+
 @router.patch("/{crime_id}/status")
 async def update_crime_status(
     crime_id: str,
-    status_value: str = Query(..., alias="status"),
+    req: StatusUpdateReq,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(require_role(["SCRB_OFFICER", "DISTRICT_OFFICER", "INVESTIGATOR"])),
 ):
@@ -303,6 +307,7 @@ async def update_crime_status(
     
     from app.core.config import CRIME_STATUS_VALUES
     
+    status_value = req.status
     if status_value not in CRIME_STATUS_VALUES:
         raise HTTPException(status_code=400, detail=f"status must be one of {CRIME_STATUS_VALUES}")
         

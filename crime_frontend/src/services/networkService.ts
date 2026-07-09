@@ -48,19 +48,29 @@ export const networkService = {
     try {
       const response = await api.get(ENDPOINTS.NETWORK.EXPAND(nodeId), { params: { node_type: nodeType } });
       return response.data?.data || response.data || null;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error expanding node:", error);
-      return null;
+      throw error;
     }
   },
 
-  getAiSummary: async (districtId?: string, crimeType?: string) => {
+  getAiSummary: async (
+    districtId?: string, 
+    crimeType?: string, 
+    searchQuery?: string, 
+    nodeType?: string,
+    opts?: { signal?: AbortSignal }
+  ) => {
     try {
-      const response = await api.get(ENDPOINTS.NETWORK.AI_SUMMARY, { params: { district_id: districtId, crime_type: crimeType } });
+      const response = await api.get(ENDPOINTS.NETWORK.AI_SUMMARY, { 
+        params: { district_id: districtId, crime_type: crimeType, search_query: searchQuery, node_type: nodeType },
+        signal: opts?.signal
+      });
       return response.data?.data || null;
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === "CanceledError") throw error;
       console.error("Error fetching AI summary:", error);
-      return null;
+      throw error;
     }
   },
 
@@ -76,7 +86,7 @@ export const networkService = {
 
   getNodeAiAnalysis: async (nodeId: string) => {
     try {
-      const response = await api.get(`${ENDPOINTS.NETWORK.NODE_DETAIL(nodeId)}/ai-analysis`);
+      const response = await api.get(ENDPOINTS.NETWORK.NODE_AI_ANALYSIS(nodeId));
       return response.data?.data?.ai_analysis || null;
     } catch (error) {
       console.error("Error fetching node AI analysis:", error);

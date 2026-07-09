@@ -34,6 +34,7 @@ export const ENDPOINTS = {
   NETWORK: {
     GRAPH_DATA: "/network/graph-data",
     NODE_DETAIL: (id: string) => `/network/node-detail/${id}`,
+    NODE_AI_ANALYSIS: (id: string) => `/network/node-detail/${id}/ai-analysis`,
     AI_SUMMARY: "/network/ai-summary",
     EXPAND: (id: string) => `/network/expand/${id}`,
     SHORTEST_PATH: "/network/shortest-path",

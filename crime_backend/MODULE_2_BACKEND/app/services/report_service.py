@@ -208,21 +208,26 @@ async def generate_report(
 
 async def get_saved_reports(
     db: AsyncSession,
+    district_id: Optional[str] = None,
     page: int = 1,
     page_size: int = 20,
 ) -> Dict[str, Any]:
     """Get list of saved reports"""
     
-    count_result = await db.execute(select(func.count(Report.report_id)))
+    query = select(Report)
+    count_query = select(func.count(Report.report_id))
+    
+    if district_id:
+        query = query.where(Report.district_id == district_id)
+        count_query = count_query.where(Report.district_id == district_id)
+        
+    count_result = await db.execute(count_query)
     total_count = count_result.scalar() or 0
     
     offset = (page - 1) * page_size
-    result = await db.execute(
-        select(Report)
-        .order_by(desc(Report.created_at))
-        .offset(offset)
-        .limit(page_size)
-    )
+    query = query.order_by(desc(Report.created_at)).offset(offset).limit(page_size)
+    
+    result = await db.execute(query)
     reports = result.scalars().all()
     
     all_districts = await db.execute(select(District))

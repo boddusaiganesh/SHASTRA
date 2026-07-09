@@ -234,7 +234,7 @@ async def build_network_from_postgres(
                         "relationship_type": "KNOWS",
                         "strength_score": 60,
                         "confidence_level": "SUSPECTED",
-                        "crime_types": [],
+                        "crime_types": [crime_type] if crime_type else [],
                     })
 
     # --- Victims ---
@@ -365,7 +365,7 @@ async def build_network_from_postgres(
                                 "relationship_type": "FREQUENTED",
                                 "strength_score": 55,
                                 "confidence_level": "SUSPECTED",
-                                "crime_types": [],
+                                "crime_types": [crime_type] if crime_type else [],
                             })
             except Exception as e:
                 logger.warning(f"Failed to link locations to crimes/offenders in fallback: {e}")
@@ -547,58 +547,55 @@ async def get_network_ai_summary(
     db: AsyncSession,
     district_id: Optional[str] = None,
     focus_area: Optional[str] = None,
+    search_query: Optional[str] = None,
+    node_type: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Get AI-powered network analysis summary"""
+    """Get AI-powered network analysis summary perfectly synced with the graph"""
     from app.services.gemini_service import get_network_analysis_summary
+    import itertools
     
-    cache_key = f"network_ai_summary:{district_id}:{focus_area}"
+    cache_key = f"network_ai_summary:{district_id}:{focus_area}:{search_query}:{node_type}"
     cached = await cache_get(cache_key)
     if cached:
         return cached
     
-    # Get network statistics
-    offender_query = select(Offender).where(Offender.total_crimes > 1)
-    if district_id:
-        offender_query = offender_query.where(Offender.district_id == district_id)
-    if focus_area:
-        from app.models.database_models.crime_model import CrimeOffenderLink, Crime
-        offender_query = (
-            offender_query.join(CrimeOffenderLink).join(Crime)
-            .where(Crime.crime_type == focus_area)
-        )
+    # Get EXACT same network graph data that the frontend sees
+    graph_data = await get_network_graph_data(
+        db, 
+        search_query=search_query, 
+        crime_type=focus_area, 
+        district_id=district_id, 
+        node_type=node_type
+    )
     
-    result = await db.execute(offender_query)
-    all_offenders = result.scalars().all()
-    # Deduplicate in python because postgres can't do DISTINCT on JSON columns
-    seen_ids = set()
-    unique_offenders = []
-    for off in all_offenders:
-        if off.offender_id not in seen_ids:
-            seen_ids.add(off.offender_id)
-            unique_offenders.append(off)
-            if len(unique_offenders) >= 50:
-                break
-    offenders = unique_offenders
+    # Extract offenders from the graph nodes
+    all_offenders = []
+    for node in graph_data.get("nodes", []):
+        if node.get("node_type") == "criminal" or node.get("node_type") == "Offender":
+            props = node.get("properties", {})
+            if props:
+                # Add full_name if missing but label exists
+                if "full_name" not in props and "label" in node:
+                    props["full_name"] = node["label"]
+                all_offenders.append(props)
     
-    # Find suspicious pairs (shared known associates)
+    # Find suspicious pairs (shared known associates) by checking all combinations
     suspicious_pairs = []
-    all_offenders = [o.to_dict() for o in offenders]
     
-    for i, o1 in enumerate(all_offenders[:10]):
-        for o2 in all_offenders[i+1:i+6]:
-            common = set(o1.get("known_associates", [])) & set(o2.get("known_associates", []))
-            if common:
-                suspicious_pairs.append({
-                    "offender_1": o1["full_name"],
-                    "offender_2": o2["full_name"],
-                    "connection_type": "SHARED_ASSOCIATE",
-                    "confidence": "SUSPECTED",
-                })
+    for o1, o2 in itertools.combinations(all_offenders, 2):
+        common = set(o1.get("known_associates", [])) & set(o2.get("known_associates", []))
+        if common:
+            suspicious_pairs.append({
+                "offender_1": o1.get("full_name", "Unknown"),
+                "offender_2": o2.get("full_name", "Unknown"),
+                "connection_type": "SHARED_ASSOCIATE",
+                "confidence": "SUSPECTED",
+            })
     
     # Network stats
     network_stats = {
         "total_criminals": len(all_offenders),
-        "high_risk_count": sum(1 for o in all_offenders if o.get("risk_level") == "HIGH"),
+        "high_risk_count": sum(1 for o in all_offenders if o.get("risk_level") == "HIGH" or o.get("risk_score", 0) >= 70),
         "active_count": sum(1 for o in all_offenders if o.get("status") == "ACTIVE"),
         "network_density": round(len(suspicious_pairs) / max(len(all_offenders), 1), 2),
     }
