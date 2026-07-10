@@ -6,6 +6,7 @@ import ForecastChart from "../components/charts/ForecastChart";
 import RiskMap from "../components/maps/RiskMap";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import AIMarkdown from "../components/common/AIMarkdown";
+import { useDistricts } from "../hooks/useDistricts";
 
 const PredictiveAnalytics: React.FC = () => {
   const [forecast, setForecast] = useState<unknown[]>([]);
@@ -14,16 +15,20 @@ const PredictiveAnalytics: React.FC = () => {
   const [riskMapData, setRiskMapData] = useState<unknown[]>([]);
   const [socioData, setSocioData] = useState<unknown[]>([]);
   const [loading, setLoading] = useState(true);
+  const [districtFilter, setDistrictFilter] = useState("All");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const districts = useDistricts();
 
   useEffect(() => {
     const load = async () => {
       setLoading(true);
       const [f, r, t, rm, s] = await Promise.all([
-        predictionService.getForecast(),
-        predictionService.getHighRiskAreas(),
-        predictionService.getEmergingTypologies(),
-        predictionService.getRiskMap(),
-        predictionService.getSocioeconomicData(),
+        predictionService.getForecast(districtFilter, dateFrom, dateTo),
+        predictionService.getHighRiskAreas(districtFilter, dateFrom, dateTo),
+        predictionService.getEmergingTypologies(districtFilter, dateFrom, dateTo),
+        predictionService.getRiskMap(districtFilter, dateFrom, dateTo),
+        predictionService.getSocioeconomicData({ district_id: districtFilter === "All" ? undefined : districtFilter }),
       ]);
       setForecast(Array.isArray(f) ? f : ((f as any)?.forecast || []));
       setRiskAreas(Array.isArray(r) ? r : ((r as any)?.predictions || (r as any)?.areas || []));
@@ -33,15 +38,46 @@ const PredictiveAnalytics: React.FC = () => {
       setLoading(false);
     };
     load();
-  }, []);
+  }, [districtFilter, dateFrom, dateTo]);
 
   if (loading) return <div className="flex-1 flex items-center justify-center"><LoadingSpinner size="lg" text="Running predictive models..." /></div>;
 
   return (
     <div className="flex-1 min-h-0 w-full overflow-y-auto custom-scrollbar p-6 space-y-6">
-      <div>
-        <h1 className="text-xl font-bold text-white">Predictive Intelligence</h1>
-        <p className="text-sm text-slate-400">AI/ML-powered crime forecasting and risk assessment</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-white">Predictive Intelligence</h1>
+          <p className="text-sm text-slate-400">AI/ML-powered crime forecasting and risk assessment</p>
+        </div>
+        
+        {/* Filters */}
+        <div className="flex items-center gap-4 bg-slate-800/50 p-2 rounded-xl border border-slate-700/50">
+          <div>
+            <select 
+              value={districtFilter} 
+              onChange={(e) => setDistrictFilter(e.target.value)}
+              className="bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-1.5 focus:outline-none focus:border-blue-500 max-w-xs"
+            >
+              <option value="All">All Districts</option>
+              {districts.map(d => <option key={d.district_id} value={d.district_id}>{d.district_name}</option>)}
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <input 
+              type="date" 
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-1.5 focus:outline-none focus:border-blue-500"
+            />
+            <span className="text-slate-500">to</span>
+            <input 
+              type="date" 
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-1.5 focus:outline-none focus:border-blue-500"
+            />
+          </div>
+        </div>
       </div>
 
       {/* 30-day forecast */}
@@ -117,7 +153,7 @@ const PredictiveAnalytics: React.FC = () => {
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-xs bg-red-900/40 text-red-400 px-2 py-0.5 rounded-full">{t.warning_level || t.trend || t.growth_rate}{t.growth_rate && typeof t.growth_rate === 'number' ? ` · +${t.growth_rate}%` : ''}</span>
                 </div>
-                <p className="text-xs text-slate-400">{t.pattern_description || t.description}</p>
+                <div className="text-xs text-slate-400"><AIMarkdown text={t.pattern_description || t.description || ""} /></div>
                 {(t.affected_districts || t.districts) && <p className="text-xs text-slate-500 mt-1">Districts: {(t.affected_districts || t.districts)?.join(", ")}</p>}
               </div>
             </div>

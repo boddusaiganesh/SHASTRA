@@ -28,9 +28,9 @@ export const reportService = {
       throw error;
     }
   },
-  getSavedList: async () => {
+  getSavedList: async (page = 1, pageSize = 20) => {
     try {
-      const res = await api.get(ENDPOINTS.REPORTS.SAVED_LIST);
+      const res = await api.get(ENDPOINTS.REPORTS.SAVED_LIST, { params: { page, limit: pageSize } });
       return res.data?.data || res.data;
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockSavedReports; }

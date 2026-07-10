@@ -1,6 +1,7 @@
 import React from "react";
 import { AlertTriangle, AlertCircle, Info, CheckCircle } from "lucide-react";
 import { formatRelative } from "../../utils/dateFormatter";
+import AIMarkdown from "../common/AIMarkdown";
 
 interface Alert {
   alert_id: string; alert_type: string; severity: string; location: string;
@@ -38,7 +39,7 @@ const AlertsTable: React.FC<Props> = ({ alerts, onMarkRead, onDismiss, compact }
               <span className="text-xs text-slate-400">{a.alert_type}</span>
               {!a.is_read && <span className="ml-auto text-xs bg-blue-600/30 text-blue-400 px-1.5 py-0.5 rounded-full">NEW</span>}
             </div>
-            <p className="text-xs text-slate-200 mb-0.5 truncate">{a.description}</p>
+            <div className="text-xs text-slate-200 mb-0.5 truncate"><AIMarkdown text={a.description} className="inline" /></div>
             {!compact && <p className="text-xs text-slate-500">{a.location} • {a.district}</p>}
             <div className="flex items-center justify-between mt-1">
               <span className="text-xs text-slate-600">{formatRelative(a.datetime)}</span>

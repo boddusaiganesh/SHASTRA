@@ -29,36 +29,52 @@ export const predictionService = {
       throw error;
     }
   },
-  getRiskMap: async () => {
+  getRiskMap: async (districtId?: string, dateFrom?: string, dateTo?: string) => {
     try {
-      const res = await api.get(ENDPOINTS.PREDICTIONS.RISK_MAP);
+      const params: any = {};
+      if (districtId && districtId !== "All") params.district_id = districtId;
+      if (dateFrom) params.date_from = dateFrom;
+      if (dateTo) params.date_to = dateTo;
+      const res = await api.get(ENDPOINTS.PREDICTIONS.RISK_MAP, { params });
       return res.data?.data || res.data;
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockDistrictRiskScores; }
       throw error;
     }
   },
-  getHighRiskAreas: async () => {
+  getHighRiskAreas: async (districtId?: string, dateFrom?: string, dateTo?: string) => {
     try {
-      const res = await api.get(ENDPOINTS.PREDICTIONS.HIGH_RISK_AREAS);
+      const params: any = {};
+      if (districtId && districtId !== "All") params.district_id = districtId;
+      if (dateFrom) params.date_from = dateFrom;
+      if (dateTo) params.date_to = dateTo;
+      const res = await api.get(ENDPOINTS.PREDICTIONS.HIGH_RISK_AREAS, { params });
       return res.data?.data || res.data;
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockHighRiskPredictions; }
       throw error;
     }
   },
-  getForecast: async () => {
+  getForecast: async (districtId?: string, dateFrom?: string, dateTo?: string) => {
     try {
-      const res = await api.get(ENDPOINTS.PREDICTIONS.FORECAST);
+      const params: any = {};
+      if (districtId && districtId !== "All") params.district_id = districtId;
+      if (dateFrom) params.date_from = dateFrom;
+      if (dateTo) params.date_to = dateTo;
+      const res = await api.get(ENDPOINTS.PREDICTIONS.FORECAST, { params });
       return res.data?.data || res.data;
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockCrimeForecast; }
       throw error;
     }
   },
-  getEmergingTypologies: async () => {
+  getEmergingTypologies: async (districtId?: string, dateFrom?: string, dateTo?: string) => {
     try {
-      const res = await api.get(ENDPOINTS.PREDICTIONS.EMERGING_TYPOLOGIES);
+      const params: any = {};
+      if (districtId && districtId !== "All") params.district_id = districtId;
+      if (dateFrom) params.date_from = dateFrom;
+      if (dateTo) params.date_to = dateTo;
+      const res = await api.get(ENDPOINTS.PREDICTIONS.EMERGING_TYPOLOGIES, { params });
       return res.data?.data || res.data;
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockEmergingTypologies; }
@@ -77,10 +93,14 @@ export const predictionService = {
 };
 
 export const anomalyService = {
-  getList: async () => {
+  getList: async (page: number = 1, pageSize: number = 20, severity?: string, status?: string, districtId?: string) => {
     try {
-      const res = await api.get(ENDPOINTS.ANOMALIES.LIST);
-      return res.data?.data || res.data || [];
+      const params: any = { page, page_size: pageSize };
+      if (severity && severity !== "All") params.severity = severity;
+      if (status && status !== "All") params.status = status;
+      if (districtId && districtId !== "All") params.district_id = districtId;
+      const res = await api.get(ENDPOINTS.ANOMALIES.LIST, { params });
+      return res.data?.data || res.data || {};
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockAnomalies; }
       throw error;

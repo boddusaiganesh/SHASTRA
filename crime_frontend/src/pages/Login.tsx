@@ -31,7 +31,11 @@ export default function Login() {
       dispatch(loginSuccess({ ...response, isAuthenticated: true, isLoading: false, error: null }));
       navigate('/');
     } catch (err: any) {
-      dispatch(loginFailure(err?.response?.data?.detail || err.message || 'Login failed'));
+      if (err?.response?.status === 429) {
+        dispatch(loginFailure('Too many login attempts. Please try again later.'));
+      } else {
+        dispatch(loginFailure(err?.response?.data?.detail || err.message || 'Login failed'));
+      }
     }
   };
 

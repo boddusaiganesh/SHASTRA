@@ -75,14 +75,15 @@ def get_token_expiry(token: str) -> Optional[datetime]:
 
 
 # FastAPI dependency for JWT authentication
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.core.redis_connection import is_token_blacklisted
 
-security_scheme = HTTPBearer()
+security_scheme = HTTPBearer(auto_error=False)
 
 
 async def get_current_user(
+    request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(security_scheme),
 ) -> Dict[str, Any]:
     """FastAPI dependency to get the current authenticated user"""
@@ -93,7 +94,13 @@ async def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
     
-    token = credentials.credentials
+    # Try cookie first, then fallback to Bearer token for backward compatibility
+    token = request.cookies.get("auth_token")
+    if not token and credentials:
+        token = credentials.credentials
+        
+    if not token:
+        raise credentials_exception
     
     # Check if token is blacklisted
     if await is_token_blacklisted(token):

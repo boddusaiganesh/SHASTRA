@@ -16,15 +16,17 @@ const AIMarkdown: React.FC<AIMarkdownProps> = ({ text, className = "" }) => {
     processedText = processedText.replace(/\\n/g, '\n');
     processedText = processedText.replace(/\\"/g, '"');
     processedText = processedText.replace(/\\\*/g, '*');
+    processedText = processedText.replace(/\*\*\s+(.*?)\s+\*\*/g, '**$1**');
+    processedText = processedText.replace(/\*\s+(.*?)\s+\*/g, '*$1*');
   }
 
   return (
     <div className={`ai-markdown-container ${className}`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeSanitize]}
         components={{
           strong: ({ node, ...props }) => <span className="font-bold text-blue-100" {...props} />,
+          em: ({ node, ...props }) => <em className="italic text-slate-300" {...props} />,
           h1: ({ node, ...props }) => <h1 className="font-bold text-base text-white mb-2 mt-4" {...props} />,
           h2: ({ node, ...props }) => <h2 className="font-bold text-sm text-white mb-2 mt-3" {...props} />,
           h3: ({ node, ...props }) => <h3 className="font-semibold text-white mb-1 mt-2 text-sm" {...props} />,

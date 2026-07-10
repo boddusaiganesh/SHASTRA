@@ -13,7 +13,8 @@ export default function CrimeDatabase() {
   const districts = useDistricts();
   
   // Filters
-  const [search, setSearch] = useState(""); // Still used for client-side text filtering if needed, or we could pass it to backend if supported. We'll use it client-side on the page data.
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [district, setDistrict] = useState("All");
   const [crimeType, setCrimeType] = useState("All");
   const [status, setStatus] = useState("All");
@@ -25,6 +26,11 @@ export default function CrimeDatabase() {
   const [evidence, setEvidence] = useState<any[]>([]);
   const [uploading, setUploading] = useState(false);
 
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 500);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   const loadCrimes = async () => {
     setLoading(true);
     try {
@@ -32,6 +38,7 @@ export default function CrimeDatabase() {
       if (district !== "All") params.district_id = district;
       if (crimeType !== "All") params.crime_type = crimeType;
       if (status !== "All") params.status = status;
+      if (debouncedSearch) params.q = debouncedSearch;
 
       // Use filter endpoint instead of map-data
       const response = await crimeService.filterCrimes(params); 
@@ -55,7 +62,7 @@ export default function CrimeDatabase() {
 
   useEffect(() => {
     loadCrimes();
-  }, [page, district, crimeType, status]); // Reload on filter or page change
+  }, [page, district, crimeType, status, debouncedSearch]); // Reload on filter or page change
 
   const handleStatusChange = async (id: string, newStatus: string) => {
     try {
@@ -99,14 +106,8 @@ export default function CrimeDatabase() {
     setUploading(false);
   };
 
-  // Client side search just on the current page
-  const filtered = crimes.filter(c => 
-    c.crime_id.toLowerCase().includes(search.toLowerCase()) || 
-    (c.crime_type && c.crime_type.toLowerCase().includes(search.toLowerCase())) ||
-    (c.district && c.district.toLowerCase().includes(search.toLowerCase())) ||
-    (c.location && c.location.toLowerCase().includes(search.toLowerCase()))
-  );
-
+  // Server-side filtering is now used via debouncedSearch
+  
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   return (
@@ -122,7 +123,7 @@ export default function CrimeDatabase() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input
               type="text"
-              placeholder="Search page..."
+              placeholder="Search database..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-48 pl-9 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:border-blue-500 outline-none"
@@ -169,7 +170,7 @@ export default function CrimeDatabase() {
         ) : (
           <>
             <CrimesTable 
-              crimes={filtered} 
+              crimes={crimes} 
               compact={false} 
               onStatusChange={handleStatusChange} 
               onDelete={handleDelete} 

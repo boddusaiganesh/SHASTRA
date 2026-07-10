@@ -127,6 +127,28 @@ async def get_network_graph_data(
             sorted(graph_data["nodes"], key=lambda x: x.get("centrality", {}).get("betweenness", 0), reverse=True)[:5]
         ]
         
+        # Build cluster summaries
+        from collections import Counter
+        groups = {}
+        for n in graph_data["nodes"]:
+            cid = n.get("community_id", 0)
+            groups.setdefault(cid, []).append(n)
+        
+        summaries = {}
+        for cid, members in groups.items():
+            if len(members) < 2:
+                continue
+            crime_types = Counter(
+                ct for m in members for ct in (m.get("preferred_crime_types") or m.get("crime_types") or [])
+            )
+            districts = Counter(m.get("district_id") for m in members if m.get("district_id"))
+            summaries[cid] = {
+                "size": len(members),
+                "dominant_crime_type": crime_types.most_common(1)[0][0] if crime_types else None,
+                "dominant_district": districts.most_common(1)[0][0] if districts else None,
+            }
+        graph_data["cluster_summary"] = summaries
+        
     expiry = 60 if graph_data.get("source") == "postgres_fallback" else 600
     await cache_set(cache_key, graph_data, expiry=expiry)
     return graph_data

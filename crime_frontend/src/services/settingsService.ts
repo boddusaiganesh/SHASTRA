@@ -4,9 +4,9 @@ import { ENDPOINTS } from "../constants/apiEndpoints";
 import { mockUsers, mockDataSources, mockAlertThresholds } from "./mockData";
 
 export const settingsService = {
-  getUsers: async () => {
+  getUsers: async (page: number = 1, pageSize: number = 20) => {
     try {
-      const res = await api.get(ENDPOINTS.SETTINGS.USERS);
+      const res = await api.get(ENDPOINTS.SETTINGS.USERS, { params: { page, page_size: pageSize } });
       return res.data?.data || res.data;
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockUsers; }
@@ -76,9 +76,9 @@ export const settingsService = {
       throw error;
     }
   },
-  getAuditLogs: async () => {
+  getAuditLogs: async (page: number = 1, pageSize: number = 20) => {
     try {
-      const res = await api.get(ENDPOINTS.SETTINGS.AUDIT_LOGS);
+      const res = await api.get(ENDPOINTS.SETTINGS.AUDIT_LOGS, { params: { page, page_size: pageSize } });
       return res.data?.data || res.data || [];
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return []; }

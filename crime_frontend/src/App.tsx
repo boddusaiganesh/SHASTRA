@@ -26,6 +26,7 @@ import SettingsPage from "./pages/SettingsPage";
 import VictimDatabase from "./pages/VictimDatabase";
 import SocioEconomicInsights from "./pages/SocioEconomicInsights";
 import AIChatWidget from "./components/common/AIChatWidget";
+import AIMarkdown from "./components/common/AIMarkdown";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useSelector((state: RootState) => state.auth);
@@ -60,11 +61,12 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       let closedByUs = false;
 
       const connect = () => {
-        const token = localStorage.getItem("auth_token");
         const base = import.meta.env.VITE_WS_URL || API_BASE_URL.replace(/^http/, "ws") + "/alerts/ws";
-        ws = new WebSocket(`${base}?token=${encodeURIComponent(token || "")}`);
+        ws = new WebSocket(base);
 
-        ws.onopen = () => { retryDelay = 1000; };
+        ws.onopen = () => { 
+          retryDelay = 1000;
+        };
         ws.onmessage = (event) => {
           try {
             const msg = JSON.parse(event.data);
@@ -120,9 +122,9 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
                   <div className="bg-red-500/20 p-2 rounded-full mt-1">
                     <Bell className="h-4 w-4 text-red-400" />
                   </div>
-                  <div className="flex-1">
-                    <h4 className="text-sm font-bold text-white mb-1">{t.title}</h4>
-                    <p className="text-xs text-slate-400 line-clamp-2">{t.description}</p>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-sm font-bold text-white mb-1 truncate">{t.title}</h4>
+                    <div className="text-xs text-slate-400 line-clamp-2"><AIMarkdown text={t.description} /></div>
                   </div>
                   <button onClick={() => setToasts(prev => prev.filter(x => x._id !== t._id))} className="text-slate-500 hover:text-white">
                     <X className="h-4 w-4" />

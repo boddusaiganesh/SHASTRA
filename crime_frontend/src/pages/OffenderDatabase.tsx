@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Users, Search, Shield, ChevronRight, MapPin, AlertTriangle, UserPlus } from "lucide-react";
+import { Users, Search, Shield, ChevronRight, MapPin, AlertTriangle, UserPlus, ChevronLeft } from "lucide-react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { offenderService } from "../services/offenderService";
 import LoadingSpinner from "../components/common/LoadingSpinner";
@@ -26,6 +26,9 @@ export default function OffenderDatabase() {
   const [crimeTypeFilter, setCrimeTypeFilter] = useState("all");
   const [riskLevelFilter, setRiskLevelFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(20);
+  const [totalCount, setTotalCount] = useState(0);
 
   const [selected, setSelected] = useState<Offender | null>(null);
   const [loading, setLoading] = useState(true);
@@ -58,10 +61,11 @@ export default function OffenderDatabase() {
     d: string = districtFilter, 
     c: string = crimeTypeFilter, 
     r: string = riskLevelFilter, 
-    s: string = statusFilter
+    s: string = statusFilter,
+    p: number = page
   ) => {
     try {
-      const filters: any = {};
+      const filters: any = { page: p, page_size: pageSize };
       if (d !== "all") filters.district_id = d;
       if (c !== "all") filters.crime_type = c;
       if (r !== "all") filters.risk_level = r;
@@ -69,6 +73,7 @@ export default function OffenderDatabase() {
 
       const data: any = await offenderService.searchOffenders(q, filters);
       setOffenders(Array.isArray(data) ? data : (data?.offenders || []));
+      setTotalCount((data as any)?.total_count || 0);
       setError(null);
     } catch (e: any) {
       console.error(e);
@@ -79,14 +84,14 @@ export default function OffenderDatabase() {
   };
 
   useEffect(() => {
-    executeSearch().then(() => {
+    executeSearch(search, districtFilter, crimeTypeFilter, riskLevelFilter, statusFilter, page).then(() => {
       const deepLinkId = searchParams.get("offender_id");
       if (deepLinkId && offenders.length > 0) {
         const match = offenders.find((o: any) => o.offender_id === deepLinkId);
         if (match) handleSelectOffender(match);
       }
     });
-  }, [searchParams]);
+  }, [searchParams, page]);
 
   const handleSelectOffender = async (o: Offender) => {
     setSelected(o);
@@ -108,7 +113,8 @@ export default function OffenderDatabase() {
 
   const handleSearch = async (q: string) => {
     setSearch(q);
-    executeSearch(q, districtFilter, crimeTypeFilter, riskLevelFilter, statusFilter);
+    setPage(1);
+    executeSearch(q, districtFilter, crimeTypeFilter, riskLevelFilter, statusFilter, 1);
   };
 
   if (loading) return <div className="flex-1 flex items-center justify-center"><LoadingSpinner size="lg" text="Loading offender database..." /></div>;
@@ -140,7 +146,7 @@ export default function OffenderDatabase() {
         <div className="flex flex-wrap gap-3 mt-4">
           <select 
             value={districtFilter} 
-            onChange={(e) => { setDistrictFilter(e.target.value); executeSearch(search, e.target.value, crimeTypeFilter, riskLevelFilter, statusFilter); }}
+            onChange={(e) => { setDistrictFilter(e.target.value); setPage(1); executeSearch(search, e.target.value, crimeTypeFilter, riskLevelFilter, statusFilter); }}
             className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-blue-500 outline-none"
           >
             <option value="all">All Districts</option>
@@ -148,7 +154,7 @@ export default function OffenderDatabase() {
           </select>
           <select 
             value={crimeTypeFilter} 
-            onChange={(e) => { setCrimeTypeFilter(e.target.value); executeSearch(search, districtFilter, e.target.value, riskLevelFilter, statusFilter); }}
+            onChange={(e) => { setCrimeTypeFilter(e.target.value); setPage(1); executeSearch(search, districtFilter, e.target.value, riskLevelFilter, statusFilter); }}
             className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-blue-500 outline-none"
           >
             <option value="all">All Crime Types</option>
@@ -156,7 +162,7 @@ export default function OffenderDatabase() {
           </select>
           <select 
             value={riskLevelFilter} 
-            onChange={(e) => { setRiskLevelFilter(e.target.value); executeSearch(search, districtFilter, crimeTypeFilter, e.target.value, statusFilter); }}
+            onChange={(e) => { setRiskLevelFilter(e.target.value); setPage(1); executeSearch(search, districtFilter, crimeTypeFilter, e.target.value, statusFilter); }}
             className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-blue-500 outline-none"
           >
             <option value="all">All Risk Levels</option>
@@ -166,7 +172,7 @@ export default function OffenderDatabase() {
           </select>
           <select 
             value={statusFilter} 
-            onChange={(e) => { setStatusFilter(e.target.value); executeSearch(search, districtFilter, crimeTypeFilter, riskLevelFilter, e.target.value); }}
+            onChange={(e) => { setStatusFilter(e.target.value); setPage(1); executeSearch(search, districtFilter, crimeTypeFilter, riskLevelFilter, e.target.value); }}
             className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-blue-500 outline-none"
           >
             <option value="all">All Statuses</option>
@@ -216,6 +222,31 @@ export default function OffenderDatabase() {
               <ChevronRight className="h-4 w-4 text-slate-600" />
             </motion.div>
           )})}
+          
+          {/* Pagination Controls */}
+          <div className="p-4 border-t border-slate-700/50 flex items-center justify-between bg-slate-900 mt-4 -mx-4 -mb-4 sticky bottom-0">
+            <span className="text-sm text-slate-400">
+              Showing {offenders.length} records {totalCount > 0 && `of ${totalCount} total`}
+            </span>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="p-1 rounded bg-slate-800 text-white disabled:opacity-50 hover:bg-slate-700 transition-colors"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <span className="text-sm text-white px-2">Page {page} {totalCount > 0 && `of ${Math.max(1, Math.ceil(totalCount / pageSize))}`}</span>
+              <button 
+                onClick={() => setPage(p => p + 1)}
+                disabled={page >= Math.max(1, Math.ceil(totalCount / pageSize))}
+                className="p-1 rounded bg-slate-800 text-white disabled:opacity-50 hover:bg-slate-700 transition-colors"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+          
         </div>
 
         {/* Detail Panel */}

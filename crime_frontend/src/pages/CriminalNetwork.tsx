@@ -58,6 +58,7 @@ const CriminalNetwork: React.FC = () => {
   const [compareNode1, setCompareNode1] = useState<NetworkNode | null>(null);
   const [compareNode2, setCompareNode2] = useState<NetworkNode | null>(null);
   const [highlightPath, setHighlightPath] = useState<string[]>([]);
+  const [clusterSummary, setClusterSummary] = useState<Record<string, any>>({});
   const [isFallbackMode, setIsFallbackMode] = useState(false);
   const navigate = useNavigate();
 
@@ -120,9 +121,12 @@ const CriminalNetwork: React.FC = () => {
           setEdges(g.edges as NetworkEdge[]);
           setKeyPlayers(g.key_players || []);
           setIsFallbackMode(g.source === "postgres_fallback");
+          setClusterSummary(g.cluster_summary || {});
           setAiSummary(ai as typeof aiSummary);
           if (g.warning) {
             setWarningMessage(g.warning);
+          } else if (g.nodes.length >= 100) {
+            setWarningMessage(`Showing ${g.nodes.length} nodes (maximum reached). Please narrow your filters to see more specific results.`);
           } else {
             setWarningMessage("");
           }
@@ -548,6 +552,7 @@ const CriminalNetwork: React.FC = () => {
                   highlightPath={highlightPath}
                   crimeTypeLens={crimeTypeLens === "all" ? null : crimeTypeLens}
                   showClusters={showClusters}
+                  clusterSummary={clusterSummary}
                 />
               ) : (
                 <ConnectivityMatrix 

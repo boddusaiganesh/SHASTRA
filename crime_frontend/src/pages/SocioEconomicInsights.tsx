@@ -5,16 +5,22 @@ import api from "../services/api";
 import { ENDPOINTS } from "../constants/apiEndpoints";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import AIMarkdown from "../components/common/AIMarkdown";
+import { useDistricts } from "../hooks/useDistricts";
+import { predictionService } from "../services/predictionService";
 
 export default function SocioEconomicInsights() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [districtFilter, setDistrictFilter] = useState("All");
+  const districts = useDistricts();
+
   useEffect(() => {
-    api.get(ENDPOINTS.PREDICTIONS.SOCIOECONOMIC)
-      .then((res) => {
-        setData(res.data?.data || res.data);
+    setLoading(true);
+    predictionService.getSocioeconomicData({ district_id: districtFilter === "All" ? undefined : districtFilter })
+      .then((data) => {
+        setData(data);
         setLoading(false);
       })
       .catch((err) => {
@@ -22,7 +28,7 @@ export default function SocioEconomicInsights() {
         setError("Failed to load socio-economic data");
         setLoading(false);
       });
-  }, []);
+  }, [districtFilter]);
 
   if (loading) return <div className="h-full flex items-center justify-center"><LoadingSpinner text="Analyzing socio-economic factors..." /></div>;
   if (error) return <div className="p-6 text-red-400">{error}</div>;
@@ -49,9 +55,22 @@ export default function SocioEconomicInsights() {
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-6 space-y-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white mb-2">Socio-Economic Correlation</h1>
-        <p className="text-slate-400 text-sm">Analyze how demographic and economic factors influence crime rates across districts.</p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-white mb-2">Socio-Economic Correlation</h1>
+          <p className="text-slate-400 text-sm">Analyze how demographic and economic factors influence crime rates across districts.</p>
+        </div>
+        
+        <div className="bg-slate-800/50 p-2 rounded-xl border border-slate-700/50">
+          <select 
+            value={districtFilter} 
+            onChange={(e) => setDistrictFilter(e.target.value)}
+            className="bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-1.5 focus:outline-none focus:border-blue-500 max-w-xs"
+          >
+            <option value="All">All Districts</option>
+            {districts.map(d => <option key={d.district_id} value={d.district_id}>{d.district_name}</option>)}
+          </select>
+        </div>
       </div>
 
       {/* Metrics Row */}

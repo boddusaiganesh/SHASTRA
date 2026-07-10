@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { CheckCheck, Filter, RefreshCw } from "lucide-react";
+import { CheckCheck, Filter, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
 import { RootState } from "../store/store";
 import { setAlerts, markAlertRead } from "../store/alertsSlice";
 import { alertService } from "../services/alertService";
@@ -9,19 +9,21 @@ import LoadingSpinner from "../components/common/LoadingSpinner";
 
 const AlertsPage: React.FC = () => {
   const dispatch = useDispatch();
-  const { alerts, unreadCount } = useSelector((s: RootState) => s.alerts);
+  const { alerts, unreadCount, totalCount } = useSelector((s: RootState) => s.alerts);
   const [loading, setLoading] = useState(true);
   const [severityFilter, setSeverityFilter] = useState("All");
   const [typeFilter, setTypeFilter] = useState("All");
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(20);
 
   const load = async () => {
     setLoading(true);
-    const data = await alertService.getAlerts();
+    const data = await alertService.getAlerts(page, pageSize);
     dispatch(setAlerts(data));
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [page]);
 
   const handleMarkRead = async (id: string) => {
     await alertService.markRead(id);
@@ -35,10 +37,12 @@ const AlertsPage: React.FC = () => {
 
   const handleMarkAllRead = async () => {
     const unread = (alerts as { alert_id: string; is_read: boolean }[]).filter((a) => !a.is_read);
-    for (const a of unread) {
-      await alertService.markRead(a.alert_id);
-      dispatch(markAlertRead(a.alert_id));
-    }
+    await Promise.all(
+      unread.map(async (a) => {
+        await alertService.markRead(a.alert_id);
+        dispatch(markAlertRead(a.alert_id));
+      })
+    );
   };
 
   const filtered = (alerts as { severity: string; alert_type: string }[]).filter((a) => {
@@ -56,7 +60,7 @@ const AlertsPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-white">System Alerts</h1>
-          <p className="text-sm text-slate-400">{unreadCount} unread · {alerts.length} total</p>
+          <p className="text-sm text-slate-400">{unreadCount} unread · {totalCount || alerts.length} total</p>
         </div>
         <div className="flex items-center gap-2">
           {unreadCount > 0 && (
@@ -113,6 +117,30 @@ const AlertsPage: React.FC = () => {
         {filtered.length === 0 && (
           <div className="text-center py-8 text-slate-500">No alerts match the current filter.</div>
         )}
+        
+        {/* Pagination Controls */}
+        <div className="p-4 border-t border-slate-700/50 flex items-center justify-between bg-slate-800/80 mt-4 -mx-4 -mb-4 rounded-b-xl">
+          <span className="text-sm text-slate-400">
+            Showing {alerts.length} records {totalCount > 0 && `of ${totalCount} total`}
+          </span>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="p-1 rounded bg-slate-700 text-white disabled:opacity-50 hover:bg-slate-600 transition-colors"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <span className="text-sm text-white px-2">Page {page} {totalCount > 0 && `of ${Math.max(1, Math.ceil(totalCount / pageSize))}`}</span>
+            <button 
+              onClick={() => setPage(p => p + 1)}
+              disabled={page >= Math.max(1, Math.ceil(totalCount / pageSize))}
+              className="p-1 rounded bg-slate-700 text-white disabled:opacity-50 hover:bg-slate-600 transition-colors"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

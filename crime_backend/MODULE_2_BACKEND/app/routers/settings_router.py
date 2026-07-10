@@ -31,14 +31,20 @@ async def sync_datasource(
 
 @router.get("/audit-logs")
 async def get_audit_logs(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
     current_user=Depends(require_scrb_officer)
 ):
-    from sqlalchemy import select, desc
+    from sqlalchemy import select, desc, func
     from app.models.database_models.audit_log_model import AuditLog
     
+    total_result = await db.execute(select(func.count(AuditLog.log_id)))
+    total_count = total_result.scalar() or 0
+    
+    offset = (page - 1) * page_size
     result = await db.execute(
-        select(AuditLog).order_by(desc(AuditLog.timestamp)).limit(100)
+        select(AuditLog).order_by(desc(AuditLog.timestamp)).offset(offset).limit(page_size)
     )
     logs = result.scalars().all()
     
@@ -55,15 +61,20 @@ async def get_audit_logs(
                 "timestamp": log.timestamp.isoformat() if log.timestamp else None
             }
             for log in logs
-        ]
+        ],
+        "total_count": total_count,
+        "page": page,
+        "page_size": page_size
     }
 
 @router.get("/users")
 async def list_users(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
     current_user=Depends(require_scrb_officer)
 ):
-    data = await get_all_users(db)
+    data = await get_all_users(db, page, page_size)
     return {"success": True, "data": data}
 
 @router.post("/users/add")

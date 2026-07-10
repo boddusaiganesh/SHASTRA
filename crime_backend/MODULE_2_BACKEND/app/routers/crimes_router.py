@@ -166,6 +166,7 @@ async def get_map_data(
 
 @router.get("/filter")
 async def filter_crimes(
+    q: Optional[str] = Query(None),
     district_id: Optional[str] = Query(None),
     crime_type: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
@@ -174,7 +175,7 @@ async def filter_crimes(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user)
 ):
-    from sqlalchemy import func
+    from sqlalchemy import func, or_, cast, String
 
     base = select(Crime, District, PoliceStation).join(
         District, Crime.district_id == District.district_id, isouter=True
@@ -185,15 +186,26 @@ async def filter_crimes(
 
     resolved_district_id = await resolve_district_id(db, district_id) if district_id else None
 
-    def apply_filter_conditions(q):
-        q = scope_district_filter(q, current_user, Crime.district_id)
+    def apply_filter_conditions(query):
+        query = scope_district_filter(query, current_user, Crime.district_id)
         if resolved_district_id:
-            q = q.where(Crime.district_id == resolved_district_id)
+            query = query.where(Crime.district_id == resolved_district_id)
         if crime_type:
-            q = q.where(Crime.crime_type == crime_type)
+            query = query.where(Crime.crime_type == crime_type)
         if status:
-            q = q.where(Crime.status == status)
-        return q
+            query = query.where(Crime.status == status)
+        if q:
+            search_term = f"%{q.lower()}%"
+            query = query.where(
+                or_(
+                    cast(Crime.crime_id, String).ilike(search_term),
+                    Crime.crime_type.ilike(search_term),
+                    Crime.district_id.ilike(search_term),
+                    Crime.address.ilike(search_term),
+                    Crime.landmark.ilike(search_term)
+                )
+            )
+        return query
 
     base = apply_filter_conditions(base)
     count_base = apply_filter_conditions(count_base)

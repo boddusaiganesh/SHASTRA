@@ -3,12 +3,14 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 interface AlertsState {
   alerts: unknown[];
   unreadCount: number;
+  totalCount: number;
   loading: boolean;
 }
 
 const initialState: AlertsState = {
   alerts: [],
   unreadCount: 0,
+  totalCount: 0,
   loading: false,
 };
 
@@ -16,10 +18,18 @@ const alertsSlice = createSlice({
   name: "alerts",
   initialState,
   reducers: {
-    setAlerts: (state, action: PayloadAction<unknown[]>) => {
-      const list = Array.isArray(action.payload) ? action.payload : ((action.payload as any)?.alerts || []);
-      state.alerts = list;
-      state.unreadCount = (list as { is_read: boolean }[]).filter((a) => !a?.is_read).length;
+    setAlerts: (state, action: PayloadAction<any>) => {
+      const payload = action.payload;
+      if (payload && payload.alerts) {
+        state.alerts = payload.alerts;
+        state.unreadCount = payload.unread_count !== undefined ? payload.unread_count : state.unreadCount;
+        state.totalCount = payload.total_count !== undefined ? payload.total_count : state.totalCount;
+      } else {
+        const list = Array.isArray(payload) ? payload : [];
+        state.alerts = list;
+        state.unreadCount = list.filter((a: any) => !a?.is_read).length;
+        state.totalCount = list.length;
+      }
     },
     addAlert: (state, action: PayloadAction<any>) => {
       state.alerts = [action.payload, ...state.alerts];

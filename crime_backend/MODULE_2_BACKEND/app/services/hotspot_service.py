@@ -21,6 +21,8 @@ async def get_hotspot_clusters(
     crime_type: Optional[str] = None,
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
+    page: int = 1,
+    page_size: int = 20,
 ) -> Dict[str, Any]:
     """Get crime hotspot clusters"""
     
@@ -37,6 +39,13 @@ async def get_hotspot_clusters(
     result = await db.execute(query.order_by(desc(Hotspot.risk_score)))
     hotspots = result.scalars().all()
     
+    total_count = len(hotspots)
+    
+    # Apply pagination in memory if we fetched everything, or we could apply it to the query
+    start_idx = (page - 1) * page_size
+    end_idx = start_idx + page_size
+    hotspots_paginated = hotspots[start_idx:end_idx]
+    
     district_map = await _get_district_map(db)
     
     if not hotspots:
@@ -46,7 +55,7 @@ async def get_hotspot_clusters(
         )
     else:
         hotspots_data = []
-        for h in hotspots:
+        for h in hotspots_paginated:
             hd = h.to_dict()
             hd["district"] = district_map.get(h.district_id, h.district_id)
             hotspots_data.append(hd)
@@ -56,9 +65,11 @@ async def get_hotspot_clusters(
     
     response = {
         "hotspots": hotspots_data,
-        "total_hotspots": len(hotspots_data),
+        "total_hotspots": total_count,
         "high_risk_count": high_risk,
         "emerging_count": emerging,
+        "page": page,
+        "page_size": page_size
     }
     
     await cache_set(cache_key, response, expiry=900)

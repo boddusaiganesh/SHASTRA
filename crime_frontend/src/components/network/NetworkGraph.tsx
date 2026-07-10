@@ -26,6 +26,7 @@ interface Props {
   highlightPath?: string[];
   crimeTypeLens?: string | null;
   showClusters?: boolean;
+  clusterSummary?: Record<string, { size: number; dominant_crime_type?: string; dominant_district?: string }>;
 }
 
 export interface NetworkGraphHandle {
@@ -60,7 +61,7 @@ const getDynamicLayoutOptions = (nodeCount: number, edgeCount: number) => {
   } as any;
 };
 
-const buildElements = (nodes: NetworkNode[], edges: NetworkEdge[], showClusters: boolean) => {
+const buildElements = (nodes: NetworkNode[], edges: NetworkEdge[], showClusters: boolean, clusterSummary?: Record<string, any>) => {
   const communityCounts: Record<number, number> = {};
   nodes.forEach((n) => {
     const c = n.community_id ?? 0;
@@ -75,7 +76,9 @@ const buildElements = (nodes: NetworkNode[], edges: NetworkEdge[], showClusters:
     ? Array.from(clusterableCommunities).map((cId) => ({
         data: {
           id: `cluster-${cId}`,
-          label: `Cluster ${cId + 1} · ${communityCounts[cId]} members`,
+          label: clusterSummary && clusterSummary[cId]?.dominant_crime_type
+            ? `${clusterSummary[cId].dominant_crime_type} · ${communityCounts[cId]} members`
+            : `Cluster ${cId + 1} · ${communityCounts[cId]} members`,
           isCluster: true,
         },
       }))
@@ -231,7 +234,7 @@ const styleSheet: any[] = [
  * @param props.crimeTypeLens Crime type string to filter edges/nodes visually
  * @param ref Forwarded ref exposing NetworkGraphHandle methods (focusOnNode, clearFocus, highlightKeyPlayers)
  */
-const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNodeSelect, onNodeExpand, onNodeCompare, onEdgeSelect, selectedNodeId, highlightPath, crimeTypeLens, showClusters = true }, ref) => {
+const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNodeSelect, onNodeExpand, onNodeCompare, onEdgeSelect, selectedNodeId, highlightPath, crimeTypeLens, showClusters = true, clusterSummary }, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<cytoscape.Core | null>(null);
   const prevIdsRef = useRef<Set<string>>(new Set());
@@ -243,7 +246,7 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNo
     if (!cyRef.current) {
       const cy = cytoscape({
         container: containerRef.current,
-        elements: buildElements(nodes, edges, showClusters),
+        elements: buildElements(nodes, edges, showClusters, clusterSummary),
         style: styleSheet,
         layout: getDynamicLayoutOptions(nodes.length, edges.length),
         minZoom: 0.2,
@@ -291,18 +294,18 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNo
     if (currentIds.size < existingIds.size) {
       // Full graph shrunk — full rebuild
       cy.elements().remove();
-      cy.add(buildElements(nodes, edges, showClusters));
+      cy.add(buildElements(nodes, edges, showClusters, clusterSummary));
       cy.layout(getDynamicLayoutOptions(nodes.length, edges.length)).run();
     } else {
       // Incremental expand
-      cy.add(buildElements(newNodes, newEdges, showClusters));
+      cy.add(buildElements(newNodes, newEdges, showClusters, clusterSummary));
       const totalNodes = cy.nodes().length;
       const totalEdges = cy.edges().length;
       cy.layout({ ...getDynamicLayoutOptions(totalNodes, totalEdges), randomize: false, fit: false, numIter: 150, animationDuration: 300 } as any).run();
     }
 
     prevIdsRef.current = currentIds;
-  }, [nodes, edges, showClusters]);
+  }, [nodes, edges, showClusters, clusterSummary]);
 
   useEffect(() => {
     if (!cyRef.current) return;

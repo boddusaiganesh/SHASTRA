@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Users, Bell, Database, Plus, Save, ActivitySquare } from "lucide-react";
+import { Users, Bell, Database, Plus, Save, ActivitySquare, ChevronLeft, ChevronRight } from "lucide-react";
 import { settingsService } from "../services/settingsService";
 import { useDistricts } from "../hooks/useDistricts";
 import LoadingSpinner from "../components/common/LoadingSpinner";
@@ -16,24 +16,31 @@ const SettingsPage: React.FC = () => {
   const [thresholds, setThresholds] = useState<AlertThresholds | null>(null);
   const [dataSources, setDataSources] = useState<unknown[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [usersPage, setUsersPage] = useState(1);
+  const [usersTotalCount, setUsersTotalCount] = useState(0);
+  const [logsPage, setLogsPage] = useState(1);
+  const [logsTotalCount, setLogsTotalCount] = useState(0);
+  const pageSize = 20;
   const [loading, setLoading] = useState(true);
   const [saveMsg, setSaveMsg] = useState("");
   const [newUser, setNewUser] = useState({ username: "", full_name: "", role: "INVESTIGATOR", password: "", district: "" });
 
   useEffect(() => {
     Promise.all([
-      settingsService.getUsers(),
+      settingsService.getUsers(usersPage, pageSize),
       settingsService.getAlertThresholds(),
       settingsService.getDataSources(),
-      settingsService.getAuditLogs(),
+      settingsService.getAuditLogs(logsPage, pageSize),
     ]).then(([u, t, d, logs]: any[]) => {
       setUsers(Array.isArray(u) ? u : (u?.users || u?.data || []));
+      setUsersTotalCount(u?.total_count || 0);
       setThresholds(t as unknown as AlertThresholds);
       setDataSources(Array.isArray(d) ? d : (d?.sources || d?.data || []));
-      setAuditLogs(Array.isArray(logs) ? logs : []);
+      setAuditLogs(Array.isArray(logs) ? logs : (logs?.data || []));
+      setLogsTotalCount(logs?.total_count || 0);
       setLoading(false);
     });
-  }, []);
+  }, [usersPage, logsPage]);
 
   const handleSaveThresholds = async () => {
     if (!thresholds) return;
@@ -122,6 +129,31 @@ const SettingsPage: React.FC = () => {
                 ))}
               </tbody>
             </table>
+            
+            {/* Users Pagination */}
+            <div className="p-4 border-t border-slate-700/50 flex items-center justify-between bg-slate-800/80">
+              <span className="text-sm text-slate-400">
+                Showing {users.length} records {usersTotalCount > 0 && `of ${usersTotalCount} total`}
+              </span>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => setUsersPage(p => Math.max(1, p - 1))}
+                  disabled={usersPage === 1}
+                  className="p-1 rounded bg-slate-700 text-white disabled:opacity-50 hover:bg-slate-600 transition-colors"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <span className="text-sm text-white px-2">Page {usersPage} {usersTotalCount > 0 && `of ${Math.max(1, Math.ceil(usersTotalCount / pageSize))}`}</span>
+                <button 
+                  onClick={() => setUsersPage(p => p + 1)}
+                  disabled={usersPage >= Math.max(1, Math.ceil(usersTotalCount / pageSize))}
+                  className="p-1 rounded bg-slate-700 text-white disabled:opacity-50 hover:bg-slate-600 transition-colors"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+            
           </div>
         </div>
       )}
@@ -214,6 +246,31 @@ const SettingsPage: React.FC = () => {
               )}
             </tbody>
           </table>
+          
+          {/* Audit Logs Pagination */}
+          <div className="p-4 border-t border-slate-700/50 flex items-center justify-between bg-slate-800/80">
+            <span className="text-sm text-slate-400">
+              Showing {auditLogs.length} records {logsTotalCount > 0 && `of ${logsTotalCount} total`}
+            </span>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setLogsPage(p => Math.max(1, p - 1))}
+                disabled={logsPage === 1}
+                className="p-1 rounded bg-slate-700 text-white disabled:opacity-50 hover:bg-slate-600 transition-colors"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <span className="text-sm text-white px-2">Page {logsPage} {logsTotalCount > 0 && `of ${Math.max(1, Math.ceil(logsTotalCount / pageSize))}`}</span>
+              <button 
+                onClick={() => setLogsPage(p => p + 1)}
+                disabled={logsPage >= Math.max(1, Math.ceil(logsTotalCount / pageSize))}
+                className="p-1 rounded bg-slate-700 text-white disabled:opacity-50 hover:bg-slate-600 transition-colors"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+          
         </div>
       )}
     </div>

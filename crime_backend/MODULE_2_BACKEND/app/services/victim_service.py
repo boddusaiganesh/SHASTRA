@@ -7,16 +7,32 @@ from app.models.database_models.victim_model import Victim
 from app.models.database_models.crime_model import CrimeVictimLink, Crime
 
 
-async def search_victims(db: AsyncSession, query: Optional[str], district_id: Optional[str], limit: int = 25) -> List[Dict[str, Any]]:
+async def search_victims(db: AsyncSession, query: Optional[str], district_id: Optional[str], page: int = 1, page_size: int = 20) -> Dict[str, Any]:
+    from sqlalchemy import func
     stmt = select(Victim)
+    count_stmt = select(func.count(Victim.victim_id))
+    
     if district_id:
         stmt = stmt.where(Victim.district_id == district_id)
+        count_stmt = count_stmt.where(Victim.district_id == district_id)
     if query:
         like = f"%{query}%"
-        stmt = stmt.where(or_(Victim.first_name.ilike(like), Victim.last_name.ilike(like), Victim.phone_number.ilike(like)))
-    stmt = stmt.limit(limit)
+        condition = or_(Victim.first_name.ilike(like), Victim.last_name.ilike(like), Victim.phone_number.ilike(like))
+        stmt = stmt.where(condition)
+        count_stmt = count_stmt.where(condition)
+        
+    total_result = await db.execute(count_stmt)
+    total_count = total_result.scalar() or 0
+        
+    offset = (page - 1) * page_size
+    stmt = stmt.offset(offset).limit(page_size)
     result = await db.execute(stmt)
-    return [v.to_dict() for v in result.scalars().all()]
+    return {
+        "victims": [v.to_dict() for v in result.scalars().all()],
+        "total_count": total_count,
+        "page": page,
+        "page_size": page_size
+    }
 
 
 async def create_victim(db: AsyncSession, payload: Dict[str, Any]) -> Dict[str, Any]:

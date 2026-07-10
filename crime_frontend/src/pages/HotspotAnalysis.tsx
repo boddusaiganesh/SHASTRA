@@ -22,6 +22,9 @@ const HotspotAnalysis: React.FC = () => {
   const [crimeType, setCrimeType] = useState("All");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(10);
+  const [totalCount, setTotalCount] = useState(0);
 
   const fetch = async (silent = false) => {
     if (!silent) setLoading(true);
@@ -33,11 +36,12 @@ const HotspotAnalysis: React.FC = () => {
 
     try {
       const [h, p, d] = await Promise.all([
-        crimeService.getHotspotClusters(params),
+        crimeService.getHotspotClusters({ ...params, page, page_size: pageSize }),
         crimeService.getTimePatterns(params),
         crimeService.getDeploymentSuggestions(params),
       ]);
       setHotspots(Array.isArray(h) ? h : (h?.hotspots || []));
+      setTotalCount((h as any)?.total_hotspots || 0);
       setPatterns(p as typeof patterns);
       setDeployment(d);
       setError(null);
@@ -53,7 +57,7 @@ const HotspotAnalysis: React.FC = () => {
     fetch();
     const interval = setInterval(() => fetch(true), 60000);
     return () => clearInterval(interval);
-  }, [district, crimeType, dateFrom, dateTo]);
+  }, [district, crimeType, dateFrom, dateTo, page]);
 
   const handleExport = async () => {
     const queryParams = new URLSearchParams({ file_format: "csv" });
@@ -136,6 +140,29 @@ const HotspotAnalysis: React.FC = () => {
               </div>
             </motion.div>
           ))}
+          
+          {/* Pagination */}
+          <div className="flex items-center justify-between p-2 mt-2 border-t border-slate-700/50">
+            <span className="text-xs text-slate-400">
+              {hotspots.length} items
+            </span>
+            <div className="flex gap-1">
+              <button 
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="p-1 rounded bg-slate-700 text-white disabled:opacity-50 hover:bg-slate-600 transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+              </button>
+              <button 
+                onClick={() => setPage(p => p + 1)}
+                disabled={page >= Math.max(1, Math.ceil(totalCount / pageSize))}
+                className="p-1 rounded bg-slate-700 text-white disabled:opacity-50 hover:bg-slate-600 transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 

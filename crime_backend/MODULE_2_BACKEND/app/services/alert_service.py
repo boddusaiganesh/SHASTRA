@@ -294,6 +294,8 @@ async def detect_and_generate_alerts(db: AsyncSession):
 async def get_active_alerts(
     db: AsyncSession,
     district_id: Optional[str] = None,
+    page: int = 1,
+    page_size: int = 20,
 ) -> Dict[str, Any]:
     """Get all currently active (non-expired) alerts — used by the Alerts page."""
     now = datetime.now(timezone.utc)
@@ -301,7 +303,12 @@ async def get_active_alerts(
     if district_id:
         conditions.append(or_(Alert.district_id == district_id, Alert.target_district == "ALL"))
 
-    query = select(Alert).where(and_(*conditions)).order_by(desc(Alert.created_at))
+    total_count_query = select(func.count(Alert.alert_id)).where(and_(*conditions))
+    total_result = await db.execute(total_count_query)
+    total_count = total_result.scalar() or 0
+
+    offset = (page - 1) * page_size
+    query = select(Alert).where(and_(*conditions)).order_by(desc(Alert.created_at)).offset(offset).limit(page_size)
     result = await db.execute(query)
     alerts = result.scalars().all()
 
@@ -322,8 +329,10 @@ async def get_active_alerts(
         
     return {
         "alerts": alert_list,
-        "total_count": len(alerts),
+        "total_count": total_count,
         "unread_count": unread_result.scalar() or 0,
+        "page": page,
+        "page_size": page_size,
     }
 
 

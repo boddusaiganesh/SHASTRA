@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, UserPlus, FileText, User } from 'lucide-react';
+import { Search, UserPlus, FileText, User, ChevronLeft, ChevronRight } from 'lucide-react';
 import { victimService } from '../services/victimService';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store/store';
@@ -11,6 +11,9 @@ export default function VictimDatabase() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedVictim, setSelectedVictim] = useState<any>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(20);
+  const [totalCount, setTotalCount] = useState(0);
   const districts = useDistricts();
   
   const [showRegisterModal, setShowRegisterModal] = useState(false);
@@ -33,8 +36,9 @@ export default function VictimDatabase() {
   const handleSearch = async () => {
     setLoading(true);
     try {
-      const data = await victimService.search(searchQuery);
-      setVictims(data || []);
+      const data = await victimService.search(searchQuery, undefined, page, pageSize);
+      setVictims(data.victims || data || []);
+      setTotalCount(data.total_count || 0);
       setError(null);
     } catch (err: any) {
       console.error(err);
@@ -46,7 +50,7 @@ export default function VictimDatabase() {
 
   useEffect(() => {
     handleSearch();
-  }, []);
+  }, [page]);
 
   const viewProfile = async (id: string) => {
     try {
@@ -86,7 +90,7 @@ export default function VictimDatabase() {
             />
           </div>
           <button
-            onClick={handleSearch}
+            onClick={() => { setPage(1); handleSearch(); }}
             className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
           >
             Search
@@ -143,6 +147,31 @@ export default function VictimDatabase() {
               )}
             </tbody>
           </table>
+          
+          {/* Pagination Controls */}
+          <div className="p-4 border-t border-slate-800 flex items-center justify-between bg-slate-900 sticky bottom-0">
+            <span className="text-sm text-slate-400">
+              Showing {victims.length} records {totalCount > 0 && `of ${totalCount} total`}
+            </span>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="p-1 rounded bg-slate-800 text-white disabled:opacity-50 hover:bg-slate-700 transition-colors"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <span className="text-sm text-white px-2">Page {page} {totalCount > 0 && `of ${Math.max(1, Math.ceil(totalCount / pageSize))}`}</span>
+              <button 
+                onClick={() => setPage(p => p + 1)}
+                disabled={page >= Math.max(1, Math.ceil(totalCount / pageSize))}
+                className="p-1 rounded bg-slate-800 text-white disabled:opacity-50 hover:bg-slate-700 transition-colors"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+          
         </div>
       </div>
 

@@ -42,6 +42,7 @@ async def generate_report_endpoint(
 
 @router.get("/history")
 async def history(
+    page: int = Query(1, ge=1),
     limit: int = Query(20, le=100),
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user)
@@ -50,7 +51,7 @@ async def history(
     if current_user["role"] == "DISTRICT_OFFICER":
         district_id = current_user.get("district_id")
         
-    data = await get_saved_reports(db, district_id=district_id, page_size=limit)
+    data = await get_saved_reports(db, district_id=district_id, page=page, page_size=limit)
     return {"success": True, "data": data}
 
 @router.get("/{report_id}/download")

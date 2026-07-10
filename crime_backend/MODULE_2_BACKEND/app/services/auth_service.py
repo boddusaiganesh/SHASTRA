@@ -134,11 +134,21 @@ async def create_user(db: AsyncSession, user_data: Dict[str, Any]) -> Dict[str, 
     return new_user.to_dict()
 
 
-async def get_all_users(db: AsyncSession) -> list:
-    """Get all users"""
-    result = await db.execute(select(User).order_by(User.created_at.desc()))
+async def get_all_users(db: AsyncSession, page: int = 1, page_size: int = 20) -> dict:
+    """Get paginated list of users"""
+    from sqlalchemy import func
+    total_result = await db.execute(select(func.count(User.user_id)))
+    total_count = total_result.scalar() or 0
+    
+    offset = (page - 1) * page_size
+    result = await db.execute(select(User).order_by(User.created_at.desc()).offset(offset).limit(page_size))
     users = result.scalars().all()
-    return [u.to_dict() for u in users]
+    return {
+        "users": [u.to_dict() for u in users],
+        "total_count": total_count,
+        "page": page,
+        "page_size": page_size
+    }
 
 
 def get_default_permissions(role: str) -> list:

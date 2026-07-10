@@ -39,6 +39,6 @@ export const authService = {
   },
 
   isAuthenticated: (): boolean => {
-    return !!localStorage.getItem("auth_token");
+    return !!localStorage.getItem("is_logged_in");
   },
 };

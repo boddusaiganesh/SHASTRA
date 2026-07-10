@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { AlertOctagon, RefreshCw, CheckCircle, Clock, Eye } from "lucide-react";
+import { AlertOctagon, RefreshCw, CheckCircle, Clock, Eye, ChevronLeft, ChevronRight } from "lucide-react";
 import { anomalyService } from "../services/predictionService";
+import { useDistricts } from "../hooks/useDistricts";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import ExplainabilityPanel from "../components/common/ExplainabilityPanel";
+import AIMarkdown from "../components/common/AIMarkdown";
 
 interface Anomaly {
   anomaly_id: string; anomaly_type: string; description: string;
@@ -29,15 +31,27 @@ const AnomalyDetection: React.FC = () => {
   const [anomalies, setAnomalies] = useState<Anomaly[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("All");
+  const [severityFilter, setSeverityFilter] = useState("All");
+  const [districtFilter, setDistrictFilter] = useState("All");
+  const districts = useDistricts();
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(20);
+  const [totalCount, setTotalCount] = useState(0);
 
   const fetch = async () => {
     setLoading(true);
-    const data: any = await anomalyService.getList();
+    const data: any = await anomalyService.getList(page, pageSize, severityFilter, statusFilter, districtFilter);
     setAnomalies(Array.isArray(data) ? data : (data?.anomalies || []));
+    setTotalCount(data?.total_count || 0);
     setLoading(false);
   };
 
-  useEffect(() => { fetch(); }, []);
+  useEffect(() => { fetch(); }, [page, severityFilter, statusFilter, districtFilter]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [severityFilter, statusFilter, districtFilter]);
 
   const handleUpdateStatus = async (id: string, status: string) => {
     await anomalyService.updateStatus(id, status);
@@ -45,9 +59,7 @@ const AnomalyDetection: React.FC = () => {
   };
 
   const safeAnomalies = Array.isArray(anomalies) ? anomalies : [];
-  const filtered = statusFilter === "All"
-    ? safeAnomalies
-    : safeAnomalies.filter((a) => a.status === statusFilter);
+  const filtered = safeAnomalies; // Server-side filtering is now active
 
   if (loading) return <div className="flex-1 flex items-center justify-center"><LoadingSpinner size="lg" text="Running anomaly detection..." /></div>;
 
@@ -77,13 +89,45 @@ const AnomalyDetection: React.FC = () => {
       </div>
 
       {/* Filter */}
-      <div className="flex gap-2">
-        {STATUS_FILTERS.map((s) => (
-          <button key={s} onClick={() => setStatusFilter(s)}
-            className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${statusFilter === s ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}>
-            {s === "All" ? "All" : STATUS_LABELS[s]}
-          </button>
-        ))}
+      <div className="flex flex-wrap items-center gap-4 bg-slate-800/50 p-4 rounded-xl border border-slate-700/50">
+        <div>
+          <label className="block text-xs text-slate-400 mb-1">Status</label>
+          <div className="flex gap-2">
+            {STATUS_FILTERS.map((s) => (
+              <button key={s} onClick={() => setStatusFilter(s)}
+                className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${statusFilter === s ? "bg-blue-600 text-white" : "bg-slate-900 text-slate-400 hover:text-white border border-slate-700"}`}>
+                {s === "All" ? "All" : STATUS_LABELS[s]}
+              </button>
+            ))}
+          </div>
+        </div>
+        
+        <div>
+          <label className="block text-xs text-slate-400 mb-1">Severity</label>
+          <select 
+            value={severityFilter} 
+            onChange={(e) => setSeverityFilter(e.target.value)}
+            className="bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-1.5 focus:outline-none focus:border-blue-500"
+          >
+            <option value="All">All Severities</option>
+            <option value="CRITICAL">Critical</option>
+            <option value="HIGH">High</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="LOW">Low</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-xs text-slate-400 mb-1">District</label>
+          <select 
+            value={districtFilter} 
+            onChange={(e) => setDistrictFilter(e.target.value)}
+            className="bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-1.5 focus:outline-none focus:border-blue-500 max-w-xs"
+          >
+            <option value="All">All Districts</option>
+            {districts.map(d => <option key={d.district_id} value={d.district_id}>{d.district_name}</option>)}
+          </select>
+        </div>
       </div>
 
       {/* Anomaly List */}
@@ -102,7 +146,7 @@ const AnomalyDetection: React.FC = () => {
                     <span className={`text-xs px-2 py-0.5 rounded-full ${severityColors[a.severity]}`}>{a.severity}</span>
                     <span className="text-xs bg-slate-700 text-slate-300 px-2 py-0.5 rounded-full">{a.anomaly_type}</span>
                   </div>
-                  <p className="text-sm text-white font-medium mb-1">{a.description}</p>
+                  <div className="text-sm text-white font-medium mb-1"><AIMarkdown text={a.description} /></div>
                   <ExplainabilityPanel points={a.evidence_points || []} score={a.anomaly_score} />
                   <p className="text-xs text-slate-400 mt-1">{a.location} · {a.district}</p>
                   <div className="flex items-center gap-4 mt-2 text-xs text-slate-500">
@@ -129,6 +173,31 @@ const AnomalyDetection: React.FC = () => {
         {filtered.length === 0 && (
           <div className="text-center py-12 text-slate-500">No anomalies match the current filter.</div>
         )}
+        
+        {/* Pagination */}
+        <div className="p-4 border-t border-slate-700/50 flex items-center justify-between bg-slate-800/50 rounded-xl mt-4">
+          <span className="text-sm text-slate-400">
+            Showing {filtered.length} records {totalCount > 0 && `of ${totalCount} total`}
+          </span>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="p-1 rounded bg-slate-700 text-white disabled:opacity-50 hover:bg-slate-600 transition-colors"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <span className="text-sm text-white px-2">Page {page} {totalCount > 0 && `of ${Math.max(1, Math.ceil(totalCount / pageSize))}`}</span>
+            <button 
+              onClick={() => setPage(p => p + 1)}
+              disabled={page >= Math.max(1, Math.ceil(totalCount / pageSize))}
+              className="p-1 rounded bg-slate-700 text-white disabled:opacity-50 hover:bg-slate-600 transition-colors"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+        
       </div>
     </div>
   );

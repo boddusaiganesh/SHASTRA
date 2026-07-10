@@ -80,6 +80,8 @@ async def search_offenders(
         "offenders": offender_list,
         "total_count": total_count,
         "total_pages": (total_count + page_size - 1) // page_size,
+        "page": page,
+        "page_size": page_size
     }
 
 

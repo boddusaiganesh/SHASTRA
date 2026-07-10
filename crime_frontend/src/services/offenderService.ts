@@ -38,16 +38,21 @@ export const offenderService = {
       const res = await api.get(ENDPOINTS.OFFENDERS.SEARCH, { 
         params: { query, ...filters } 
       });
-      const list = res.data?.data || res.data || [];
-      return (Array.isArray(list) ? list : []).map(normalizeOffender).filter(Boolean);
+      const data = res.data?.data || res.data || {};
+      const list = data?.offenders || (Array.isArray(data) ? data : []);
+      return {
+        ...data,
+        offenders: list.map(normalizeOffender).filter(Boolean)
+      };
     } catch (error) {
       if (import.meta.env.VITE_DEMO_MODE === 'true') {
         flagMockDataUsed();
-        return mockOffenders.filter((o: any) => 
+        const filtered = mockOffenders.filter((o: any) => 
           (!query || o.offender_name?.toLowerCase().includes(query.toLowerCase())) &&
           (!filters?.district_id || o.district === filters.district_id) &&
           (!filters?.crime_type || o.primary_crime_type === filters.crime_type)
         ).map(normalizeOffender).filter(Boolean);
+        return { offenders: filtered, total_count: filtered.length };
       }
       throw error;
     }

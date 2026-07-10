@@ -13,20 +13,18 @@ router = APIRouter()
 async def search(
     q: Optional[str] = Query(None),
     district_id: Optional[str] = Query(None),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    # Apply district scoping if DISTRICT_OFFICER
-    if current_user["role"] == "DISTRICT_OFFICER":
-        user_district = current_user.get("district_id")
-        if district_id and district_id != user_district:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied. District officers can only access their own district data."
-            )
-        district_id = user_district
+    from app.utils.district_resolver import resolve_district_id
+    from app.core.security import scope_district_param
+    
+    resolved_district = await resolve_district_id(db, district_id)
+    effective_district = scope_district_param(resolved_district, current_user)
 
-    data = await search_victims(db, q, district_id)
+    data = await search_victims(db, q, effective_district, page, page_size)
     return {"success": True, "data": data}
 
 

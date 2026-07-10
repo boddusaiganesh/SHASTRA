@@ -25,13 +25,17 @@ const ReportsPage: React.FC = () => {
   const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
   const [successMsg, setSuccessMsg] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(20);
+  const [totalCount, setTotalCount] = useState(0);
 
   useEffect(() => {
-    reportService.getSavedList().then((d: any) => {
+    reportService.getSavedList(page, pageSize).then((d: any) => {
       setSavedReports(Array.isArray(d) ? d : (d?.reports || d?.data || []));
+      setTotalCount(d?.total_count || 0);
       setLoading(false);
     });
-  }, []);
+  }, [page, pageSize]);
 
   const handleGenerate = async () => {
     setGenerating(true);
@@ -164,6 +168,27 @@ const ReportsPage: React.FC = () => {
           {savedReports.length === 0 && (
             <div className="text-center py-8 text-slate-500 text-sm">No saved reports found.</div>
           )}
+          {/* Pagination Controls */}
+          <div className="flex items-center justify-between p-4 border-t border-slate-700/50 mt-4">
+            <span className="text-sm text-slate-400">Total: {totalCount}</span>
+            <div className="flex gap-2 items-center">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-3 py-1 bg-slate-800 text-slate-300 rounded disabled:opacity-50"
+              >
+                Prev
+              </button>
+              <span className="text-sm text-white px-2">Page {page} {totalCount > 0 && `of ${Math.max(1, Math.ceil(totalCount / pageSize))}`}</span>
+              <button
+                onClick={() => setPage(p => p + 1)}
+                disabled={page >= Math.max(1, Math.ceil(totalCount / pageSize))}
+                className="px-3 py-1 bg-slate-800 text-slate-300 rounded disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
