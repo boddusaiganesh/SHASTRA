@@ -29,17 +29,17 @@ export const CRIME_TYPE_COLORS: Record<string, string> = {
   "Domestic Violence": "#F43F5E",
 };
 
-export const RISK_LEVELS = ["High", "Medium", "Low"] as const;
+export const RISK_LEVELS = ["HIGH", "MEDIUM", "LOW"] as const;
 export type RiskLevel = (typeof RISK_LEVELS)[number];
 
-export const SEVERITY_LEVELS = ["Critical", "High", "Medium", "Low"] as const;
+export const SEVERITY_LEVELS = ["CRITICAL", "HIGH", "MEDIUM", "LOW"] as const;
 export type SeverityLevel = (typeof SEVERITY_LEVELS)[number];
 
 export const STATUS_OPTIONS = [
-  "Active",
-  "Imprisoned",
-  "Absconding",
-  "Deceased",
+  "ACTIVE",
+  "IMPRISONED",
+  "ABSCONDING",
+  "DECEASED",
 ] as const;
 export type StatusOption = (typeof STATUS_OPTIONS)[number];
 

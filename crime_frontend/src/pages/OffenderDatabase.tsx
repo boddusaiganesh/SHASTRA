@@ -9,6 +9,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../store/store';
 import { useDistricts } from '../hooks/useDistricts';
 import { CRIME_TYPES } from '../constants/crimeTypes';
+import AIMarkdown from "../components/common/AIMarkdown";
 
 interface Offender {
   offender_id: string; offender_name: string; age: number; offender_age?: number; district: string;
@@ -248,9 +249,9 @@ export default function OffenderDatabase() {
               {selected.modus_operandi && !modusOperandi && (
                  <div className="bg-slate-800/60 rounded-lg p-3">
                    <p className="text-xs text-slate-400 mb-1 flex items-center gap-1"><Shield className="h-3 w-3" />Modus Operandi</p>
-                   <p className="text-xs text-slate-200 leading-relaxed">
-                     {typeof selected.modus_operandi === 'string' ? selected.modus_operandi : selected.modus_operandi.typical_target || "N/A"}
-                   </p>
+                   <div className="text-xs text-slate-200 leading-relaxed">
+                     <AIMarkdown text={typeof selected.modus_operandi === 'string' ? selected.modus_operandi : selected.modus_operandi.typical_target || "N/A"} />
+                   </div>
                  </div>
               )}
               {modusOperandi && (
@@ -259,7 +260,7 @@ export default function OffenderDatabase() {
                   {Object.entries(modusOperandi).map(([k, v]) => (
                     <div key={k} className="flex justify-between text-xs">
                       <span className="text-slate-400 capitalize">{k.replace(/_/g, " ")}</span>
-                      <span className="text-slate-200 text-right max-w-[60%]">{Array.isArray(v) ? v.join(", ") : String(v)}</span>
+                      <div className="text-slate-200 text-right max-w-[60%]"><AIMarkdown text={Array.isArray(v) ? v.join(", ") : String(v)} /></div>
                     </div>
                   ))}
                 </div>

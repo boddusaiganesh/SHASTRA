@@ -150,7 +150,7 @@ async def seed_initial_data():
             
             # Now sync to Neo4j
             try:
-                from sync_neo4j import sync as sync_neo4j_graph
+                from scripts.sync_postgres_to_neo4j import sync as sync_neo4j_graph
                 await sync_neo4j_graph()
                 logger.info("Initial Neo4j graph synced successfully")
             except Exception as e:

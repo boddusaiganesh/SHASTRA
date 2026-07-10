@@ -92,6 +92,8 @@ async def run_neo4j_query(query: str, parameters: Dict = None) -> List[Dict[str,
             return [record.data() async for record in result]
     except Exception as e:
         logger.error(f"Neo4j query error: {e}")
+        if "MERGE" in query or "SET" in query or "CREATE" in query or "DELETE" in query:
+            raise e # Fail loudly on writes
         return []
 
 
@@ -278,6 +280,8 @@ async def get_network_graph(
         where_clauses.append("$crime_type IN n.crime_types")
         
     params["crime_type"] = crime_type if crime_type else None
+    if "district_id" not in params:
+        params["district_id"] = district_id if district_id else None
 
     query = f"""
     MATCH (n)
@@ -289,9 +293,10 @@ async def get_network_graph(
     CALL {{
       WITH n
       OPTIONAL MATCH (n)-[r]-(connected)
-      WHERE $crime_type IS NULL
+      WHERE ($crime_type IS NULL
          OR $crime_type IN coalesce(r.crime_types, [])
-         OR $crime_type IN coalesce(connected.crime_types, [])
+         OR $crime_type IN coalesce(connected.crime_types, []))
+        AND ($district_id IS NULL OR connected.district_id = $district_id)
       RETURN r, connected
       LIMIT 25
     }}

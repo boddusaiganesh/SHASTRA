@@ -418,8 +418,18 @@ async def update_offender(db: AsyncSession, offender_id: str, payload: dict):
     # Sync to Neo4j
     from app.core.neo4j_connection import sync_offender_to_neo4j, create_criminal_relationship
     try:
-        # We would ideally fetch existing crime_types here, but for now we just pass empty to avoid losing district info
-        # Note: bulk sync will fix crime_types later, or we could fetch them here if required.
+        # Fetch existing crime_types to avoid overwriting with empty
+        from sqlalchemy import select
+        from app.models.crime import Crime
+        from app.models.crime_offender_link import CrimeOffenderLink
+        crime_types_result = await db.execute(
+            select(Crime.crime_type)
+            .join(CrimeOffenderLink, CrimeOffenderLink.crime_id == Crime.crime_id)
+            .where(CrimeOffenderLink.offender_id == offender.offender_id)
+            .distinct()
+        )
+        current_crime_types = [row[0] for row in crime_types_result.all()]
+
         await sync_offender_to_neo4j({
             "offender_id": str(offender.offender_id),
             "name": f"{offender.first_name} {offender.last_name}",
@@ -428,7 +438,7 @@ async def update_offender(db: AsyncSession, offender_id: str, payload: dict):
             "crime_count": offender.total_crimes or 0,
             "status": offender.status,
             "district_id": offender.district_id,
-            "crime_types": [], 
+            "crime_types": current_crime_types, 
         })
         if offender.known_associates:
             for associate_id in offender.known_associates:

@@ -80,7 +80,7 @@ docker compose up -d --build
 Once the containers are running, you must seed the initial mock data (Crimes, Offenders, Victims) into PostgreSQL and Neo4j so that the dashboards populate correctly.
 ```bash
 docker compose exec backend python -m app.utils.data_seeder
-docker compose exec backend python sync_neo4j.py
+docker compose exec backend python scripts/sync_postgres_to_neo4j.py
 ```
 
 ### 3. Generate Machine Learning Insights (Optional)

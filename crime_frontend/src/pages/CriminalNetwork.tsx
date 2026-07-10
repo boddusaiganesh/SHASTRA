@@ -51,6 +51,7 @@ const CriminalNetwork: React.FC = () => {
   const [nodeTypeFilter, setNodeTypeFilter] = useState("all");
   const [crimeTypeLens, setCrimeTypeLens] = useState("all");
   const [showIsolated, setShowIsolated] = useState(false);
+  const [showClusters, setShowClusters] = useState(true);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<"ok" | "offline" | "no_data">("ok");
   const [errorMessage, setErrorMessage] = useState("");
@@ -450,6 +451,15 @@ const CriminalNetwork: React.FC = () => {
             >
               {showIsolated ? "Hide Isolated" : "Show Isolated"}
             </button>
+
+            <button
+              onClick={() => setShowClusters(!showClusters)}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+                showClusters ? "bg-purple-900/40 text-purple-400" : "bg-slate-800 text-slate-400 hover:text-white"
+              }`}
+            >
+              {showClusters ? "Clusters: On" : "Clusters: Off"}
+            </button>
             <span className="text-xs text-slate-500 ml-2">{filteredNodes.length} nodes • {edges.length} connections</span>
           </div>
           <div className="ml-auto flex items-center gap-3">
@@ -537,6 +547,7 @@ const CriminalNetwork: React.FC = () => {
                   selectedNodeId={selectedNode?.node_id} 
                   highlightPath={highlightPath}
                   crimeTypeLens={crimeTypeLens === "all" ? null : crimeTypeLens}
+                  showClusters={showClusters}
                 />
               ) : (
                 <ConnectivityMatrix 
@@ -746,7 +757,7 @@ const CriminalNetwork: React.FC = () => {
                 {(Array.isArray(aiSummary?.key_findings) ? aiSummary.key_findings : []).map((kf, i) => (
                   <div key={i} className="flex items-start gap-2 text-xs text-slate-300">
                     <span className="text-blue-400 font-bold mt-0.5">•</span>
-                    <span>{kf}</span>
+                    <div className="flex-1"><AIMarkdown text={kf} /></div>
                   </div>
                 ))}
               </div>
@@ -757,8 +768,8 @@ const CriminalNetwork: React.FC = () => {
               <div className="space-y-2 mb-3">
                 {(Array.isArray(aiSummary?.suspicious_pairs) ? aiSummary.suspicious_pairs : []).map((s, i) => (
                   <div key={i} className="p-2 bg-orange-950/20 border border-orange-500/20 rounded-lg">
-                    <p className="text-xs text-slate-300">{s.offender_1} ↔ {s.offender_2} ({s.connection_type})</p>
-                    <span className="text-xs text-slate-500">{s.confidence}</span>
+                    <div className="text-xs text-slate-300"><AIMarkdown text={`${s.offender_1} ↔ ${s.offender_2} (${s.connection_type})`} /></div>
+                    <div className="text-xs text-slate-500"><AIMarkdown text={s.confidence} /></div>
                   </div>
                 ))}
               </div>
@@ -770,7 +781,7 @@ const CriminalNetwork: React.FC = () => {
                 {(Array.isArray(aiSummary?.recommended_actions) ? aiSummary.recommended_actions : []).map((p, i) => (
                   <div key={i} className="flex items-start gap-2 text-xs text-slate-300">
                     <span className="text-green-400 font-bold mt-0.5">{i + 1}.</span>
-                    <span>{p}</span>
+                    <div className="flex-1"><AIMarkdown text={p} /></div>
                   </div>
                 ))}
               </div>
