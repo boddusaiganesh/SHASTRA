@@ -232,7 +232,7 @@ async def get_modus_operandi(
                 time_category_counts["EVENING"] += count
             else:
                 time_category_counts["NIGHT"] += count
-        except:
+        except Exception:
             pass
     
     preferred_time = max(time_category_counts, key=time_category_counts.get)
@@ -419,9 +419,7 @@ async def update_offender(db: AsyncSession, offender_id: str, payload: dict):
     from app.core.neo4j_connection import sync_offender_to_neo4j, create_criminal_relationship
     try:
         # Fetch existing crime_types to avoid overwriting with empty
-        from sqlalchemy import select
-        from app.models.crime import Crime
-        from app.models.crime_offender_link import CrimeOffenderLink
+        from app.models.database_models.crime_model import Crime, CrimeOffenderLink
         crime_types_result = await db.execute(
             select(Crime.crime_type)
             .join(CrimeOffenderLink, CrimeOffenderLink.crime_id == Crime.crime_id)

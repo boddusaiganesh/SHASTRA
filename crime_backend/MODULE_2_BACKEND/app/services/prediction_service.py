@@ -137,13 +137,16 @@ async def get_high_risk_areas(
         return cached
     
     # Get active hotspots as high-risk candidates
-    query = select(Hotspot).where(Hotspot.is_active)
-    if district_id:
-        query = query.where(Hotspot.district_id == district_id)
-    query = query.order_by(desc(Hotspot.risk_score)).limit(limit * 2)
-    
-    result = await db.execute(query)
-    hotspots = result.scalars().all()
+    if date_from or date_to:
+        from app.services.hotspot_service import generate_hotspots_from_crimes
+        hotspots_data = await generate_hotspots_from_crimes(db, district_id, None, date_from, date_to)
+    else:
+        query = select(Hotspot).where(Hotspot.is_active)
+        if district_id:
+            query = query.where(Hotspot.district_id == district_id)
+        query = query.order_by(desc(Hotspot.risk_score)).limit(limit * 2)
+        result = await db.execute(query)
+        hotspots_data = [h.to_dict() for h in result.scalars().all()]
     
     district_result = await db.execute(select(District))
     district_map = {d.district_id: d.district_name for d in district_result.scalars().all()}
@@ -151,25 +154,25 @@ async def get_high_risk_areas(
     predictions = []
     today = date.today()
     
-    for rank, hotspot in enumerate(hotspots[:limit], start=1):
+    for rank, hotspot in enumerate(hotspots_data[:limit], start=1):
         # Get contributing factors
         factors = []
-        if hotspot.crime_count > 10:
-            factors.append(f"High crime concentration ({hotspot.crime_count} incidents)")
-        if hotspot.trend == "INCREASING":
-            factors.append(f"Increasing trend ({hotspot.trend_percentage:.1f}%)")
-        if hotspot.dominant_crime_type:
-            factors.append(f"Dominant crime type: {hotspot.dominant_crime_type}")
-        if hotspot.peak_days:
-            factors.append(f"Peak days: {', '.join(hotspot.peak_days[:3])}")
+        if hotspot.get("crime_count", 0) > 10:
+            factors.append(f"High crime concentration ({hotspot.get('crime_count')} incidents)")
+        if hotspot.get("trend") == "INCREASING":
+            factors.append(f"Increasing trend ({hotspot.get('trend_percentage', 0):.1f}%)")
+        if hotspot.get("dominant_crime_type"):
+            factors.append(f"Dominant crime type: {hotspot.get('dominant_crime_type')}")
+        if hotspot.get("peak_days"):
+            factors.append(f"Peak days: {', '.join(hotspot.get('peak_days', [])[:3])}")
         
         # Get similar past events (simplified)
         similar_events = await db.execute(
             select(Crime)
             .where(
                 and_(
-                    Crime.district_id == hotspot.district_id,
-                    Crime.crime_type == hotspot.dominant_crime_type,
+                    Crime.district_id == hotspot.get("district_id"),
+                    Crime.crime_type == hotspot.get("dominant_crime_type"),
                 )
             )
             .limit(3)
@@ -181,16 +184,16 @@ async def get_high_risk_areas(
         
         predictions.append({
             "rank": rank,
-            "location": hotspot.hotspot_name,
-            "district": district_map.get(hotspot.district_id, hotspot.district_id),
-            "predicted_crime_type": hotspot.dominant_crime_type or "General Crime",
-            "risk_percentage": min(hotspot.risk_score, 100),
+            "location": hotspot.get("hotspot_name"),
+            "district": district_map.get(hotspot.get("district_id"), hotspot.get("district_id")),
+            "predicted_crime_type": hotspot.get("dominant_crime_type") or "General Crime",
+            "risk_percentage": min(hotspot.get("risk_score", 0), 100),
             "confidence_level": 72.0,
             "prediction_date_range": {
                 "from": today.isoformat(),
                 "to": (today + timedelta(days=days_ahead)).isoformat(),
             },
-            "recommended_action": hotspot.deployment_suggestion or "Increase patrol frequency",
+            "recommended_action": hotspot.get("deployment_suggestion") or "Increase patrol frequency",
             "contributing_factors": factors,
             "similar_past_events": similar_crimes,
         })
@@ -227,6 +230,10 @@ async def get_crime_forecast(
         conditions.append(Crime.district_id == district_id)
     if crime_type and crime_type != "ALL":
         conditions.append(Crime.crime_type == crime_type)
+    if date_from:
+        conditions.append(Crime.date_of_occurrence >= date.fromisoformat(date_from))
+    if date_to:
+        conditions.append(Crime.date_of_occurrence <= date.fromisoformat(date_to))
     
     if conditions:
         query = query.where(and_(*conditions))
@@ -272,9 +279,18 @@ async def get_emerging_typologies(
         return cached
     
     now = date.today()
-    recent_start = now - timedelta(days=30)
-    baseline_start = now - timedelta(days=90)
-    baseline_end = now - timedelta(days=31)
+    if date_to:
+        now = date.fromisoformat(date_to)
+    
+    if date_from:
+        recent_start = date.fromisoformat(date_from)
+        days_diff = (now - recent_start).days
+        baseline_end = recent_start - timedelta(days=1)
+        baseline_start = baseline_end - timedelta(days=days_diff)
+    else:
+        recent_start = now - timedelta(days=30)
+        baseline_start = now - timedelta(days=90)
+        baseline_end = now - timedelta(days=31)
     
     from app.core.config import CRIME_TYPES
     

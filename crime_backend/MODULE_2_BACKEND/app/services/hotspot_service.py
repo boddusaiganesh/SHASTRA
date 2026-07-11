@@ -31,13 +31,15 @@ async def get_hotspot_clusters(
     if cached:
         return cached
     
-    # Try to get from DB first
-    query = select(Hotspot).where(Hotspot.is_active)
-    if district_id:
-        query = query.where(Hotspot.district_id == district_id)
-    
-    result = await db.execute(query.order_by(desc(Hotspot.risk_score)))
-    hotspots = result.scalars().all()
+    hotspots = []
+    # Only use pre-computed DB hotspots if no dynamic filters are applied
+    if not crime_type and not date_from and not date_to:
+        query = select(Hotspot).where(Hotspot.is_active)
+        if district_id:
+            query = query.where(Hotspot.district_id == district_id)
+        
+        result = await db.execute(query.order_by(desc(Hotspot.risk_score)))
+        hotspots = result.scalars().all()
     
     total_count = len(hotspots)
     

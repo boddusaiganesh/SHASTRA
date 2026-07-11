@@ -36,7 +36,7 @@ async def generate_report(
     try:
         d_from = date.fromisoformat(date_from) if date_from else None
         d_to = date.fromisoformat(date_to) if date_to else None
-    except:
+    except Exception:
         d_from = None
         d_to = None
     

@@ -119,7 +119,7 @@ async def calculate_correlations(
                 denom_y = sum((y - mean_y) ** 2 for y in factor_values) ** 0.5
                 
                 corr = numerator / (denom_x * denom_y) if (denom_x * denom_y) != 0 else 0.0
-        except:
+        except Exception:
             corr = 0.0
         
         # Generate insight

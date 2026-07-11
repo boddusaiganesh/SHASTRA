@@ -91,7 +91,7 @@ async def get_dashboard_summary(
     repeat_offenders = repeat_result.scalar() or 0
     
     # Pending alerts
-    alert_query = select(func.count(Alert.alert_id)).where(not Alert.is_read)
+    alert_query = select(func.count(Alert.alert_id)).where(Alert.is_read.is_(False))
     if district_id:
         alert_query = alert_query.where(
             or_(Alert.district_id == district_id, Alert.target_district == "ALL")

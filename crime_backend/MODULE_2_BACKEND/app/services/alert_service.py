@@ -32,7 +32,7 @@ async def get_alert_list(
     conditions = []
     
     if filter_type == "UNREAD":
-        conditions.append(not Alert.is_read)
+        conditions.append(Alert.is_read.is_(False))
     elif filter_type == "CRITICAL":
         conditions.append(Alert.severity == "CRITICAL")
     
@@ -55,7 +55,7 @@ async def get_alert_list(
     total_count = total_result.scalar() or 0
     
     unread_result = await db.execute(
-        select(func.count(Alert.alert_id)).where(not Alert.is_read)
+        select(func.count(Alert.alert_id)).where(Alert.is_read.is_(False))
     )
     unread_count = unread_result.scalar() or 0
     
@@ -318,7 +318,7 @@ async def get_active_alerts(
     alerts = result.scalars().all()
 
     unread_result = await db.execute(
-        select(func.count(Alert.alert_id)).where(and_(*conditions, not Alert.is_read))
+        select(func.count(Alert.alert_id)).where(and_(*conditions, Alert.is_read.is_(False)))
     )
     
     all_districts = await db.execute(select(District))
