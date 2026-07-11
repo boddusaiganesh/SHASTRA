@@ -1,4 +1,5 @@
 import api from './api';
+import { ENDPOINTS } from '../constants/apiEndpoints';
 
 const normalizeHotspot = (h: any) => {
   if (!h) return null;
@@ -50,7 +51,7 @@ export const crimeService = {
     try {
       const res = await api.get(ENDPOINTS.DASHBOARD.CRIME_TRENDS);
       return res.data?.data || res.data;
-    } catch (error) {; }
+    } catch (error) {
       throw error;
     }
   },
@@ -98,7 +99,7 @@ export const crimeService = {
         ...data,
         hotspots: list.map(normalizeHotspot)
       };
-    } catch (error) {; }
+    } catch (error) {
       throw error;
     }
   },
@@ -125,7 +126,7 @@ export const crimeService = {
         return { byHour, byDay, byMonth };
       }
       return { byHour: mockTimePatternData, byDay: mockDayPatternData, byMonth: mockMonthPatternData };
-    } catch (error) {; }
+    } catch (error) {
       throw error;
     }
   },
@@ -169,7 +170,7 @@ export const crimeService = {
     try {
       const res = await api.get(ENDPOINTS.CRIMES.FILTER, { params });
       return res.data;
-    } catch (error) {; }
+    } catch (error) {
       throw error;
     }
   },

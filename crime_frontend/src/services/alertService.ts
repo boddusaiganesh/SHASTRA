@@ -1,4 +1,5 @@
 import api from "./api";
+import { ENDPOINTS } from "../constants/apiEndpoints";
 
 export const alertService = {
   getAlerts: async (page: number = 1, pageSize: number = 20, severity?: string, type?: string) => {

@@ -1,4 +1,5 @@
 import api from './api';
+import { ENDPOINTS } from "../constants/apiEndpoints";
 
 export const predictionService = {
   getPredictions: async (filters?: any) => {
@@ -100,7 +101,7 @@ export const anomalyService = {
     try {
       const res = await api.patch(ENDPOINTS.ANOMALIES.UPDATE_STATUS(id), { status });
       return res.data?.data || res.data;
-    } catch (error) {; }
+    } catch (error) {
       throw error;
     }
   },

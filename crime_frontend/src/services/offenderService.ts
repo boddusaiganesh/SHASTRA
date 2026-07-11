@@ -1,4 +1,5 @@
 import api from "./api";
+import { ENDPOINTS } from "../constants/apiEndpoints";
 
 const normalizeOffender = (o: any) => {
   if (!o) return null;
@@ -41,8 +42,7 @@ export const offenderService = {
         ...data,
         offenders: list.map(normalizeOffender).filter(Boolean)
       };
-    } catch (error) {;
-      }
+    } catch (error) {
       throw error;
     }
   },

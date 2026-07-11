@@ -1,4 +1,5 @@
 import api from "./api";
+import { ENDPOINTS } from "../constants/apiEndpoints";
 
 export const reportService = {
   generateReport: async (params: Record<string, string>) => {
@@ -12,12 +13,7 @@ export const reportService = {
         `${ENDPOINTS.REPORTS.GENERATE}?${new URLSearchParams(queryParams).toString()}`
       );
       return res.data?.data || res.data;
-    } catch (error) {`,
-          report_type: params.report_type,
-          status: "Ready",
-          generated_at: new Date().toISOString(),
-        };
-      }
+    } catch (error) {
       throw error;
     }
   },

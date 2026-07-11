@@ -1,4 +1,5 @@
 import api from "./api";
+import { ENDPOINTS } from "../constants/apiEndpoints";
 
 export const settingsService = {
   getUsers: async (page: number = 1, pageSize: number = 20) => {
@@ -13,7 +14,7 @@ export const settingsService = {
     try {
       const res = await api.post(ENDPOINTS.SETTINGS.USERS_ADD, user);
       return res.data;
-    } catch (error) { }; }
+    } catch (error) {
       throw error;
     }
   },
@@ -37,7 +38,7 @@ export const settingsService = {
     try {
       const res = await api.put(ENDPOINTS.SETTINGS.ALERT_THRESHOLDS, thresholds);
       return res.data?.data || res.data;
-    } catch (error) {; }
+    } catch (error) {
       throw error;
     }
   },
@@ -59,8 +60,7 @@ export const settingsService = {
     try {
       const res = await api.post(ENDPOINTS.SETTINGS.DATASOURCE_SYNC(sourceId));
       return res.data;
-    } catch (error) {` };
-      }
+    } catch (error) {
       throw error;
     }
   },
