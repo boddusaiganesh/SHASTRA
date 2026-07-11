@@ -25,7 +25,19 @@ interface Props { collapsed: boolean; onToggle: () => void; alertCount?: number;
 
 const Sidebar: React.FC<Props> = ({ collapsed, onToggle, alertCount = 0 }) => {
   return (
-    <aside className={`${collapsed ? "w-16" : "w-64"} transition-all duration-300 bg-slate-900 border-r border-slate-700/50 flex flex-col h-full`}>
+    <>
+      {/* Mobile overlay */}
+      {!collapsed && (
+        <div 
+          className="md:hidden fixed inset-0 bg-black/50 z-40"
+          onClick={onToggle}
+        />
+      )}
+      <aside className={`
+        ${collapsed ? "w-16 -translate-x-full md:translate-x-0" : "w-64 translate-x-0"} 
+        transition-all duration-300 bg-slate-900 border-r border-slate-700/50 flex flex-col h-full
+        fixed md:relative z-50
+      `}>
       {/* Logo */}
       <div className="flex items-center gap-3 px-4 py-4 border-b border-slate-700/50">
         <div className="flex-shrink-0 h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
@@ -72,6 +84,7 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle, alertCount = 0 }) => {
         ))}
       </nav>
     </aside>
+    </>
   );
 };
 

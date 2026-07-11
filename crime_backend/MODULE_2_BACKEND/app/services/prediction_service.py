@@ -50,7 +50,10 @@ async def get_risk_map(
     for district in districts:
         # Get crime count for this district in last 30 days
         from datetime import datetime
+        from datetime import datetime
         thirty_days_ago = date.today() - timedelta(days=30)
+        dt_from = datetime.fromisoformat(date_from).date() if date_from else thirty_days_ago
+        dt_to = datetime.fromisoformat(date_to).date() if date_to else date.today()
         dt_from = datetime.fromisoformat(date_from).date() if date_from else thirty_days_ago
         dt_to = datetime.fromisoformat(date_to).date() if date_to else date.today()
         crime_count_result = await db.execute(

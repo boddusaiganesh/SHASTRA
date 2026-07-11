@@ -9,10 +9,17 @@ export const buildApiUrl = (path: string, params?: Record<string, string>) => {
 export const downloadAuthenticated = async (path: string, params?: Record<string, string>) => {
   const api = (await import("../services/api")).default;
   const response = await api.get(path, { params, responseType: "blob" });
+  
+  const disposition: string = response.headers["content-disposition"] || "";
+  const match = disposition.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
+  const filename = match ? decodeURIComponent(match[1]) : path.split("/").pop() || "download";
+
   const blobUrl = window.URL.createObjectURL(new Blob([response.data]));
   const a = document.createElement("a");
   a.href = blobUrl;
-  a.download = "";
+  a.download = filename;
+  document.body.appendChild(a);
   a.click();
+  document.body.removeChild(a);
   window.URL.revokeObjectURL(blobUrl);
 };

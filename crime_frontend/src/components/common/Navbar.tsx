@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "../../store/store";
 import { logout } from "../../store/authSlice";
+import { authService } from "../../services/authService";
 import { clearUnreadCount } from "../../store/alertsSlice";
 import { useNavigate } from "react-router-dom";
 import { Bell, LogOut, Shield, User, Clock, AlertTriangle, Search, Languages } from "lucide-react";
@@ -34,9 +35,15 @@ const Navbar: React.FC<Props> = ({ alertCount = 0 }) => {
     return () => clearInterval(t);
   }, []);
 
-  const handleLogout = () => {
-    dispatch(logout());
-    navigate("/login");
+  const handleLogout = async () => {
+    try {
+      await authService.logout();
+    } catch (e) {
+      console.error("Logout request failed, clearing local session anyway", e);
+    } finally {
+      dispatch(logout());
+      navigate("/login");
+    }
   };
 
   const toggleLanguage = () => {
@@ -56,7 +63,12 @@ const Navbar: React.FC<Props> = ({ alertCount = 0 }) => {
         const api = (await import("../../services/api")).default;
         const { ENDPOINTS } = await import("../../constants/apiEndpoints");
         const res = await api.get(ENDPOINTS.SEARCH.GLOBAL, { params: { q: searchQuery } });
-        setSearchResults(res.data);
+        const unwrapped = res.data?.data || res.data;
+        setSearchResults({
+          crimes: Array.isArray(unwrapped?.crimes) ? unwrapped.crimes : [],
+          offenders: Array.isArray(unwrapped?.offenders) ? unwrapped.offenders : [],
+          victims: Array.isArray(unwrapped?.victims) ? unwrapped.victims : [],
+        });
       } catch (e) {
         console.error(e);
       }

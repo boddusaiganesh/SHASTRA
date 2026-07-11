@@ -48,11 +48,6 @@ const AnomalyDetection: React.FC = () => {
 
   useEffect(() => { fetch(); }, [page, severityFilter, statusFilter, districtFilter]);
 
-  // Reset page when filters change
-  useEffect(() => {
-    setPage(1);
-  }, [severityFilter, statusFilter, districtFilter]);
-
   const handleUpdateStatus = async (id: string, status: string) => {
     await anomalyService.updateStatus(id, status);
     setAnomalies((prev) => prev.map((a) => a.anomaly_id === id ? { ...a, status } : a));
@@ -94,7 +89,7 @@ const AnomalyDetection: React.FC = () => {
           <label className="block text-xs text-slate-400 mb-1">Status</label>
           <div className="flex gap-2">
             {STATUS_FILTERS.map((s) => (
-              <button key={s} onClick={() => setStatusFilter(s)}
+              <button key={s} onClick={() => { setStatusFilter(s); setPage(1); }}
                 className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${statusFilter === s ? "bg-blue-600 text-white" : "bg-slate-900 text-slate-400 hover:text-white border border-slate-700"}`}>
                 {s === "All" ? "All" : STATUS_LABELS[s]}
               </button>
@@ -106,7 +101,7 @@ const AnomalyDetection: React.FC = () => {
           <label className="block text-xs text-slate-400 mb-1">Severity</label>
           <select 
             value={severityFilter} 
-            onChange={(e) => setSeverityFilter(e.target.value)}
+            onChange={(e) => { setSeverityFilter(e.target.value); setPage(1); }}
             className="bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-1.5 focus:outline-none focus:border-blue-500"
           >
             <option value="All">All Severities</option>
@@ -121,7 +116,7 @@ const AnomalyDetection: React.FC = () => {
           <label className="block text-xs text-slate-400 mb-1">District</label>
           <select 
             value={districtFilter} 
-            onChange={(e) => setDistrictFilter(e.target.value)}
+            onChange={(e) => { setDistrictFilter(e.target.value); setPage(1); }}
             className="bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-1.5 focus:outline-none focus:border-blue-500 max-w-xs"
           >
             <option value="All">All Districts</option>
@@ -151,7 +146,7 @@ const AnomalyDetection: React.FC = () => {
                   <p className="text-xs text-slate-400 mt-1">{a.location} · {a.district}</p>
                   <div className="flex items-center gap-4 mt-2 text-xs text-slate-500">
                     <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{new Date(a.detected_at || new Date()).toLocaleString()}</span>
-                    <span>Confidence: <span className="text-blue-400 font-bold">{(a.confidence_score * 100).toFixed(0)}%</span></span>
+                    <span>Confidence: <span className="text-blue-400 font-bold">{((a.confidence_score || 0) * 100).toFixed(0)}%</span></span>
                     <span>{a.affected_crimes_count} crimes affected</span>
                   </div>
                 </div>

@@ -32,7 +32,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useSelector((state: RootState) => state.auth);
   const alerts = useSelector((state: RootState) => state.alerts);
   const dispatch = useDispatch();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(window.innerWidth < 768);
   const [toasts, setToasts] = useState<any[]>([]);
 
   const addToast = (alert: any) => {
@@ -42,6 +42,16 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       setToasts((prev) => prev.filter((t) => t._id !== id));
     }, 5000);
   };
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768) {
+        setSidebarCollapsed(true);
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     if (isAuthenticated) {

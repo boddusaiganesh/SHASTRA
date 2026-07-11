@@ -47,14 +47,14 @@ export default function SocioEconomicInsights() {
 
   const metrics = [
     { title: "Strongest Correlation", value: correlations[0]?.factor_name || "Urbanization", icon: Building2, color: "text-blue-400" },
-    { title: "Avg Crime Rate", value: (chartData.reduce((acc: number, val: any) => acc + val.crimeRate, 0) / chartData.length).toFixed(1), icon: TrendingUp, color: "text-orange-400" },
+    { title: "Avg Crime Rate", value: (chartData.length > 0 ? chartData.reduce((acc: number, val: any) => acc + val.crimeRate, 0) / chartData.length : 0).toFixed(1), icon: TrendingUp, color: "text-orange-400" },
     { title: "High Risk Factor", value: "Youth Unemployment", icon: Briefcase, color: "text-red-400" },
     { title: "Districts Analyzed", value: chartData.length, icon: Users, color: "text-green-400" },
   ];
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-6 space-y-6">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-wrap gap-4 items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white mb-2">Socio-Economic Correlation</h1>
           <p className="text-slate-400 text-sm">Analyze how demographic and economic factors influence crime rates across districts.</p>

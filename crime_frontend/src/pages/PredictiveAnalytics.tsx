@@ -44,14 +44,14 @@ const PredictiveAnalytics: React.FC = () => {
 
   return (
     <div className="flex-1 min-h-0 w-full overflow-y-auto custom-scrollbar p-6 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap gap-4 items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-white">Predictive Intelligence</h1>
           <p className="text-sm text-slate-400">AI/ML-powered crime forecasting and risk assessment</p>
         </div>
         
         {/* Filters */}
-        <div className="flex items-center gap-4 bg-slate-800/50 p-2 rounded-xl border border-slate-700/50">
+        <div className="flex flex-wrap items-center gap-4 bg-slate-800/50 p-2 rounded-xl border border-slate-700/50">
           <div>
             <select 
               value={districtFilter} 
@@ -62,7 +62,7 @@ const PredictiveAnalytics: React.FC = () => {
               {districts.map(d => <option key={d.district_id} value={d.district_id}>{d.district_name}</option>)}
             </select>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <input 
               type="date" 
               value={dateFrom}

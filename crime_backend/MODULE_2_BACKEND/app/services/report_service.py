@@ -297,6 +297,8 @@ def export_report_csv(report_data: dict) -> bytes:
 
 def export_report_pdf(report_data: dict) -> bytes:
     import io
+    import io
+    from xml.sax.saxutils import escape
     try:
         from reportlab.lib.pagesizes import letter
         from reportlab.lib import colors
@@ -313,7 +315,7 @@ def export_report_pdf(report_data: dict) -> bytes:
         leftMargin=40,
         topMargin=60,
         bottomMargin=40,
-        title=report_data.get("report_name", "SHASTRA Report")
+        title=escape(report_data.get("report_name", "SHASTRA Report"))
     )
     
     styles = getSampleStyleSheet()
@@ -341,9 +343,9 @@ def export_report_pdf(report_data: dict) -> bytes:
     story.append(Spacer(1, 20))
     
     # Report Info
-    story.append(Paragraph(f"Report: {report_data.get('report_name', 'Untitled')}", h1_style))
-    story.append(Paragraph(f"Type: {report_data.get('report_type', 'N/A')}", normal_style))
-    story.append(Paragraph(f"Date: {report_data.get('created_at', 'N/A')}", normal_style))
+    story.append(Paragraph(f"Report: {escape(str(report_data.get('report_name', 'Untitled')))}", h1_style))
+    story.append(Paragraph(f"Type: {escape(str(report_data.get('report_type', 'N/A')))}", normal_style))
+    story.append(Paragraph(f"Date: {escape(str(report_data.get('created_at', 'N/A')))}", normal_style))
     story.append(Spacer(1, 20))
     
     # AI Narrative (if present)
@@ -353,7 +355,7 @@ def export_report_pdf(report_data: dict) -> bytes:
         # Narrative might have multiple paragraphs separated by newlines
         for p in ai_narrative.split("\n"):
             if p.strip():
-                story.append(Paragraph(p.strip(), narrative_style))
+                story.append(Paragraph(escape(p.strip()), narrative_style))
         story.append(Spacer(1, 20))
     
     # Data Tables
@@ -367,7 +369,7 @@ def export_report_pdf(report_data: dict) -> bytes:
         
         for k, v in data.items():
             if isinstance(v, (int, float, str)):
-                simple_data.append([k.replace('_', ' ').title(), str(v)])
+                simple_data.append([escape(k.replace('_', ' ').title()), escape(str(v))])
             elif isinstance(v, list) and len(v) > 0 and isinstance(v[0], dict):
                 complex_data[k] = v
         
@@ -389,11 +391,11 @@ def export_report_pdf(report_data: dict) -> bytes:
             
         # Render Complex Data Tables
         for k, items in complex_data.items():
-            story.append(Paragraph(k.replace('_', ' ').title(), h2_style))
-            headers = [key.replace('_', ' ').title() for key in items[0].keys()]
+            story.append(Paragraph(escape(k.replace('_', ' ').title()), h2_style))
+            headers = [escape(key.replace('_', ' ').title()) for key in items[0].keys()]
             table_data = [headers]
             for item in items:
-                table_data.append([str(val) for val in item.values()])
+                table_data.append([escape(str(val)) for val in item.values()])
                 
             t2 = Table(table_data)
             t2.setStyle(TableStyle([

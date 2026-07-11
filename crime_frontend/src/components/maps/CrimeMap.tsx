@@ -24,6 +24,19 @@ const FitBounds = () => {
   return null;
 };
 
+const InvalidateOnResize = () => {
+  const map = useMap();
+  useEffect(() => {
+    const container = map.getContainer();
+    const ro = new ResizeObserver(() => {
+      map.invalidateSize();
+    });
+    ro.observe(container);
+    return () => ro.disconnect();
+  }, [map]);
+  return null;
+};
+
 const CrimeMap: React.FC<Props> = ({ crimes, viewMode, onCrimeSelect }) => {
   const getRadius = () => viewMode === "heatmap" ? 20 : 7;
   const getOpacity = () => viewMode === "heatmap" ? 0.35 : 0.85;
@@ -42,6 +55,7 @@ const CrimeMap: React.FC<Props> = ({ crimes, viewMode, onCrimeSelect }) => {
         className="map-tiles"
       />
       <FitBounds />
+      <InvalidateOnResize />
       {viewMode === "heatmap" ? (
         <HeatLayer points={crimes.map((c) => [c.latitude, c.longitude, 0.6])} />
       ) : viewMode === "cluster" ? (

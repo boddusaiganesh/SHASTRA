@@ -62,8 +62,8 @@ export default function VictimDatabase() {
   };
 
   return (
-    <div className="flex h-full space-x-6">
-      <div className="flex-1 bg-slate-900 rounded-xl border border-slate-800 p-6 flex flex-col">
+    <div className="flex-1 min-h-0 w-full overflow-hidden flex p-6 space-x-6">
+      <div className="flex-1 bg-slate-900 rounded-xl border border-slate-800 p-6 flex flex-col min-h-0">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-slate-100 flex items-center gap-2">
             <User className="h-6 w-6 text-emerald-500" />

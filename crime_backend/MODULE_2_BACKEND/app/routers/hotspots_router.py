@@ -40,11 +40,13 @@ async def hotspot_clusters(
         from io import StringIO
         from fastapi.responses import StreamingResponse
         
+        rows = data.get("hotspots", []) if isinstance(data, dict) else data
+        
         output = StringIO()
-        if data:
-            writer = csv.DictWriter(output, fieldnames=list(data[0].keys()))
+        if rows:
+            writer = csv.DictWriter(output, fieldnames=list(rows[0].keys()))
             writer.writeheader()
-            writer.writerows(data)
+            writer.writerows(rows)
             
         output.seek(0)
         return StreamingResponse(

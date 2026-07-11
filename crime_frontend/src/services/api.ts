@@ -20,8 +20,10 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    if (error.response?.status === 401) {
+    const isLoginRequest = error.config?.url?.includes("/auth/login");
+    if (error.response?.status === 401 && !isLoginRequest) {
       localStorage.removeItem("user_data");
+      localStorage.removeItem("is_logged_in");
       window.location.href = "/login";
     }
     // No mock-data fallback. Let the caller show a real error/toast.

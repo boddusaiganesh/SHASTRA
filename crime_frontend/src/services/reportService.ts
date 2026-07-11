@@ -4,11 +4,14 @@ import { ENDPOINTS } from "../constants/apiEndpoints";
 export const reportService = {
   generateReport: async (params: Record<string, string>) => {
     try {
-      const queryParams = {
+      const queryParams: Record<string, string> = {
         report_type: params.report_type,
         report_name: params.report_name || `${params.report_type}_${Date.now()}`,
-        ...(params.district_id ? { district_id: params.district_id } : {}),
       };
+      if (params.district_id) queryParams.district_id = params.district_id;
+      if (params.date_from) queryParams.date_from = params.date_from;
+      if (params.date_to) queryParams.date_to = params.date_to;
+
       const res = await api.post(
         `${ENDPOINTS.REPORTS.GENERATE}?${new URLSearchParams(queryParams).toString()}`
       );

@@ -93,7 +93,7 @@ const ReportsPage: React.FC = () => {
 
       <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5">
         <h3 className="text-sm font-semibold text-white mb-4">Generate New Report</h3>
-        <div className="flex gap-4 items-end">
+        <div className="flex flex-wrap gap-4 items-end">
           <div className="flex-1">
             <label className="block text-xs text-slate-400 mb-1">Report Type</label>
             <select

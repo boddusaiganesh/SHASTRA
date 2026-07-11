@@ -11,6 +11,7 @@ const AlertsPage: React.FC = () => {
   const dispatch = useDispatch();
   const { alerts, unreadCount, totalCount } = useSelector((s: RootState) => s.alerts);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [severityFilter, setSeverityFilter] = useState("All");
   const [typeFilter, setTypeFilter] = useState("All");
   const [page, setPage] = useState(1);
@@ -18,9 +19,16 @@ const AlertsPage: React.FC = () => {
 
   const load = async () => {
     setLoading(true);
-    const data = await alertService.getAlerts(page, pageSize, severityFilter, typeFilter);
-    dispatch(setAlerts(data));
-    setLoading(false);
+    setError(null);
+    try {
+      const data = await alertService.getAlerts(page, pageSize, severityFilter, typeFilter);
+      dispatch(setAlerts(data));
+    } catch (e) {
+      console.error(e);
+      setError("Failed to load alerts");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, [page, severityFilter, typeFilter]);
@@ -47,13 +55,14 @@ const AlertsPage: React.FC = () => {
 
   // Removed local filtering, handled by backend
 
-  const alertTypes = Array.from(new Set((alerts as { alert_type: string }[]).map((a) => a.alert_type)));
+  const alertTypes = ["SYSTEM", "SECURITY", "ANOMALY", "PREDICTION", "REPORT"];
 
   if (loading) return <div className="flex-1 flex items-center justify-center"><LoadingSpinner size="lg" text="Loading alerts..." /></div>;
+  if (error) return <div className="flex-1 flex flex-col items-center justify-center text-red-500 gap-4"><p>{error}</p><button onClick={load} className="px-4 py-2 bg-slate-800 rounded-lg text-white">Retry</button></div>;
 
   return (
     <div className="flex-1 min-h-0 w-full overflow-y-auto custom-scrollbar p-6 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap gap-4 items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-white">System Alerts</h1>
           <p className="text-sm text-slate-400">{unreadCount} unread · {totalCount || alerts.length} total</p>

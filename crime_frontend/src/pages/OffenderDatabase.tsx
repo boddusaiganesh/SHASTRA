@@ -91,7 +91,7 @@ export default function OffenderDatabase() {
         if (match) handleSelectOffender(match);
       }
     });
-  }, [searchParams, page]);
+  }, [searchParams, page, districtFilter, crimeTypeFilter, riskLevelFilter, statusFilter]);
 
   const handleSelectOffender = async (o: Offender) => {
     setSelected(o);
@@ -114,7 +114,7 @@ export default function OffenderDatabase() {
   const handleSearch = async (q: string) => {
     setSearch(q);
     setPage(1);
-    executeSearch(q, districtFilter, crimeTypeFilter, riskLevelFilter, statusFilter, 1);
+    // useEffect will trigger executeSearch due to state update
   };
 
   if (loading) return <div className="flex-1 flex items-center justify-center"><LoadingSpinner size="lg" text="Loading offender database..." /></div>;
@@ -146,7 +146,7 @@ export default function OffenderDatabase() {
         <div className="flex flex-wrap gap-3 mt-4">
           <select 
             value={districtFilter} 
-            onChange={(e) => { setDistrictFilter(e.target.value); setPage(1); executeSearch(search, e.target.value, crimeTypeFilter, riskLevelFilter, statusFilter); }}
+            onChange={(e) => { setDistrictFilter(e.target.value); setPage(1); }}
             className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-blue-500 outline-none"
           >
             <option value="all">All Districts</option>
@@ -154,7 +154,7 @@ export default function OffenderDatabase() {
           </select>
           <select 
             value={crimeTypeFilter} 
-            onChange={(e) => { setCrimeTypeFilter(e.target.value); setPage(1); executeSearch(search, districtFilter, e.target.value, riskLevelFilter, statusFilter); }}
+            onChange={(e) => { setCrimeTypeFilter(e.target.value); setPage(1); }}
             className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-blue-500 outline-none"
           >
             <option value="all">All Crime Types</option>
@@ -162,7 +162,7 @@ export default function OffenderDatabase() {
           </select>
           <select 
             value={riskLevelFilter} 
-            onChange={(e) => { setRiskLevelFilter(e.target.value); setPage(1); executeSearch(search, districtFilter, crimeTypeFilter, e.target.value, statusFilter); }}
+            onChange={(e) => { setRiskLevelFilter(e.target.value); setPage(1); }}
             className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-blue-500 outline-none"
           >
             <option value="all">All Risk Levels</option>
@@ -172,7 +172,7 @@ export default function OffenderDatabase() {
           </select>
           <select 
             value={statusFilter} 
-            onChange={(e) => { setStatusFilter(e.target.value); setPage(1); executeSearch(search, districtFilter, crimeTypeFilter, riskLevelFilter, e.target.value); }}
+            onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
             className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-blue-500 outline-none"
           >
             <option value="all">All Statuses</option>

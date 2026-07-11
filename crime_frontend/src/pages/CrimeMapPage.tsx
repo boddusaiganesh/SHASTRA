@@ -96,6 +96,9 @@ const CrimeMapPage: React.FC = () => {
   const handleExport = async () => {
     const queryParams = new URLSearchParams({ file_format: "csv" });
     if (filters.district !== "All Districts") queryParams.append("district_id", filters.district);
+    if (filters.crimeType !== "All") queryParams.append("crime_type", filters.crimeType);
+    if (filters.dateFrom) queryParams.append("date_from", filters.dateFrom);
+    if (filters.dateTo) queryParams.append("date_to", filters.dateTo);
     const { downloadAuthenticated } = await import("../utils/buildApiUrl");
     await downloadAuthenticated("/crimes/map-data", Object.fromEntries(queryParams.entries()));
   };

@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
+import { RootState } from "../store/store";
 import { Users, Bell, Database, Plus, Save, ActivitySquare, ChevronLeft, ChevronRight } from "lucide-react";
 import { settingsService } from "../services/settingsService";
 import { useDistricts } from "../hooks/useDistricts";
@@ -11,7 +13,10 @@ interface AlertThresholds { crime_spike_percent: number; anomaly_confidence: num
 
 const SettingsPage: React.FC = () => {
   const districts = useDistricts();
-  const [activeTab, setActiveTab] = useState("users");
+  const { user_role } = useSelector((state: RootState) => state.auth);
+  const isScrbOfficer = user_role === "SCRB_OFFICER";
+  
+  const [activeTab, setActiveTab] = useState(isScrbOfficer ? "users" : "thresholds");
   const [users, setUsers] = useState<User[]>([]);
   const [thresholds, setThresholds] = useState<AlertThresholds | null>(null);
   const [dataSources, setDataSources] = useState<unknown[]>([]);
@@ -26,21 +31,49 @@ const SettingsPage: React.FC = () => {
   const [newUser, setNewUser] = useState({ username: "", full_name: "", role: "INVESTIGATOR", password: "", district: "" });
 
   useEffect(() => {
-    Promise.all([
-      settingsService.getUsers(usersPage, pageSize),
-      settingsService.getAlertThresholds(),
-      settingsService.getDataSources(),
-      settingsService.getAuditLogs(logsPage, pageSize),
-    ]).then(([u, t, d, logs]: any[]) => {
-      setUsers(Array.isArray(u) ? u : (u?.users || u?.data || []));
-      setUsersTotalCount(u?.total_count || 0);
-      setThresholds(t as unknown as AlertThresholds);
-      setDataSources(Array.isArray(d) ? d : (d?.sources || d?.data || []));
-      setAuditLogs(Array.isArray(logs) ? logs : (logs?.data || []));
-      setLogsTotalCount(logs?.total_count || 0);
-      setLoading(false);
-    });
-  }, [usersPage, logsPage]);
+    let cancelled = false;
+
+    const loadAll = async () => {
+      setLoading(true);
+
+      const [thresholdsResult, dataSourcesResult] = await Promise.allSettled([
+        settingsService.getAlertThresholds(),
+        settingsService.getDataSources(),
+      ]);
+      
+      if (!cancelled) {
+        if (thresholdsResult.status === "fulfilled") setThresholds(thresholdsResult.value as unknown as AlertThresholds);
+        if (dataSourcesResult.status === "fulfilled") {
+          const d = dataSourcesResult.value as any;
+          setDataSources(Array.isArray(d) ? d : (d?.sources || d?.data || []));
+        }
+      }
+
+      if (isScrbOfficer) {
+        const [usersResult, logsResult] = await Promise.allSettled([
+          settingsService.getUsers(usersPage, pageSize),
+          settingsService.getAuditLogs(logsPage, pageSize),
+        ]);
+        if (!cancelled) {
+          if (usersResult.status === "fulfilled") {
+            const u = usersResult.value as any;
+            setUsers(Array.isArray(u) ? u : (u?.users || u?.data || []));
+            setUsersTotalCount(u?.total_count || 0);
+          }
+          if (logsResult.status === "fulfilled") {
+            const logs = logsResult.value as any;
+            setAuditLogs(Array.isArray(logs) ? logs : (logs?.data || []));
+            setLogsTotalCount(logs?.total_count || 0);
+          }
+        }
+      }
+
+      if (!cancelled) setLoading(false);
+    };
+
+    loadAll();
+    return () => { cancelled = true; };
+  }, [usersPage, logsPage, isScrbOfficer]);
 
   const handleSaveThresholds = async () => {
     if (!thresholds) return;
@@ -74,10 +107,10 @@ const SettingsPage: React.FC = () => {
       {/* Tabs */}
       <div className="flex gap-2 border-b border-slate-700/50 pb-0">
         {[
-          { id: "users", label: "User Management", icon: Users },
+          ...(isScrbOfficer ? [{ id: "users", label: "User Management", icon: Users }] : []),
           { id: "thresholds", label: "Alert Thresholds", icon: Bell },
           { id: "datasources", label: "Data Sources", icon: Database },
-          { id: "auditlogs", label: "Activity Log", icon: ActivitySquare },
+          ...(isScrbOfficer ? [{ id: "auditlogs", label: "Activity Log", icon: ActivitySquare }] : []),
           { id: "import", label: "Import Data", icon: UploadCloud },
         ].map(({ id, label, icon: Icon }) => (
           <button key={id} onClick={() => setActiveTab(id)}

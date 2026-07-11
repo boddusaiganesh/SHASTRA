@@ -106,7 +106,7 @@ services:
     restart: unless-stopped
     command: /bin/sh -c 'redis-server --requirepass "$$REDIS_PASSWORD"'
     env_file:
-      - ./crime_backend/MODULE_2_BACKEND/.env
+      - .env
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "$$REDIS_PASSWORD", "ping"]
       interval: 5s

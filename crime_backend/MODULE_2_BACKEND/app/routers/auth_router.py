@@ -5,6 +5,7 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 from app.core.database import get_db
+from app.core.config import settings
 from app.core.security import get_current_user
 from app.core.redis_connection import blacklist_token
 from app.services.auth_service import authenticate_user, create_user_token
@@ -35,7 +36,7 @@ async def login(request: Request, response: Response, body: LoginRequest, db: As
         value=token_data["auth_token"],
         httponly=True,
         samesite="lax",
-        secure=False, # True if using HTTPS
+        secure=settings.ENVIRONMENT == "production",
         max_age=token_data["expires_in"]
     )
     
@@ -47,7 +48,12 @@ async def login(request: Request, response: Response, body: LoginRequest, db: As
 async def logout(response: Response, current_user=Depends(get_current_user)):
     """Invalidate the current JWT token and delete the cookie"""
     await blacklist_token(current_user["token"])
-    response.delete_cookie(key="auth_token", httponly=True, samesite="lax", secure=False)
+    response.delete_cookie(
+        key="auth_token",
+        httponly=True,
+        samesite="lax",
+        secure=settings.ENVIRONMENT == "production",
+    )
     return {"success": True, "message": "Logged out successfully"}
 
 @router.get("/verify-token")

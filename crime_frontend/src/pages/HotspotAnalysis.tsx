@@ -62,6 +62,9 @@ const HotspotAnalysis: React.FC = () => {
   const handleExport = async () => {
     const queryParams = new URLSearchParams({ file_format: "csv" });
     if (district !== "All Districts") queryParams.append("district_id", district);
+    if (crimeType !== "All") queryParams.append("crime_type", crimeType);
+    if (dateFrom) queryParams.append("date_from", dateFrom);
+    if (dateTo) queryParams.append("date_to", dateTo);
     const { downloadAuthenticated } = await import("../utils/buildApiUrl");
     await downloadAuthenticated("/hotspots/clusters", Object.fromEntries(queryParams.entries()));
   };

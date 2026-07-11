@@ -241,6 +241,25 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNo
 
   useEffect(() => {
     if (!containerRef.current) return;
+    const el = containerRef.current;
+    const ro = new ResizeObserver(() => {
+      if (cyRef.current) {
+        cyRef.current.resize();
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      cyRef.current?.destroy();
+      cyRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
     const currentIds = new Set(nodes.map(n => n.node_id));
 
     if (!cyRef.current) {
