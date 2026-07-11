@@ -55,16 +55,23 @@ async def init_gemini_models():
     if not keys:
         logger.warning("No Gemini API keys found for dynamic model discovery.")
         return
-        
+    valid_models = []
+    for key in keys:
+        try:
+            genai.configure(api_key=key)
+            models = genai.list_models()
+            valid_models = [
+                m.name for m in models 
+                if 'generateContent' in m.supported_generation_methods 
+                and 'gemini' in m.name.lower()
+            ]
+            if valid_models:
+                break # Successfully fetched models, break the loop
+        except Exception as e:
+            logger.warning(f"Failed to fetch Gemini models with key: {e}. Trying next key...")
+            continue
+            
     try:
-        genai.configure(api_key=keys[0])
-        models = genai.list_models()
-        valid_models = [
-            m.name for m in models 
-            if 'generateContent' in m.supported_generation_methods 
-            and 'gemini' in m.name.lower()
-        ]
-        
         # Sort using the ranking heuristic
         valid_models.sort(key=_rank_model, reverse=True)
         
@@ -76,7 +83,7 @@ async def init_gemini_models():
             logger.warning("No compatible Gemini models discovered. Will fallback to default model.")
             
     except Exception as e:
-        logger.error(f"Failed to fetch Gemini models at startup: {e}")
+        logger.error(f"Failed to rank Gemini models at startup: {e}")
 
 def get_next_key_and_model() -> tuple[Optional[str], Optional[str]]:
     """Get the next API key and Model using round-robin"""

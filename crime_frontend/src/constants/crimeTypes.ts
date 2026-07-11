@@ -47,7 +47,6 @@ export const NODE_TYPES = [
   "criminal",
   "victim",
   "location",
-  "organization",
 ] as const;
 export type NodeType = (typeof NODE_TYPES)[number];
 

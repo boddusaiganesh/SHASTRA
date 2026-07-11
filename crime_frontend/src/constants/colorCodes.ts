@@ -35,7 +35,6 @@ export const NODE_COLORS: Record<string, string> = {
   criminal: "#EF4444",
   victim: "#3B82F6",
   location: "#22C55E",
-  organization: "#a855f7",
 };
 
 export const CHART_COLORS = [

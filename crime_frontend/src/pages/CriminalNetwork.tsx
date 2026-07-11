@@ -27,7 +27,6 @@ const nodeTypeIcons: Record<string, React.FC<{ className?: string }>> = {
   criminal: Users,
   victim: Users,
   location: MapPin,
-  organization: Building,
 };
 
 const CriminalNetwork: React.FC = () => {

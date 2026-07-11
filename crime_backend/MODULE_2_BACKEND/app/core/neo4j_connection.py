@@ -247,8 +247,6 @@ def normalize_node(raw_node: dict, labels: list[str], eid: str = None) -> dict:
         node_type, color = "victim", "#3b82f6"
     elif "Location" in labels or raw_node.get("location_id"):
         node_type, color = "location", "#22c55e"
-    elif "Organization" in labels or raw_node.get("org_id"):
-        node_type, color = "organization", "#a855f7"
     else:
         node_type, color = "criminal", "#ef4444"
 
@@ -286,7 +284,6 @@ async def get_network_graph(
         "criminal": "Criminal",
         "victim": "Victim",
         "location": "Location",
-        "organization": "Organization",
     }
     
     root_labels = [label_map[node_type]] if node_type in label_map else list(label_map.values())
