@@ -1,5 +1,6 @@
 import api from './api';
 import { ENDPOINTS } from '../constants/apiEndpoints';
+import { evidenceService } from './evidenceService';
 
 const normalizeHotspot = (h: any) => {
   if (!h) return null;
@@ -125,7 +126,7 @@ export const crimeService = {
         }));
         return { byHour, byDay, byMonth };
       }
-      return { byHour: mockTimePatternData, byDay: mockDayPatternData, byMonth: mockMonthPatternData };
+      return { byHour: [], byDay: [], byMonth: [] };
     } catch (error) {
       throw error;
     }

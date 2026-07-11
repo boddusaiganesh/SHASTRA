@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo, useRef } from "react";
 import { motion } from "framer-motion";
-import { Network, AlertTriangle, Search, ChevronRight, Users, MapPin, Building, Brain, ChevronLeft, Grid, Loader2 } from "lucide-react";
+import { Network, AlertTriangle, Search, ChevronRight, Users, MapPin, Brain, ChevronLeft, Grid, Loader2 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import AIMarkdown from "../components/common/AIMarkdown";
 import { useDistricts } from "../hooks/useDistricts";
