@@ -21,6 +21,8 @@ const ReportsPage: React.FC = () => {
   const [savedReports, setSavedReports] = useState<SavedReport[]>([]);
   const [reportType, setReportType] = useState(REPORT_TYPES[0].value);
   const [district, setDistrict] = useState("All Districts");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const districts = useDistricts();
   const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -43,6 +45,8 @@ const ReportsPage: React.FC = () => {
     try {
       const params: Record<string, string> = { report_type: reportType };
       if (district !== "All Districts") params.district_id = district;
+      if (dateFrom) params.date_from = dateFrom;
+      if (dateTo) params.date_to = dateTo;
       const result = await reportService.generateReport(params);
       if (result) {
         setSavedReports((prev) => [result as unknown as SavedReport, ...prev]);
@@ -114,6 +118,24 @@ const ReportsPage: React.FC = () => {
                 <option key={d.district_id} value={d.district_id}>{d.district_name}</option>
               ))}
             </select>
+          </div>
+          <div className="flex-1">
+            <label className="block text-xs text-slate-400 mb-1">From Date</label>
+            <input 
+              type="date" 
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="w-full bg-slate-900 border border-slate-600 text-slate-200 text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:border-blue-500 [color-scheme:dark]"
+            />
+          </div>
+          <div className="flex-1">
+            <label className="block text-xs text-slate-400 mb-1">To Date</label>
+            <input 
+              type="date" 
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="w-full bg-slate-900 border border-slate-600 text-slate-200 text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:border-blue-500 [color-scheme:dark]"
+            />
           </div>
           <button
             onClick={handleGenerate}

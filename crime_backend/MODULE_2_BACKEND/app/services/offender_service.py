@@ -4,13 +4,12 @@ Offender Service - Profile management and MO analysis
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_, func, desc
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 import uuid
 import logging
 
 from app.models.database_models.offender_model import Offender
 from app.models.database_models.crime_model import Crime, CrimeOffenderLink, District
-from app.core.redis_connection import cache_get, cache_set
 
 logger = logging.getLogger(__name__)
 
@@ -221,7 +220,6 @@ async def get_modus_operandi(
                 weapons_used[w] += 1
     
     # Determine preferred time of day
-    from app.core.config import TIME_OF_DAY
     time_category_counts = {"MORNING": 0, "AFTERNOON": 0, "EVENING": 0, "NIGHT": 0}
     for hour_str, count in time_patterns.items():
         try:

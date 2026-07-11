@@ -401,7 +401,7 @@ const CriminalNetwork: React.FC = () => {
             />
           </div>
           <div className="flex items-center gap-1.5">
-            {[["all", "All Nodes"], ["criminal", "Criminals"], ["victim", "Victims"], ["location", "Locations"], ["organization", "Orgs"]].map(([val, label]) => (
+            {[["all", "All Nodes"], ["criminal", "Criminals"], ["victim", "Victims"], ["location", "Locations"]].map(([val, label]) => (
               <button
                 key={val}
                 onClick={() => setNodeTypeFilter(val)}
@@ -467,7 +467,7 @@ const CriminalNetwork: React.FC = () => {
             <span className="text-xs text-slate-500 ml-2">{filteredNodes.length} nodes • {edges.length} connections</span>
           </div>
           <div className="ml-auto flex items-center gap-3">
-            {[["criminal", "Criminals"], ["victim", "Victims"], ["location", "Locations"], ["organization", "Organizations"]].map(([type, label]) => (
+            {[["criminal", "Criminals"], ["victim", "Victims"], ["location", "Locations"]].map(([type, label]) => (
               <div key={type} className="flex items-center gap-1.5">
                 <div className="h-3 w-3 rounded-full" style={{ background: NODE_COLORS[type] }} />
                 <span className="text-xs text-slate-400">{label}</span>

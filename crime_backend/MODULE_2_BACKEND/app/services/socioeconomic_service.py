@@ -134,7 +134,6 @@ async def calculate_correlations(
         else:
             insight = f"Weak correlation - {factor_name.replace('_', ' ')} shows minimal direct impact on crime rate"
         
-        from app.core.config import CRIME_TYPES
         correlations.append({
             "factor_name": factor_name.replace("_", " ").title(),
             "correlation_score": round(corr, 3),

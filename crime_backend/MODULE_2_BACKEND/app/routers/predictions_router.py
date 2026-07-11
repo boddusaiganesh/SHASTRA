@@ -21,12 +21,18 @@ router = APIRouter()
 
 @router.get("/risk-map")
 @limiter.limit("30/minute")
-async def risk_map(request: Request, db: AsyncSession = Depends(get_db), current_user=Depends(get_current_user)):
-    district_id = None
-    if current_user["role"] == "DISTRICT_OFFICER":
-        district_id = current_user.get("district_id")
+async def risk_map(
+    request: Request,
+    district_id: Optional[str] = Query(None),
+    date_from: Optional[str] = Query(None),
+    date_to: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_db), 
+    current_user=Depends(get_current_user)
+):
+    resolved_id = await resolve_district_id(db, district_id)
+    district_id = scope_district_param(resolved_id, current_user)
         
-    data = await get_risk_map(db, district_id=district_id)
+    data = await get_risk_map(db, district_id=district_id, date_from=date_from, date_to=date_to)
     return {"success": True, "data": data}
 
 @router.get("/high-risk-areas")
@@ -34,13 +40,15 @@ async def risk_map(request: Request, db: AsyncSession = Depends(get_db), current
 async def high_risk_areas(
     request: Request,
     district_id: Optional[str] = Query(None),
+    date_from: Optional[str] = Query(None),
+    date_to: Optional[str] = Query(None),
     days_ahead: int = Query(7, le=30),
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
     resolved_id = await resolve_district_id(db, district_id)
     district_id = scope_district_param(resolved_id, current_user)
-    data = await get_high_risk_areas(db, days_ahead, district_id)
+    data = await get_high_risk_areas(db, days_ahead, district_id, date_from=date_from, date_to=date_to)
     return {"success": True, "data": data}
 
 @router.get("/forecast")
@@ -49,13 +57,15 @@ async def forecast(
     request: Request,
     district_id: Optional[str] = Query(None),
     crime_type: Optional[str] = Query(None),
+    date_from: Optional[str] = Query(None),
+    date_to: Optional[str] = Query(None),
     days_ahead: int = Query(30, le=90),
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
     resolved_id = await resolve_district_id(db, district_id)
     district_id = scope_district_param(resolved_id, current_user)
-    data = await get_crime_forecast(db, district_id, crime_type, days_ahead)
+    data = await get_crime_forecast(db, district_id, crime_type, days_ahead, date_from=date_from, date_to=date_to)
     return {"success": True, "data": data}
 
 @router.get("/emerging-typologies")
@@ -63,12 +73,14 @@ async def forecast(
 async def emerging_typologies(
     request: Request,
     district_id: Optional[str] = Query(None),
+    date_from: Optional[str] = Query(None),
+    date_to: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
     resolved_id = await resolve_district_id(db, district_id)
     district_id = scope_district_param(resolved_id, current_user)
-    data = await get_emerging_typologies(db, district_id)
+    data = await get_emerging_typologies(db, district_id, date_from=date_from, date_to=date_to)
     return {"success": True, "data": data}
 
 @router.get("/socioeconomic-correlation")

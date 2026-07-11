@@ -1,6 +1,6 @@
 import logging
 from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import datetime, date, timezone
+from datetime import date
 import uuid
 import random
 

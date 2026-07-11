@@ -376,7 +376,7 @@ def _identify_behavioral_signatures(
     # Repeat jurisdiction
     districts = Counter([c.get("district_id", "") for c in crimes if c.get("district_id")])
     if districts and districts.most_common(1)[0][1] >= len(crimes) * 0.6:
-        signatures.append(f"Strongly territorial - operates primarily in home district")
+        signatures.append("Strongly territorial - operates primarily in home district")
     
     return signatures
 

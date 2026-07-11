@@ -1,7 +1,4 @@
-import { flagMockDataUsed } from '../utils/mockDataFlag';
 import api from "./api";
-import { ENDPOINTS } from "../constants/apiEndpoints";
-import { mockSavedReports } from "./mockData";
 
 export const reportService = {
   generateReport: async (params: Record<string, string>) => {
@@ -15,11 +12,7 @@ export const reportService = {
         `${ENDPOINTS.REPORTS.GENERATE}?${new URLSearchParams(queryParams).toString()}`
       );
       return res.data?.data || res.data;
-    } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') {
-      flagMockDataUsed();
-        return {
-          report_id: `RPT_${Date.now()}`,
+    } catch (error) {`,
           report_type: params.report_type,
           status: "Ready",
           generated_at: new Date().toISOString(),
@@ -33,7 +26,6 @@ export const reportService = {
       const res = await api.get(ENDPOINTS.REPORTS.SAVED_LIST, { params: { page, limit: pageSize } });
       return res.data?.data || res.data;
     } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockSavedReports; }
       throw error;
     }
   },

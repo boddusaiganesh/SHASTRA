@@ -4,7 +4,7 @@ Alert Service - Alert management and generation
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, func, desc, or_, update
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 from datetime import datetime, timezone, timedelta
 import uuid
 import logging
@@ -32,7 +32,7 @@ async def get_alert_list(
     conditions = []
     
     if filter_type == "UNREAD":
-        conditions.append(Alert.is_read == False)
+        conditions.append(not Alert.is_read)
     elif filter_type == "CRITICAL":
         conditions.append(Alert.severity == "CRITICAL")
     
@@ -55,7 +55,7 @@ async def get_alert_list(
     total_count = total_result.scalar() or 0
     
     unread_result = await db.execute(
-        select(func.count(Alert.alert_id)).where(Alert.is_read == False)
+        select(func.count(Alert.alert_id)).where(not Alert.is_read)
     )
     unread_count = unread_result.scalar() or 0
     
@@ -247,7 +247,6 @@ async def detect_and_generate_alerts(db: AsyncSession):
             )
         )
         baseline_total = baseline_result.scalar() or 0
-        daily_average = baseline_total / 30
         previous_count = baseline_total / 30
         
         # Check for spike
@@ -294,6 +293,8 @@ async def detect_and_generate_alerts(db: AsyncSession):
 async def get_active_alerts(
     db: AsyncSession,
     district_id: Optional[str] = None,
+    severity: Optional[str] = None,
+    alert_type: Optional[str] = None,
     page: int = 1,
     page_size: int = 20,
 ) -> Dict[str, Any]:
@@ -302,6 +303,10 @@ async def get_active_alerts(
     conditions = [or_(Alert.expires_at.is_(None), Alert.expires_at >= now)]
     if district_id:
         conditions.append(or_(Alert.district_id == district_id, Alert.target_district == "ALL"))
+    if severity and severity != "ALL":
+        conditions.append(Alert.severity == severity)
+    if alert_type and alert_type != "ALL":
+        conditions.append(Alert.alert_type == alert_type)
 
     total_count_query = select(func.count(Alert.alert_id)).where(and_(*conditions))
     total_result = await db.execute(total_count_query)
@@ -313,7 +318,7 @@ async def get_active_alerts(
     alerts = result.scalars().all()
 
     unread_result = await db.execute(
-        select(func.count(Alert.alert_id)).where(and_(*conditions, Alert.is_read == False))
+        select(func.count(Alert.alert_id)).where(and_(*conditions, not Alert.is_read))
     )
     
     all_districts = await db.execute(select(District))

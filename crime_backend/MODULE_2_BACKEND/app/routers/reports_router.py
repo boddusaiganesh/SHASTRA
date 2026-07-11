@@ -5,7 +5,7 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 from app.core.database import get_db
-from app.core.security import get_current_user, require_role, scope_district_param
+from app.core.security import get_current_user, require_role
 from app.services.report_service import (
     generate_report,
     get_saved_reports,

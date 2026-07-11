@@ -185,16 +185,12 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         if settings.ENVIRONMENT == "production":
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
 
-        if request.url.path in ("/docs", "/redoc"):
+        if request.url.path in ("/docs", "/redoc") or request.url.path == "/openapi.json":
             response.headers["Content-Security-Policy"] = (
                 "default-src 'self'; "
                 "script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; "
                 "style-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; "
                 "img-src 'self' data: https://fastapi.tiangolo.com"
-            )
-        else:
-            response.headers["Content-Security-Policy"] = (
-                f"default-src 'self'; connect-src 'self' {settings.FRONTEND_URL}"
             )
         return response
 

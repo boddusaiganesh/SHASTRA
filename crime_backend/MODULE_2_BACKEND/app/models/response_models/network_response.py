@@ -3,7 +3,7 @@ Network Analysis Response Models
 """
 
 from pydantic import BaseModel
-from typing import Optional, List, Any
+from typing import List
 
 
 class NetworkNode(BaseModel):

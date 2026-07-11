@@ -77,6 +77,7 @@ async def sync_data():
                 "status": off.status,
                 "district_id": off.district_id,
                 "crime_types": off_crime_types,
+                "known_associates": off.known_associates or [],
             })
         print(f"Synced {len(offenders)} offenders.")
 
@@ -149,7 +150,29 @@ async def sync_data():
                             crime_type=crime.crime_type
                         )
                         vo_count += 1
-        print(f"Created {vo_count} victim-offender relationships.")
+    print(f"Created {vo_count} victim-offender relationships.")
+
+    print("Creating criminal-location relationships...")
+    from app.core.neo4j_connection import create_location_relationship
+
+    # Map each crime to its location (if any) so we can link offenders -> locations
+    crime_to_location = {str(c.crime_id): str(c.location_id) for c in crimes if c.location_id}
+
+    loc_rel_count = 0
+    for cid, loc_id in crime_to_location.items():
+        crime = crime_map.get(cid)
+        if not crime or cid not in crime_to_offenders:
+            continue
+        for oid in crime_to_offenders[cid]:
+            await create_location_relationship(
+                offender_id=oid,
+                location_id=loc_id,
+                relationship_type="FREQUENTED",
+                crime_ids=[cid],
+                crime_types=[crime.crime_type] if crime.crime_type else []
+            )
+            loc_rel_count += 1
+    print(f"Created {loc_rel_count} criminal-location relationships.")
 
     await close_neo4j()
     print("Sync complete.")

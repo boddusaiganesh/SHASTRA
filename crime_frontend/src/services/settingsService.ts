@@ -1,7 +1,4 @@
-import { flagMockDataUsed } from '../utils/mockDataFlag';
 import api from "./api";
-import { ENDPOINTS } from "../constants/apiEndpoints";
-import { mockUsers, mockDataSources, mockAlertThresholds } from "./mockData";
 
 export const settingsService = {
   getUsers: async (page: number = 1, pageSize: number = 20) => {
@@ -9,7 +6,6 @@ export const settingsService = {
       const res = await api.get(ENDPOINTS.SETTINGS.USERS, { params: { page, page_size: pageSize } });
       return res.data?.data || res.data;
     } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockUsers; }
       throw error;
     }
   },
@@ -17,8 +13,7 @@ export const settingsService = {
     try {
       const res = await api.post(ENDPOINTS.SETTINGS.USERS_ADD, user);
       return res.data;
-    } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return { user: { ...user, user_id: "mock-id-" + Math.random().toString(36).substring(2, 11) } }; }
+    } catch (error) { }; }
       throw error;
     }
   },
@@ -27,7 +22,6 @@ export const settingsService = {
       const res = await api.get(ENDPOINTS.SETTINGS.DISTRICTS);
       return res.data?.data || res.data || [];
     } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return []; }
       throw error;
     }
   },
@@ -36,7 +30,6 @@ export const settingsService = {
       const res = await api.get(ENDPOINTS.SETTINGS.ALERT_THRESHOLDS);
       return res.data?.data || res.data;
     } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockAlertThresholds; }
       throw error;
     }
   },
@@ -44,8 +37,7 @@ export const settingsService = {
     try {
       const res = await api.put(ENDPOINTS.SETTINGS.ALERT_THRESHOLDS, thresholds);
       return res.data?.data || res.data;
-    } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return { success: true, thresholds }; }
+    } catch (error) {; }
       throw error;
     }
   },
@@ -60,7 +52,6 @@ export const settingsService = {
         { name: "Gemini AI", type: "AI Engine", status: "Active", last_sync: "On-demand", source_id: "gemini" },
       ];
     } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return mockDataSources; }
       throw error;
     }
   },
@@ -68,10 +59,7 @@ export const settingsService = {
     try {
       const res = await api.post(ENDPOINTS.SETTINGS.DATASOURCE_SYNC(sourceId));
       return res.data;
-    } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') {
-        flagMockDataUsed();
-        return { status: "success", message: `Synced ${sourceId}` };
+    } catch (error) {` };
       }
       throw error;
     }
@@ -81,7 +69,6 @@ export const settingsService = {
       const res = await api.get(ENDPOINTS.SETTINGS.AUDIT_LOGS, { params: { page, page_size: pageSize } });
       return res.data?.data || res.data || [];
     } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') { flagMockDataUsed(); return []; }
       throw error;
     }
   },

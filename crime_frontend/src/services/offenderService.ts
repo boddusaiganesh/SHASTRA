@@ -1,7 +1,4 @@
-import { flagMockDataUsed } from '../utils/mockDataFlag';
 import api from "./api";
-import { ENDPOINTS } from "../constants/apiEndpoints";
-import { mockOffenders } from "./mockData";
 
 const normalizeOffender = (o: any) => {
   if (!o) return null;
@@ -44,15 +41,7 @@ export const offenderService = {
         ...data,
         offenders: list.map(normalizeOffender).filter(Boolean)
       };
-    } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') {
-        flagMockDataUsed();
-        const filtered = mockOffenders.filter((o: any) => 
-          (!query || o.offender_name?.toLowerCase().includes(query.toLowerCase())) &&
-          (!filters?.district_id || o.district === filters.district_id) &&
-          (!filters?.crime_type || o.primary_crime_type === filters.crime_type)
-        ).map(normalizeOffender).filter(Boolean);
-        return { offenders: filtered, total_count: filtered.length };
+    } catch (error) {;
       }
       throw error;
     }
@@ -62,10 +51,6 @@ export const offenderService = {
       const res = await api.get(ENDPOINTS.OFFENDERS.PROFILE(id));
       return normalizeOffender(res.data?.data || res.data);
     } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') {
-      flagMockDataUsed();
-        return normalizeOffender(mockOffenders.find((o: any) => o.offender_id === id));
-      }
       throw error;
     }
   },
@@ -92,9 +77,6 @@ export const offenderService = {
       }
       return null;
     } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') {
-        return null;
-      }
       throw error;
     }
   },
@@ -103,9 +85,6 @@ export const offenderService = {
       const res = await api.get(ENDPOINTS.OFFENDERS.RISK(id));
       return res.data?.data || res.data;
     } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') {
-        return null;
-      }
       throw error;
     }
   },
@@ -114,9 +93,6 @@ export const offenderService = {
       const res = await api.get(ENDPOINTS.OFFENDERS.NETWORK(id));
       return res.data?.data || res.data;
     } catch (error) {
-      if (import.meta.env.VITE_DEMO_MODE === 'true') {
-        return null;
-      }
       throw error;
     }
   },

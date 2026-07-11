@@ -4,9 +4,7 @@ Called by the scheduler for periodic model updates
 """
 
 import logging
-import os
 from datetime import date, timedelta
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +62,7 @@ async def retrain_risk_scoring_model(db) -> str:
             select(func.count(Hotspot.hotspot_id)).where(
                 and_(
                     Hotspot.district_id == district.district_id,
-                    Hotspot.is_active == True,
+                    Hotspot.is_active,
                 )
             )
         )

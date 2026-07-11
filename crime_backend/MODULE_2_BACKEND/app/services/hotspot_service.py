@@ -26,13 +26,13 @@ async def get_hotspot_clusters(
 ) -> Dict[str, Any]:
     """Get crime hotspot clusters"""
     
-    cache_key = f"hotspot_clusters:{district_id}:{crime_type}:{date_from}:{date_to}"
+    cache_key = f"hotspot_clusters:{district_id}:{crime_type}:{date_from}:{date_to}:{page}:{page_size}"
     cached = await cache_get(cache_key)
     if cached:
         return cached
     
     # Try to get from DB first
-    query = select(Hotspot).where(Hotspot.is_active == True)
+    query = select(Hotspot).where(Hotspot.is_active)
     if district_id:
         query = query.where(Hotspot.district_id == district_id)
     
@@ -225,7 +225,7 @@ async def get_top_hotspots(
 ) -> List[Dict[str, Any]]:
     """Get top N hotspots ranked by risk score"""
     
-    query = select(Hotspot).where(Hotspot.is_active == True)
+    query = select(Hotspot).where(Hotspot.is_active)
     if district_id:
         query = query.where(Hotspot.district_id == district_id)
     
@@ -260,7 +260,7 @@ async def get_deployment_suggestions(
     from app.services.gemini_service import get_deployment_suggestions_ai
     
     # Get active hotspots for district
-    query = select(Hotspot).where(Hotspot.is_active == True)
+    query = select(Hotspot).where(Hotspot.is_active)
     if district_id and district_id != "ALL":
         query = query.where(Hotspot.district_id == district_id)
         

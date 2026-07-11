@@ -56,7 +56,6 @@ async def verify_token(current_user=Depends(get_current_user)):
     return {
         "success": True, 
         "data": {
-            "auth_token": current_user["token"],
             "user_id": current_user["user_id"],
             "user_name": current_user["username"],
             "user_role": current_user["role"],

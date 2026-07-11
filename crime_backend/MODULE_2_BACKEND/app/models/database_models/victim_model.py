@@ -2,7 +2,7 @@
 Victim Database Model - PostgreSQL Table: victims
 """
 
-from sqlalchemy import Column, String, Boolean, DateTime, JSON, Integer, Date, Text, ForeignKey
+from sqlalchemy import Column, String, DateTime, JSON, Integer, Date, Text, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from datetime import datetime, timezone
 import uuid

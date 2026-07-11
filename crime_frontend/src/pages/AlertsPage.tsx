@@ -18,12 +18,12 @@ const AlertsPage: React.FC = () => {
 
   const load = async () => {
     setLoading(true);
-    const data = await alertService.getAlerts(page, pageSize);
+    const data = await alertService.getAlerts(page, pageSize, severityFilter, typeFilter);
     dispatch(setAlerts(data));
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, [page]);
+  useEffect(() => { load(); }, [page, severityFilter, typeFilter]);
 
   const handleMarkRead = async (id: string) => {
     await alertService.markRead(id);
@@ -45,11 +45,7 @@ const AlertsPage: React.FC = () => {
     );
   };
 
-  const filtered = (alerts as { severity: string; alert_type: string }[]).filter((a) => {
-    if (severityFilter !== "All" && a.severity !== severityFilter) return false;
-    if (typeFilter !== "All" && a.alert_type !== typeFilter) return false;
-    return true;
-  });
+  // Removed local filtering, handled by backend
 
   const alertTypes = Array.from(new Set((alerts as { alert_type: string }[]).map((a) => a.alert_type)));
 
@@ -110,11 +106,11 @@ const AlertsPage: React.FC = () => {
       {/* Alerts List */}
       <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 overflow-x-auto custom-scrollbar">
         <AlertsTable
-          alerts={filtered as any}
+          alerts={alerts as any}
           onMarkRead={handleMarkRead}
           onDismiss={handleDismiss}
         />
-        {filtered.length === 0 && (
+        {alerts.length === 0 && (
           <div className="text-center py-8 text-slate-500">No alerts match the current filter.</div>
         )}
         

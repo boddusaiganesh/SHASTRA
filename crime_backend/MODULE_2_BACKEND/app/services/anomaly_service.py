@@ -11,7 +11,6 @@ import logging
 
 from app.models.database_models.anomaly_model import Anomaly
 from app.models.database_models.crime_model import Crime, District
-from app.core.redis_connection import cache_get, cache_set
 
 logger = logging.getLogger(__name__)
 
@@ -159,7 +158,7 @@ async def get_anomaly_detail(
         timeline.append({
             "event": "Anomaly Detected",
             "timestamp": anomaly.detected_at.isoformat(),
-            "description": f"Anomaly automatically detected by ML model",
+            "description": "Anomaly automatically detected by ML model",
         })
     if anomaly.status == "UNDER_REVIEW":
         timeline.append({

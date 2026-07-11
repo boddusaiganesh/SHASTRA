@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import List, Dict, Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.models.database_models.crime_model import Crime, District, PoliceStation
+from app.models.database_models.crime_model import Crime
 from app.models.database_models.offender_model import Offender
 from app.models.database_models.victim_model import Victim
 
@@ -85,7 +85,6 @@ async def _import_crime(db: AsyncSession, data: dict, user_id: str):
     db.add(crime)
 
 async def _import_offender(db: AsyncSession, data: dict):
-    from datetime import date
     try:
         dob_str = data.get("date_of_birth", "")
         dob = datetime.strptime(dob_str.split("T")[0], "%Y-%m-%d").date() if dob_str else None
@@ -113,7 +112,6 @@ async def _import_offender(db: AsyncSession, data: dict):
     db.add(offender)
 
 async def _import_victim(db: AsyncSession, data: dict):
-    from datetime import date
     try:
         dob_str = data.get("date_of_birth", "")
         dob = datetime.strptime(dob_str.split("T")[0], "%Y-%m-%d").date() if dob_str else None

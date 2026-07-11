@@ -1,11 +1,10 @@
-from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, status, Request
+from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Optional
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 from app.core.database import get_db
-from app.core.security import get_current_user, require_role
+from app.core.security import require_role
 from app.services.import_service import parse_and_import_csv, parse_and_import_json
 
 limiter = Limiter(key_func=get_remote_address)

@@ -137,7 +137,7 @@ async def generate_report(
         report_data["repeat_offenders"] = repeat_result.scalar() or 0
     
     if report_type == "HOTSPOT":
-        hotspot_query = select(Hotspot).where(Hotspot.is_active == True)
+        hotspot_query = select(Hotspot).where(Hotspot.is_active)
         if district_id:
             hotspot_query = hotspot_query.where(Hotspot.district_id == district_id)
         

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 from slowapi import Limiter
@@ -123,7 +123,7 @@ async def expand_node(
         results = await run_neo4j_query(query, {"id": node_id})
         if not results:
             return {"success": True, "data": {"nodes": [], "edges": []}}
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE, 
             detail="Node expansion is currently not available in fallback mode (Neo4j is offline)."

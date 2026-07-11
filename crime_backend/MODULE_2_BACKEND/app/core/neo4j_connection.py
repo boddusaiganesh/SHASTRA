@@ -124,7 +124,8 @@ async def sync_offender_to_neo4j(offender_data: Dict[str, Any]):
         c.crime_count = $crime_count,
         c.status = $status,
         c.district_id = $district_id,
-        c.crime_types = $crime_types
+        c.crime_types = $crime_types,
+        c.known_associates = $known_associates
     RETURN c
     """
     await run_neo4j_query(query, offender_data)
@@ -214,6 +215,32 @@ async def create_victim_offender_relationship(offender_id: str, victim_id: str, 
         "crime_id": crime_id, "crime_types": [crime_type] if crime_type else []
     })
 
+async def create_location_relationship(
+    offender_id: str,
+    location_id: str,
+    relationship_type: str = "FREQUENTED",
+    crime_ids: list[str] = None,
+    crime_types: list[str] = None,
+):
+    """Link a criminal to a location where one of their crimes occurred."""
+    if relationship_type not in RELATIONSHIP_TYPES:
+        raise ValueError(f"Invalid relationship_type: {relationship_type}")
+    query = f"""
+    MATCH (c:Criminal {{offender_id: $offender_id}})
+    MATCH (l:Location {{location_id: $location_id}})
+    MERGE (c)-[r:{relationship_type}]->(l)
+    SET r.crime_ids = $crime_ids,
+        r.crime_types = $crime_types,
+        r.strength_score = 55,
+        r.confidence_level = 'SUSPECTED'
+    """
+    await run_neo4j_query(query, {
+        "offender_id": offender_id,
+        "location_id": location_id,
+        "crime_ids": crime_ids or [],
+        "crime_types": crime_types or [],
+    })
+
 
 def normalize_node(raw_node: dict, labels: list[str], eid: str = None) -> dict:
     if "Victim" in labels or raw_node.get("victim_id"):
@@ -277,7 +304,12 @@ async def get_network_graph(
         params["district_id"] = district_id
 
     if crime_type:
-        where_clauses.append("$crime_type IN n.crime_types")
+        where_clauses.append(
+            "("
+            "  $crime_type IN coalesce(n.crime_types, [])"
+            "  OR EXISTS { MATCH (n)-[rel]-() WHERE $crime_type IN coalesce(rel.crime_types, []) }"
+            ")"
+        )
         
     params["crime_type"] = crime_type if crime_type else None
     if "district_id" not in params:

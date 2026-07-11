@@ -4,15 +4,13 @@ Prediction Service - Risk scoring, forecasting, and predictive analytics
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_, desc
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 from datetime import datetime, timezone, date, timedelta
 import logging
 
 from app.models.database_models.crime_model import Crime, District
-from app.models.database_models.location_model import Hotspot, SocioeconomicData
-from app.models.database_models.prediction_model import Prediction
+from app.models.database_models.location_model import Hotspot
 from app.core.redis_connection import cache_get, cache_set
-from app.core.config import KARNATAKA_DISTRICTS
 
 logger = logging.getLogger(__name__)
 
@@ -27,11 +25,12 @@ RISK_COLORS = {
 async def get_risk_map(
     db: AsyncSession,
     district_id: Optional[str] = None,
-    date_target: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Get district-level risk scores for the map"""
     
-    cache_key = f"risk_map:{date_target}:{district_id}"
+    cache_key = f"risk_map:{district_id}:{date_from}:{date_to}"
     cached = await cache_get(cache_key)
     if cached:
         return cached
@@ -45,18 +44,21 @@ async def get_risk_map(
     districts = district_result.scalars().all()
     
     # Get recent predictions or calculate on the fly
-    from app.ml_models.risk_scoring import calculate_district_risk
     
     district_risks = []
     
     for district in districts:
         # Get crime count for this district in last 30 days
+        from datetime import datetime
         thirty_days_ago = date.today() - timedelta(days=30)
+        dt_from = datetime.fromisoformat(date_from).date() if date_from else thirty_days_ago
+        dt_to = datetime.fromisoformat(date_to).date() if date_to else date.today()
         crime_count_result = await db.execute(
             select(func.count(Crime.crime_id)).where(
                 and_(
                     Crime.district_id == district.district_id,
-                    Crime.date_of_occurrence >= thirty_days_ago,
+                    Crime.date_of_occurrence >= dt_from,
+                    Crime.date_of_occurrence <= dt_to,
                 )
             )
         )
@@ -67,7 +69,7 @@ async def get_risk_map(
             select(func.count(Hotspot.hotspot_id)).where(
                 and_(
                     Hotspot.district_id == district.district_id,
-                    Hotspot.is_active == True,
+                    Hotspot.is_active,
                 )
             )
         )
@@ -79,7 +81,8 @@ async def get_risk_map(
             .where(
                 and_(
                     Crime.district_id == district.district_id,
-                    Crime.date_of_occurrence >= thirty_days_ago,
+                    Crime.date_of_occurrence >= dt_from,
+                    Crime.date_of_occurrence <= dt_to,
                 )
             )
             .group_by(Crime.crime_type)
@@ -123,18 +126,18 @@ async def get_high_risk_areas(
     days_ahead: int = 7,
     district_id: Optional[str] = None,
     limit: int = 5,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Get predicted high-risk areas"""
-    from app.ml_models.risk_scoring import calculate_location_risk_scores
-    from app.services.gemini_service import get_prediction_recommended_action
     
-    cache_key = f"high_risk_areas:{days_ahead}:{district_id}:{limit}"
+    cache_key = f"high_risk_areas:{days_ahead}:{district_id}:{limit}:{date_from}:{date_to}"
     cached = await cache_get(cache_key)
     if cached:
         return cached
     
     # Get active hotspots as high-risk candidates
-    query = select(Hotspot).where(Hotspot.is_active == True)
+    query = select(Hotspot).where(Hotspot.is_active)
     if district_id:
         query = query.where(Hotspot.district_id == district_id)
     query = query.order_by(desc(Hotspot.risk_score)).limit(limit * 2)
@@ -202,11 +205,13 @@ async def get_crime_forecast(
     district_id: Optional[str] = None,
     crime_type: Optional[str] = None,
     days_ahead: int = 30,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Get crime count forecast using Prophet time series model"""
     from app.ml_models.crime_forecasting import forecast_crimes
     
-    cache_key = f"crime_forecast:{district_id}:{crime_type}:{days_ahead}"
+    cache_key = f"crime_forecast:{district_id}:{crime_type}:{days_ahead}:{date_from}:{date_to}"
     cached = await cache_get(cache_key)
     if cached:
         return cached
@@ -255,11 +260,13 @@ async def get_crime_forecast(
 async def get_emerging_typologies(
     db: AsyncSession,
     district_id: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Detect emerging crime typologies"""
     from app.services.gemini_service import get_emerging_typology_explanation
     
-    cache_key = f"emerging_typologies:{district_id}"
+    cache_key = f"emerging_typologies:{district_id}:{date_from}:{date_to}"
     cached = await cache_get(cache_key)
     if cached:
         return cached

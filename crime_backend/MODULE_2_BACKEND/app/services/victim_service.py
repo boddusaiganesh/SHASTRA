@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
-from typing import Optional, List, Dict, Any
+from typing import Optional, Dict, Any
 import uuid
 
 from app.models.database_models.victim_model import Victim

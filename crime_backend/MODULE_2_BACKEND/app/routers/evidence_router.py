@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 import os
@@ -22,13 +22,18 @@ async def list_evidence(
 ):
     from sqlalchemy import select
     from app.models.database_models.evidence_model import Evidence
+    from app.models.database_models.crime_model import Crime
+    from app.core.security import scope_district_filter
     
     try:
         uuid.UUID(crime_id)
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid crime_id")
         
-    result = await db.execute(select(Evidence).where(Evidence.crime_id == crime_id))
+    query = select(Evidence).join(Crime, Evidence.crime_id == Crime.crime_id).where(Evidence.crime_id == crime_id)
+    query = scope_district_filter(query, current_user, Crime.district_id)
+    
+    result = await db.execute(query)
     items = result.scalars().all()
     
     return {"success": True, "data": [
@@ -112,8 +117,13 @@ async def download_evidence(
 ):
     from sqlalchemy import select
     from app.models.database_models.evidence_model import Evidence
+    from app.models.database_models.crime_model import Crime
+    from app.core.security import scope_district_filter
 
-    result = await db.execute(select(Evidence).where(Evidence.evidence_id == evidence_id))
+    query = select(Evidence).join(Crime, Evidence.crime_id == Crime.crime_id).where(Evidence.evidence_id == evidence_id)
+    query = scope_district_filter(query, current_user, Crime.district_id)
+
+    result = await db.execute(query)
     item = result.scalar_one_or_none()
     if not item or not os.path.exists(item.file_path):
         raise HTTPException(status_code=404, detail="Evidence not found")

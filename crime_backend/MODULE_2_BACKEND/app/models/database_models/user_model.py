@@ -2,9 +2,8 @@
 User Database Model - PostgreSQL Table: users
 """
 
-from sqlalchemy import Column, String, Boolean, DateTime, JSON, ForeignKey, Text
+from sqlalchemy import Column, String, Boolean, DateTime, JSON
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
 import uuid
 

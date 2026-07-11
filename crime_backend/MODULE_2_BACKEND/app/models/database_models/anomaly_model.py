@@ -2,7 +2,7 @@
 Anomaly Database Model - PostgreSQL Table: anomalies
 """
 
-from sqlalchemy import Column, String, Boolean, DateTime, JSON, Float, Text, ForeignKey
+from sqlalchemy import Column, String, DateTime, JSON, Float, Text
 from sqlalchemy.dialects.postgresql import UUID
 from datetime import datetime, timezone
 import uuid

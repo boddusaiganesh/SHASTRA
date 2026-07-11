@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Body
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
-from typing import List, Any, Optional
+from sqlalchemy import select
+from typing import Optional
 import logging
 
 from app.core.database import get_db

@@ -25,7 +25,7 @@ async def authenticate_user(
     
     # Find user by username
     result = await db.execute(
-        select(User).where(User.username == username, User.is_active == True)
+        select(User).where(User.username == username, User.is_active)
     )
     user = result.scalar_one_or_none()
     
@@ -79,7 +79,6 @@ async def create_user_token(user_data: Dict[str, Any]) -> Dict[str, Any]:
 
 async def get_user_by_id(db: AsyncSession, user_id: str) -> Optional[Dict[str, Any]]:
     """Get a user by their ID"""
-    from sqlalchemy.dialects.postgresql import UUID as PG_UUID
     import uuid
     
     result = await db.execute(

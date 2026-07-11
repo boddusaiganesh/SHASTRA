@@ -70,7 +70,6 @@ The platform is fully dockerized for easy deployment. It includes PostgreSQL (Re
 ### 1. Start the Platform
 Ensure you have Docker and Docker Compose installed.
 ```bash
-cd crime_backend/MODULE_2_BACKEND
 docker compose up -d --build
 ```
 *The Frontend will be available at `http://localhost`*

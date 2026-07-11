@@ -3,13 +3,12 @@ Network Analysis Service - Criminal network and link analysis
 """
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
-from typing import Optional, Dict, Any, List
+from sqlalchemy import select
+from typing import Optional, Dict, Any
 from datetime import datetime, timezone
 import logging
-import uuid
 
-from app.core.neo4j_connection import get_network_graph, run_neo4j_query
+from app.core.neo4j_connection import get_network_graph
 from app.models.database_models.offender_model import Offender
 from app.core.redis_connection import cache_get, cache_set
 
@@ -235,6 +234,7 @@ async def build_network_from_postgres(
                     "status": offender.status,
                     "risk_level": offender.risk_level,
                     "district_id": offender.district_id,
+                    "known_associates": offender.known_associates or [],
                 },
             })
             offender_node_ids.add(node_id)
@@ -594,11 +594,13 @@ async def get_network_ai_summary(
     all_offenders = []
     for node in graph_data.get("nodes", []):
         if node.get("node_type") == "criminal" or node.get("node_type") == "Offender":
-            props = node.get("properties", {})
+            props = dict(node.get("profile_data", {}) or {})
             if props:
                 # Add full_name if missing but label exists
                 if "full_name" not in props and "label" in node:
                     props["full_name"] = node["label"]
+                if "risk_score" not in props and "risk_score" in node:
+                    props["risk_score"] = node["risk_score"]
                 all_offenders.append(props)
     
     # Find suspicious pairs (shared known associates) by checking all combinations

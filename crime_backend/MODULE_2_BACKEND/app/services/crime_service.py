@@ -3,9 +3,9 @@ Crime Service - Business logic for crime data operations
 """
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_, or_, extract, desc, asc
-from typing import Optional, List, Dict, Any
-from datetime import date, datetime, timezone
+from sqlalchemy import select, func, and_, or_, desc
+from typing import Optional, Dict, Any
+from datetime import datetime, timezone
 import uuid
 import logging
 

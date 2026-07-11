@@ -3,7 +3,7 @@ Risk Scoring - Random Forest Classifier for district and location risk assessmen
 """
 
 import numpy as np
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 import logging
 import os
 import joblib

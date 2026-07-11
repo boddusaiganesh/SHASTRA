@@ -2,7 +2,7 @@
 Prediction Database Model - PostgreSQL Table: predictions
 """
 
-from sqlalchemy import Column, String, Boolean, DateTime, JSON, Float, Integer, Date, Text
+from sqlalchemy import Column, String, Boolean, DateTime, JSON, Float, Date, Text
 from sqlalchemy.dialects.postgresql import UUID
 from datetime import datetime, timezone
 import uuid

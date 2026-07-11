@@ -17,6 +17,8 @@ router = APIRouter()
 @router.get("/active")
 async def active_alerts(
     district_id: Optional[str] = Query(None),
+    severity: Optional[str] = Query(None),
+    alert_type: Optional[str] = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
@@ -24,7 +26,7 @@ async def active_alerts(
 ):
     resolved_district = await resolve_district_id(db, district_id)
     effective_district = scope_district_param(resolved_district, current_user)
-    data = await get_active_alerts(db, effective_district, page, page_size)
+    data = await get_active_alerts(db, effective_district, severity, alert_type, page, page_size)
     return {"success": True, "data": data}
 
 @router.put("/{alert_id}/read")
@@ -72,7 +74,7 @@ async def websocket_endpoint(websocket: WebSocket):
         
         while True:
             # Keep connection alive
-            data = await websocket.receive_text()
+            await websocket.receive_text()
     except WebSocketDisconnect:
         from app.core.websocket import manager
         manager.disconnect(websocket)

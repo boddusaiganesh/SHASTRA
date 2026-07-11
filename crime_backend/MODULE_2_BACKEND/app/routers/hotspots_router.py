@@ -22,6 +22,9 @@ router = APIRouter()
 @limiter.limit("30/minute")
 async def hotspot_clusters(
     district_id: Optional[str] = Query(None),
+    crime_type: Optional[str] = Query(None),
+    date_from: Optional[str] = Query(None),
+    date_to: Optional[str] = Query(None),
     file_format: str = Query("json", enum=["json", "csv"]),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
@@ -30,7 +33,7 @@ async def hotspot_clusters(
 ):
     resolved_id = await resolve_district_id(db, district_id)
     district_id = scope_district_param(resolved_id, current_user)
-    data = await get_hotspot_clusters(db, district_id, None, None, None, page, page_size)
+    data = await get_hotspot_clusters(db, district_id, crime_type, date_from, date_to, page, page_size)
     
     if file_format == "csv":
         import csv

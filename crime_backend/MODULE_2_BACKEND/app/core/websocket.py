@@ -1,5 +1,4 @@
 from fastapi import WebSocket
-from typing import List
 import json
 
 class ConnectionManager:

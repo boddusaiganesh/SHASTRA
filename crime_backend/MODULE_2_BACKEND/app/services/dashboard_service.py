@@ -3,7 +3,7 @@ Dashboard Service - Summary statistics and trend data
 """
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_, or_, extract, desc
+from sqlalchemy import select, func, and_, or_, desc
 from typing import Optional, Dict, Any, List
 from datetime import datetime, timezone, timedelta, date
 import calendar
@@ -66,7 +66,7 @@ async def get_dashboard_summary(
     change_pct = round(((total_crimes_month - last_month_crimes) / last_month_crimes) * 100, 1)
     
     # Active hotspots
-    hotspot_query = select(func.count(Hotspot.hotspot_id)).where(Hotspot.is_active == True)
+    hotspot_query = select(func.count(Hotspot.hotspot_id)).where(Hotspot.is_active)
     if district_id:
         hotspot_query = hotspot_query.where(Hotspot.district_id == district_id)
     hotspot_result = await db.execute(hotspot_query)
@@ -74,7 +74,7 @@ async def get_dashboard_summary(
     
     # High risk areas (hotspots with HIGH risk level)
     high_risk_query = select(func.count(Hotspot.hotspot_id)).where(
-        and_(Hotspot.is_active == True, Hotspot.risk_level == "HIGH")
+        and_(Hotspot.is_active, Hotspot.risk_level == "HIGH")
     )
     if district_id:
         high_risk_query = high_risk_query.where(Hotspot.district_id == district_id)
@@ -91,7 +91,7 @@ async def get_dashboard_summary(
     repeat_offenders = repeat_result.scalar() or 0
     
     # Pending alerts
-    alert_query = select(func.count(Alert.alert_id)).where(Alert.is_read == False)
+    alert_query = select(func.count(Alert.alert_id)).where(not Alert.is_read)
     if district_id:
         alert_query = alert_query.where(
             or_(Alert.district_id == district_id, Alert.target_district == "ALL")

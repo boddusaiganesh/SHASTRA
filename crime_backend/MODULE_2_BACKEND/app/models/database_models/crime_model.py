@@ -3,10 +3,9 @@ Crime Database Model - PostgreSQL Table: crimes
 """
 
 from sqlalchemy import (
-    Column, String, Boolean, DateTime, JSON, Float, Integer, Date, Time, Text, ForeignKey
+    Column, String, Boolean, DateTime, JSON, Float, Integer, Date, Text, ForeignKey
 )
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
 import uuid
 

@@ -4,7 +4,7 @@ Detects unusual crime patterns that deviate from baseline
 """
 
 import numpy as np
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 from datetime import date, timedelta
 import logging
 
@@ -199,7 +199,7 @@ def classify_anomaly(
     count = data_point.get("total_count", 0)
     high_severity = data_point.get("high_severity_count", 0)
     crime_types = data_point.get("crime_types", [])
-    hour = data_point.get("hour_of_day", 12)
+    data_point.get("hour_of_day", 12)
     
     # Calculate baseline
     baseline_counts = [d.get("total_count", 0) for d in all_data]
@@ -225,29 +225,29 @@ def classify_anomaly(
         )
         evidence = [
             f"High severity count: {high_severity}",
-            f"Normal high severity: typically < 2",
+            "Normal high severity: typically < 2",
             f"Anomaly score: {anomaly_score:.3f}",
         ]
     elif len(set(crime_types)) > 5:
         anomaly_type = "UNUSUAL_PATTERN"
         description = (
-            f"Unusual diversity in crime types detected in a concentrated period, "
-            f"suggesting organized activity or multi-type criminal operation."
+            "Unusual diversity in crime types detected in a concentrated period, "
+            "suggesting organized activity or multi-type criminal operation."
         )
         evidence = [
             f"Crime types present: {', '.join(list(set(crime_types))[:5])}",
-            f"Diversity index: high",
+            "Diversity index: high",
             f"Anomaly score: {anomaly_score:.3f}",
         ]
     else:
         anomaly_type = "STATISTICAL_ANOMALY"
         description = (
-            f"Statistical anomaly detected. Crime patterns deviate significantly "
-            f"from established baseline for this district and time period."
+            "Statistical anomaly detected. Crime patterns deviate significantly "
+            "from established baseline for this district and time period."
         )
         evidence = [
             f"Anomaly score: {anomaly_score:.3f}",
-            f"Deviation from expected pattern",
+            "Deviation from expected pattern",
         ]
     
     return anomaly_type, description, evidence
@@ -257,10 +257,8 @@ async def run_full_anomaly_scan(db) -> List[Dict[str, Any]]:
     """
     Full anomaly detection scan - called by scheduler every hour
     """
-    from sqlalchemy.ext.asyncio import AsyncSession
     from sqlalchemy import select, func, and_
     from app.models.database_models.crime_model import Crime, District
-    from datetime import datetime, timezone
     
     logger.info("Starting full anomaly detection scan...")
     

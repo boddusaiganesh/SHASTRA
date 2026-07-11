@@ -2,7 +2,7 @@
 Alert Database Model - PostgreSQL Table: alerts
 """
 
-from sqlalchemy import Column, String, Boolean, DateTime, Text, ForeignKey
+from sqlalchemy import Column, String, Boolean, DateTime, Text
 from sqlalchemy.dialects.postgresql import UUID
 from datetime import datetime, timezone
 import uuid

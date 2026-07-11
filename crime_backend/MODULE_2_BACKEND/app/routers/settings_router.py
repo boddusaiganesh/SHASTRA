@@ -77,15 +77,30 @@ async def list_users(
     data = await get_all_users(db, page, page_size)
     return {"success": True, "data": data}
 
+from pydantic import BaseModel
+from sqlalchemy.exc import IntegrityError
+
+class CreateUserRequest(BaseModel):
+    username: str
+    password: str
+    role: str
+    district_id: Optional[str] = None
+    email: Optional[str] = None
+    full_name: Optional[str] = None
+
 @router.post("/users/add")
 async def add_user(
-    user_data: dict = Body(...),
+    user_data: CreateUserRequest = Body(...),
     db: AsyncSession = Depends(get_db),
     current_user=Depends(require_scrb_officer)
 ):
-    new_user = await create_user(db, user_data)
-    return {"success": True, "data": new_user}
-
+    try:
+        new_user = await create_user(db, user_data.dict())
+        return {"success": True, "data": new_user}
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    except IntegrityError:
+        raise HTTPException(status_code=409, detail="User already exists")
 @router.get("/alert-thresholds")
 async def get_alert_thresholds(
     db: AsyncSession = Depends(get_db),

@@ -2,7 +2,7 @@
 Report Database Model - PostgreSQL Table: reports
 """
 
-from sqlalchemy import Column, String, Boolean, DateTime, JSON, Date, Text
+from sqlalchemy import Column, String, DateTime, JSON, Date, Text
 from sqlalchemy.dialects.postgresql import UUID
 from datetime import datetime, timezone
 import uuid

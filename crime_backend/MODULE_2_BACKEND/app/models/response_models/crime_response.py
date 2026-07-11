@@ -3,8 +3,7 @@ Crime Response Pydantic Models
 """
 
 from pydantic import BaseModel
-from typing import Optional, List, Any
-from datetime import date, datetime
+from typing import Optional, List
 
 
 class CrimeMapItem(BaseModel):
