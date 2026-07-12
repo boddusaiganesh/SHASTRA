@@ -28,9 +28,9 @@ export const reportService = {
       throw error;
     }
   },
-  download: async (id: string) => {
+  download: async (id: string, format: string = "pdf") => {
     try {
-      const res = await api.get(ENDPOINTS.REPORTS.DOWNLOAD(id), { responseType: 'blob' });
+      const res = await api.get(`${ENDPOINTS.REPORTS.DOWNLOAD(id)}?format=${format}`, { responseType: 'blob' });
       return res.data;
     } catch {
       return null;

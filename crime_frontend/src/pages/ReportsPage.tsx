@@ -58,20 +58,20 @@ const ReportsPage: React.FC = () => {
     }
   };
 
-  const handleDownload = async (reportId: string) => {
+  const handleDownload = async (reportId: string, format: string = "pdf") => {
     try {
-      const blob = await reportService.download(reportId);
+      const blob = await reportService.download(reportId, format);
       if (blob) {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `Report_${reportId}.pdf`;
+        a.download = `Report_${reportId}.${format}`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
       } else {
-        setSuccessMsg(`Failed to download report ${reportId}.`);
+        setSuccessMsg(`Failed to download report ${reportId} as ${format.toUpperCase()}.`);
         setTimeout(() => setSuccessMsg(""), 4000);
       }
     } catch (error) {
@@ -179,10 +179,16 @@ const ReportsPage: React.FC = () => {
                   {report.status || "Ready"}
                 </span>
                 <button
-                  onClick={() => handleDownload(report.report_id)}
+                  onClick={() => handleDownload(report.report_id, 'pdf')}
                   className="flex items-center gap-1 px-3 py-1.5 text-xs text-blue-400 hover:text-blue-300 hover:bg-blue-900/20 rounded-lg transition-colors"
                 >
-                  <Download className="h-4 w-4" /> Download
+                  <Download className="h-4 w-4" /> PDF
+                </button>
+                <button
+                  onClick={() => handleDownload(report.report_id, 'csv')}
+                  className="flex items-center gap-1 px-3 py-1.5 text-xs text-blue-400 hover:text-blue-300 hover:bg-blue-900/20 rounded-lg transition-colors"
+                >
+                  <Download className="h-4 w-4" /> CSV
                 </button>
               </div>
             </div>

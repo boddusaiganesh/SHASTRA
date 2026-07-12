@@ -25,6 +25,9 @@ export default function CrimeDatabase() {
   const [selectedCrime, setSelectedCrime] = useState<string | null>(null);
   const [evidence, setEvidence] = useState<any[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [crimeToDelete, setCrimeToDelete] = useState<string | null>(null);
+
+  // Added missing dispatch/navigate variables if needed, though they aren't used for logout here
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 500);
@@ -74,9 +77,14 @@ export default function CrimeDatabase() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this crime record?")) return;
+    setCrimeToDelete(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!crimeToDelete) return;
     try {
-      await crimeService.remove(id);
+      await crimeService.remove(crimeToDelete);
+      setCrimeToDelete(null);
       await loadCrimes();
     } catch (e) {
       console.error(e);
@@ -241,6 +249,20 @@ export default function CrimeDatabase() {
                 {uploading ? "Uploading..." : "Upload File"}
                 <input type="file" className="hidden" onChange={handleFileUpload} disabled={uploading} />
               </label>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {crimeToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-slate-800 rounded-xl w-full max-w-sm shadow-2xl p-6 flex flex-col gap-4 text-center">
+            <AlertTriangle className="h-12 w-12 text-red-500 mx-auto" />
+            <h2 className="text-lg font-bold text-white">Delete Record?</h2>
+            <p className="text-sm text-slate-400">Are you sure you want to permanently delete this crime record? This action cannot be undone.</p>
+            <div className="flex justify-center gap-3 mt-2">
+              <button onClick={() => setCrimeToDelete(null)} className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors text-sm">Cancel</button>
+              <button onClick={confirmDelete} className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg transition-colors text-sm">Delete</button>
             </div>
           </div>
         </div>
