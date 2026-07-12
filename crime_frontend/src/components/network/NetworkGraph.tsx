@@ -139,8 +139,16 @@ const styleSheet: any[] = [
       "text-valign": "bottom",
       "text-halign": "center",
       "text-margin-y": 4,
-      "width": (ele: cytoscape.NodeSingular) => Math.max(30, Math.min(80, 20 + ele.data("crimes") * 2 + ele.data("betweenness") * 100)),
-      "height": (ele: cytoscape.NodeSingular) => Math.max(30, Math.min(80, 20 + ele.data("crimes") * 2 + ele.data("betweenness") * 100)),
+      "width": (ele: cytoscape.NodeSingular) => {
+        const crimes = ele.data("crimes") || 0;
+        const btw = ele.data("betweenness") || 0;
+        return Math.max(30, Math.min(80, 20 + crimes * 2 + btw * 100));
+      },
+      "height": (ele: cytoscape.NodeSingular) => {
+        const crimes = ele.data("crimes") || 0;
+        const btw = ele.data("betweenness") || 0;
+        return Math.max(30, Math.min(80, 20 + crimes * 2 + btw * 100));
+      },
       "text-wrap": "wrap",
       "text-max-width": "80px",
     },

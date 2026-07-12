@@ -21,6 +21,7 @@ router = APIRouter()
 @router.get("/clusters")
 @limiter.limit("30/minute")
 async def hotspot_clusters(
+    request: Request,
     district_id: Optional[str] = Query(None),
     crime_type: Optional[str] = Query(None),
     date_from: Optional[str] = Query(None),

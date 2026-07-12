@@ -74,6 +74,7 @@ async def create_user_token(user_data: Dict[str, Any]) -> Dict[str, Any]:
         "user_district": user_data.get("district_id"),
         "permissions_list": user_data.get("permissions", []),
         "login_time": datetime.now(timezone.utc).isoformat(),
+        "expires_in": settings.JWT_EXPIRY_HOURS * 3600,
     }
 
 
