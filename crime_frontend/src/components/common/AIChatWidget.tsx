@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { MessageSquare, X, Send, Bot, User, AlertTriangle } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import Draggable from 'react-draggable';
+import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import api from '../../services/api';
 import { ENDPOINTS } from '../../constants/apiEndpoints';
 import AIMarkdown from './AIMarkdown';
@@ -20,6 +19,7 @@ export default function AIChatWidget() {
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const controls = useDragControls();
 
   const sendMessage = async () => {
     if (!input.trim()) return;
@@ -45,16 +45,23 @@ export default function AIChatWidget() {
     <div className="fixed bottom-6 right-6 z-50">
       <AnimatePresence>
         {isOpen && (
-          <Draggable handle=".chat-drag-handle" bounds="body" defaultPosition={{x: -20, y: -80}}>
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="fixed bottom-0 right-0 w-80 md:w-96 h-[500px] bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
-              style={{ position: 'fixed' }}
+              drag
+              dragControls={controls}
+              dragListener={false}
+              dragMomentum={false}
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.95 }}
+              className="absolute bottom-16 right-0 w-80 md:w-96 h-[500px] bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+              style={{ originX: 1, originY: 1 }}
             >
               {/* Header */}
-              <div className="chat-drag-handle bg-slate-800 p-4 border-b border-slate-700 flex justify-between items-center cursor-move select-none hover:bg-slate-750 transition-colors">
+              <div 
+                onPointerDown={(e) => controls.start(e)}
+                style={{ touchAction: 'none' }}
+                className="chat-drag-handle bg-slate-800 p-4 border-b border-slate-700 flex justify-between items-center cursor-move select-none hover:bg-slate-750 transition-colors"
+              >
                 <div className="flex items-center gap-2">
                   <div className="p-1.5 bg-blue-500/20 rounded-lg text-blue-400">
                     <Bot className="h-5 w-5" />
@@ -130,7 +137,6 @@ export default function AIChatWidget() {
                 </div>
               </div>
             </motion.div>
-          </Draggable>
         )}
       </AnimatePresence>
 

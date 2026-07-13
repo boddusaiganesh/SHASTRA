@@ -30,7 +30,6 @@
     "react-cytoscapejs": "^2.0.0",
     "react-datepicker": "^9.1.0",
     "react-dom": "^19.2.7",
-    "react-draggable": "^4.7.0",
     "react-i18next": "^17.0.8",
     "react-leaflet": "^5.0.0",
     "react-leaflet-cluster": "^4.1.3",
