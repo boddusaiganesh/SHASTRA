@@ -4,6 +4,7 @@ interface AlertsState {
   alerts: unknown[];
   unreadCount: number;
   totalCount: number;
+  severityCounts: Record<string, number>;
   loading: boolean;
 }
 
@@ -11,6 +12,7 @@ const initialState: AlertsState = {
   alerts: [],
   unreadCount: 0,
   totalCount: 0,
+  severityCounts: { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 },
   loading: false,
 };
 
@@ -24,6 +26,9 @@ const alertsSlice = createSlice({
         state.alerts = payload.alerts;
         state.unreadCount = payload.unread_count !== undefined ? payload.unread_count : state.unreadCount;
         state.totalCount = payload.total_count !== undefined ? payload.total_count : state.totalCount;
+        if (payload.severity_counts) {
+          state.severityCounts = payload.severity_counts;
+        }
       } else {
         const list = Array.isArray(payload) ? payload : [];
         state.alerts = list;

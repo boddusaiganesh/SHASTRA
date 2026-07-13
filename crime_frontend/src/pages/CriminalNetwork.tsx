@@ -1,12 +1,16 @@
 import React, { useEffect, useState, useMemo, useRef } from "react";
 import { motion } from "framer-motion";
-import { Network, AlertTriangle, Search, ChevronRight, Users, MapPin, Brain, ChevronLeft, Grid, Loader2 } from "lucide-react";
+import { Network, AlertTriangle, Search, ChevronRight, Users, MapPin, Brain, ChevronLeft, Grid, Loader2, Map } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import AIMarkdown from "../components/common/AIMarkdown";
 import { useDistricts } from "../hooks/useDistricts";
 import { networkService } from "../services/networkService";
+import { watchlistService } from "../services/watchlistService";
+import { investigationService } from "../services/investigationService";
 import NetworkGraph, { NetworkGraphHandle } from "../components/network/NetworkGraph";
 import ConnectivityMatrix from "../components/network/ConnectivityMatrix";
+import NetworkTimeline from "../components/network/NetworkTimeline";
+import NetworkMap from "../components/network/NetworkMap";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import { NODE_COLORS } from "../constants/colorCodes";
 import { CRIME_TYPES } from "../constants/crimeTypes";
@@ -14,12 +18,13 @@ import { CRIME_TYPES } from "../constants/crimeTypes";
 interface NetworkNode {
   node_id: string; node_type: string; label: string; risk_score: number;
   crime_count: number; profile_data: Record<string, unknown>;
-  ai_analysis?: string; timeline?: any[];
+  ai_analysis?: string; is_fallback?: boolean; timeline?: any[];
 }
 interface NetworkEdge {
   edge_id?: string;
   source_node_id: string; target_node_id: string; relationship_type: string; strength_score: number;
   crime_types?: string[];
+  crime_ids?: string[];
   confidence_level?: string;
   source?: string;
   target?: string;
@@ -71,10 +76,118 @@ const CriminalNetwork: React.FC = () => {
   const districts = useDistricts();
 
   // New states for Ego-Network Navigation and Grid View
-  const [viewMode, setViewMode] = useState<"graph" | "matrix">("graph");
+  const [viewMode, setViewMode] = useState<"graph" | "matrix" | "map">("graph");
   const [navHistory, setNavHistory] = useState<NetworkNode[]>([]);
   const [navIndex, setNavIndex] = useState(-1);
   const graphRef = useRef<NetworkGraphHandle>(null);
+
+  const [isWatched, setIsWatched] = useState(false);
+  const [watchedNodeIds, setWatchedNodeIds] = useState<Set<string>>(new Set());
+
+  const fetchWatchlist = async () => {
+    try {
+      const w = await watchlistService.list();
+      setWatchedNodeIds(new Set(w.map((item: any) => item.entity_id)));
+    } catch (e) {
+      console.warn("Could not fetch watchlist");
+    }
+  };
+
+  useEffect(() => {
+    fetchWatchlist();
+  }, []);
+
+  useEffect(() => {
+    if (!selectedNode) return;
+    watchlistService.status(selectedNode.node_id).then(setIsWatched).catch(() => {});
+  }, [selectedNode?.node_id]);
+
+  const toggleWatch = async () => {
+    if (!selectedNode) return;
+    try {
+      if (isWatched) {
+        await watchlistService.remove(selectedNode.node_id);
+      } else {
+        await watchlistService.add(selectedNode.node_id, selectedNode.node_type, selectedNode.label);
+      }
+      setIsWatched(!isWatched);
+      fetchWatchlist(); // refresh stars in graph
+    } catch (e) {
+      console.error("Failed to toggle watch status", e);
+    }
+  };
+
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [investigationTitle, setInvestigationTitle] = useState("");
+  const [savedInvestigations, setSavedInvestigations] = useState<any[]>([]);
+  const [showLoadPanel, setShowLoadPanel] = useState(false);
+
+  const handleSaveInvestigation = async () => {
+    if (!investigationTitle.trim()) return;
+    try {
+      await investigationService.save({
+        title: investigationTitle,
+        filters: { districtFilter, crimeTypeLens, nodeTypeFilter, searchQuery },
+        board_state: {
+          node_ids: nodes.map(n => n.node_id),
+          edge_ids: edges.map(e => e.edge_id).filter(Boolean),
+          node_notes: {},
+        },
+        district_id: districtFilter !== "all" ? districtFilter : undefined,
+      });
+      setShowSaveModal(false);
+      setInvestigationTitle("");
+      fetchInvestigations(); // Refresh the list
+    } catch (e) {
+      console.error("Failed to save investigation", e);
+    }
+  };
+
+  const handleLoadInvestigation = async (id: string) => {
+    try {
+      const inv = await investigationService.get(id);
+      if (!inv) return;
+      const f = inv.filters || {};
+      setDistrictFilter(f.districtFilter || "all");
+      setCrimeTypeLens(f.crimeTypeLens || "all");
+      setNodeTypeFilter(f.nodeTypeFilter || "all");
+      setSearchQuery(f.searchQuery || "");
+      setShowLoadPanel(false);
+    } catch (e) {
+      console.error("Failed to load investigation", e);
+    }
+  };
+
+  const fetchInvestigations = async () => {
+    try {
+      const d = await investigationService.list();
+      setSavedInvestigations(d?.investigations || []);
+    } catch (e) {
+      console.warn("Could not fetch investigations");
+    }
+  };
+
+  useEffect(() => {
+    if (showLoadPanel) fetchInvestigations();
+  }, [showLoadPanel]);
+
+  const [timelineEvents, setTimelineEvents] = useState<any[]>([]);
+  const [selectedTimelineDate, setSelectedTimelineDate] = useState<string | null>(null);
+
+  useEffect(() => {
+    const allCrimeIds = Array.from(new Set(edges.flatMap((e: any) => e.crime_ids || [])));
+    if (allCrimeIds.length === 0) { setTimelineEvents([]); return; }
+    networkService.getTimeline(allCrimeIds).then(setTimelineEvents);
+  }, [edges]);
+
+  useEffect(() => {
+    if (!selectedTimelineDate) { graphRef.current?.clearFocus(); return; }
+    const matchingCrimeIds = new Set(
+      timelineEvents.filter(e => e.date === selectedTimelineDate).map(e => e.crime_id)
+    );
+    graphRef.current?.highlightByCrimeIds?.(matchingCrimeIds);
+  }, [selectedTimelineDate, timelineEvents]);
+
 
   useEffect(() => {
     const d = searchParams.get("district"); if (d) setDistrictFilter(d);
@@ -184,7 +297,7 @@ const CriminalNetwork: React.FC = () => {
     if (node.node_type === "criminal") {
       networkService.getNodeAiAnalysis(node.node_id).then(aiRes => {
          if (aiRes) {
-            setSelectedNode(prev => prev && prev.node_id === node.node_id ? { ...prev, ai_analysis: aiRes } : prev);
+            setSelectedNode(prev => prev && prev.node_id === node.node_id ? { ...prev, ai_analysis: aiRes.ai_analysis, is_fallback: aiRes.is_fallback } : prev);
          }
       });
     }
@@ -358,6 +471,23 @@ const CriminalNetwork: React.FC = () => {
               }`}
             >
               <Grid className="h-3.5 w-3.5" /> Matrix
+            </button>
+            <button
+              onClick={() => setViewMode("map")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                viewMode === "map" ? "bg-blue-600 text-white" : "text-slate-400 hover:text-white"
+              }`}
+            >
+              <Map className="h-3.5 w-3.5" /> Map
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2 border-l border-slate-700 pl-4">
+            <button onClick={() => setShowSaveModal(true)} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 hover:text-white border border-slate-700">
+              💾 Save Investigation
+            </button>
+            <button onClick={() => setShowLoadPanel(true)} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 hover:text-white border border-slate-700">
+              📂 My Investigations
             </button>
           </div>
 
@@ -577,8 +707,9 @@ const CriminalNetwork: React.FC = () => {
                   clusterSummary={clusterSummary}
                   replaceKey={replaceKey}
                   colorBy={colorBy}
+                  watchedNodeIds={watchedNodeIds}
                 />
-              ) : (
+              ) : viewMode === "matrix" ? (
                 <ConnectivityMatrix 
                   nodes={filteredNodes}
                   edges={edges}
@@ -602,10 +733,18 @@ const CriminalNetwork: React.FC = () => {
                     }
                   }}
                 />
+              ) : (
+                <NetworkMap 
+                  nodes={filteredNodes}
+                  edges={edges}
+                  onNodeSelect={navigateToNode}
+                  selectedNodeId={selectedNode?.node_id}
+                  watchedNodeIds={watchedNodeIds}
+                />
               )}
               
               {/* Floating zoom controls */}
-              <div className="absolute bottom-4 left-4 flex flex-col gap-1 z-10">
+              <div className="absolute bottom-24 left-4 flex flex-col gap-1 z-10">
                 <button
                   onClick={() => graphRef.current?.zoomIn()}
                   title="Zoom In"
@@ -622,12 +761,12 @@ const CriminalNetwork: React.FC = () => {
                   className="w-8 h-8 flex items-center justify-center bg-slate-800/95 border border-slate-600 rounded-lg text-slate-300 hover:text-white hover:bg-slate-700 text-sm shadow transition-colors"
                 >⊡</button>
               </div>
-              <div className="absolute bottom-4 left-14 bg-slate-900/80 backdrop-blur border border-slate-700/50 rounded-lg px-3 py-1.5">
+              <div className="absolute bottom-24 left-14 bg-slate-900/80 backdrop-blur border border-slate-700/50 rounded-lg px-3 py-1.5 z-10">
                 <p className="text-xs text-slate-500">Click node • Double-click expand • Shift-click compare • Scroll / ± to zoom</p>
               </div>
               
               {edgeInsight && (
-                <div className="absolute bottom-16 left-4 right-4 max-w-md bg-blue-950/90 backdrop-blur border border-blue-500/30 rounded-lg p-3 z-10 shadow-lg shadow-blue-900/20">
+                <div className="absolute bottom-32 left-4 right-4 max-w-md bg-blue-950/90 backdrop-blur border border-blue-500/30 rounded-lg p-3 z-10 shadow-lg shadow-blue-900/20">
                   <div className="flex items-center gap-2 mb-1">
                     <Brain className="h-3.5 w-3.5 text-blue-400" />
                     <span className="text-xs font-semibold text-white">Connection Insight</span>
@@ -667,6 +806,15 @@ const CriminalNetwork: React.FC = () => {
               )}
             </>
           )}
+
+          {/* Timeline Overlay */}
+          <div className="absolute bottom-0 left-0 right-0 z-20">
+            <NetworkTimeline 
+              events={timelineEvents} 
+              onSelectDate={setSelectedTimelineDate} 
+              selectedDate={selectedTimelineDate} 
+            />
+          </div>
         </div>
 
         {/* Right Panel */}
@@ -760,7 +908,7 @@ const CriminalNetwork: React.FC = () => {
                     <h3 className="text-sm font-semibold text-white">AI Profile Analysis</h3>
                   </div>
                   <div className="text-xs text-blue-200 leading-relaxed">
-                    <AIMarkdown text={selectedNode.ai_analysis} />
+                    <AIMarkdown text={selectedNode.ai_analysis} isFallback={selectedNode.is_fallback} />
                   </div>
                 </div>
               )}
@@ -773,6 +921,15 @@ const CriminalNetwork: React.FC = () => {
                   Open Full Offender Record →
                 </button>
               )}
+              
+              <button
+                onClick={toggleWatch}
+                className={`mt-2 w-full text-xs px-3 py-2 rounded-lg font-medium border ${
+                  isWatched ? "bg-yellow-900/30 border-yellow-500/50 text-yellow-400" : "bg-slate-800 border-slate-700 text-slate-300 hover:text-white"
+                }`}
+              >
+                {isWatched ? "⭐ Watching — you'll be alerted on new activity" : "☆ Add to Watchlist"}
+              </button>
               
               <div className="mt-3">
                 <p className="text-xs text-slate-400 mb-2">Connected Edges ({edges.filter(e => e.source_node_id === selectedNode.node_id || e.target_node_id === selectedNode.node_id).length})</p>
@@ -809,7 +966,7 @@ const CriminalNetwork: React.FC = () => {
                 <span className="text-xs bg-blue-900/40 text-blue-400 px-1.5 py-0.5 rounded-full">Gemini</span>
               </div>
               <div className="bg-blue-950/30 border border-blue-500/20 rounded-lg p-3 mb-3 text-xs text-blue-200 leading-relaxed">
-                <AIMarkdown text={aiSummary.summary_text} />
+                <AIMarkdown text={aiSummary.summary_text} isFallback={aiSummary.is_fallback} />
               </div>
 
               <h4 className="text-xs font-semibold text-blue-400 mb-2 flex items-center gap-1">
@@ -851,6 +1008,44 @@ const CriminalNetwork: React.FC = () => {
           )}
         </div>
       </div>
+      
+      {showSaveModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center" onClick={() => setShowSaveModal(false)}>
+          <div className="bg-slate-900 border border-slate-700 rounded-xl p-5 w-96" onClick={e => e.stopPropagation()}>
+            <h3 className="text-sm font-bold text-white mb-3">Save this investigation</h3>
+            <input
+              autoFocus
+              placeholder="e.g. Kolar burglary ring — July 2026"
+              value={investigationTitle}
+              onChange={e => setInvestigationTitle(e.target.value)}
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white mb-3 focus:outline-none focus:border-blue-500"
+            />
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setShowSaveModal(false)} className="px-3 py-1.5 text-xs text-slate-400 hover:text-white">Cancel</button>
+              <button onClick={handleSaveInvestigation} className="px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-500 text-white rounded-lg">Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showLoadPanel && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center" onClick={() => setShowLoadPanel(false)}>
+          <div className="bg-slate-900 border border-slate-700 rounded-xl p-5 w-[420px] max-h-[70vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <h3 className="text-sm font-bold text-white mb-3">My Investigations</h3>
+            {savedInvestigations.length === 0 && <p className="text-xs text-slate-500">No saved investigations yet.</p>}
+            {savedInvestigations.map(inv => (
+              <button
+                key={inv.investigation_id}
+                onClick={() => handleLoadInvestigation(inv.investigation_id)}
+                className="w-full text-left p-3 mb-2 bg-slate-800/50 hover:bg-slate-800 rounded-lg border border-slate-700/50 transition-colors"
+              >
+                <p className="text-sm text-white font-medium">{inv.title}</p>
+                <p className="text-xs text-slate-500 mt-1">Updated {new Date(inv.updated_at).toLocaleString()}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

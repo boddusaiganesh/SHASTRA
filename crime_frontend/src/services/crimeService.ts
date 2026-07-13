@@ -161,6 +161,7 @@ export const crimeService = {
       
       return {
         ai_summary: data?.ai_overall_strategy || data?.ai_summary || "Maintain standard patrol schedules.",
+        is_fallback: data?.is_fallback || false,
         suggestions: suggestions,
       };
     } catch (error) {

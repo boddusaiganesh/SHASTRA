@@ -39,6 +39,22 @@ export const ENDPOINTS = {
     EXPAND: (id: string) => `/network/expand/${id}`,
     SHORTEST_PATH: "/network/shortest-path",
     EDGE_INSIGHT: "/network/edge-insight",
+    TIMELINE: "/network/timeline",
+  },
+  // Investigations (saved network case boards)
+  INVESTIGATIONS: {
+    LIST: "/investigations",
+    CREATE: "/investigations",
+    DETAIL: (id: string) => `/investigations/${id}`,
+    UPDATE: (id: string) => `/investigations/${id}`,
+    DELETE: (id: string) => `/investigations/${id}`,
+  },
+  // Watchlist
+  WATCHLIST: {
+    LIST: "/watchlist",
+    ADD: "/watchlist",
+    REMOVE: (entityId: string) => `/watchlist/${entityId}`,
+    STATUS: (entityId: string) => `/watchlist/${entityId}/status`,
   },
   // Offenders
   OFFENDERS: {
@@ -82,6 +98,7 @@ export const ENDPOINTS = {
   SETTINGS: {
     USERS: "/settings/users",
     USERS_ADD: "/settings/users/add",
+    USERS_UPDATE: (id: string) => `/settings/users/${id}`,
     DISTRICTS: "/settings/districts",
     ALERT_THRESHOLDS: "/settings/alert-thresholds",
     AUDIT_LOGS: "/settings/audit-logs",

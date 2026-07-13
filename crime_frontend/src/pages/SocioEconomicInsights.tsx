@@ -130,7 +130,7 @@ export default function SocioEconomicInsights() {
               AI Intelligence Brief
             </h3>
             <div className="text-sm text-slate-300 leading-relaxed">
-              <AIMarkdown text={narrative} />
+              <AIMarkdown text={narrative} isFallback={data?.is_fallback} />
             </div>
           </div>
 

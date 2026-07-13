@@ -113,13 +113,15 @@ async def add_offender(
 @router.put("/{offender_id}")
 async def edit_offender(
     offender_id: str,
-    payload: dict = Body(...),
+    payload_obj: "app.models.response_models.offender_response.UpdateOffenderRequest" = Body(...),
     db: AsyncSession = Depends(get_db),
     current_user=Depends(require_role(["SCRB_OFFICER", "DISTRICT_OFFICER", "INVESTIGATOR"])),
 ):
     from app.services.offender_service import update_offender, get_offender_profile
     from app.utils.audit import log_action
+    from app.models.response_models.offender_response import UpdateOffenderRequest
     
+    payload = payload_obj.dict(exclude_unset=True)
     profile_data = await get_offender_profile(db, offender_id)
     if not profile_data:
         raise HTTPException(status_code=404, detail="Offender not found")

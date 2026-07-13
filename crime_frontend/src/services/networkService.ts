@@ -77,7 +77,7 @@ export const networkService = {
   getEdgeInsight: async (nodeA: any, nodeB: any, edge: any) => {
     try {
       const response = await api.post(ENDPOINTS.NETWORK.EDGE_INSIGHT, { node_a: nodeA, node_b: nodeB, edge });
-      return response.data?.data?.insight ?? null;
+      return response.data?.data ?? null;
     } catch (error) {
       console.error("Error fetching edge insight:", error);
       return null;
@@ -87,10 +87,20 @@ export const networkService = {
   getNodeAiAnalysis: async (nodeId: string) => {
     try {
       const response = await api.get(ENDPOINTS.NETWORK.NODE_AI_ANALYSIS(nodeId));
-      return response.data?.data?.ai_analysis || null;
+      return response.data?.data || null;
     } catch (error) {
       console.error("Error fetching node AI analysis:", error);
       return null;
+    }
+  },
+  
+  getTimeline: async (crimeIds: string[]) => {
+    try {
+      const response = await api.post(ENDPOINTS.NETWORK.TIMELINE, { crime_ids: crimeIds });
+      return response.data?.data?.events || [];
+    } catch (error) {
+      console.error("Error fetching timeline:", error);
+      return [];
     }
   },
 };

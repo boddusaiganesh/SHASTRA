@@ -321,6 +321,16 @@ async def get_active_alerts(
         select(func.count(Alert.alert_id)).where(and_(*conditions, Alert.is_read.is_(False)))
     )
     
+    severity_counts = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0}
+    severity_result = await db.execute(
+        select(Alert.severity, func.count(Alert.alert_id))
+        .where(and_(*conditions))
+        .group_by(Alert.severity)
+    )
+    for sev, cnt in severity_result:
+        if sev in severity_counts:
+            severity_counts[sev] = cnt
+            
     all_districts = await db.execute(select(District))
     district_map = {d.district_id: d.district_name for d in all_districts.scalars().all()}
     
@@ -336,6 +346,7 @@ async def get_active_alerts(
         "alerts": alert_list,
         "total_count": total_count,
         "unread_count": unread_result.scalar() or 0,
+        "severity_counts": severity_counts,
         "page": page,
         "page_size": page_size,
     }

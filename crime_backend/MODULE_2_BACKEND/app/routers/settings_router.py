@@ -137,3 +137,21 @@ async def list_districts(
     result = await db.execute(select(District).order_by(District.district_name))
     districts = result.scalars().all()
     return {"success": True, "data": [d.to_dict() for d in districts]}
+
+class UpdateUserRequest(BaseModel):
+    is_active: Optional[bool] = None
+    role: Optional[str] = None
+    district_id: Optional[str] = None
+
+@router.patch("/users/{user_id}")
+async def update_user(
+    user_id: str,
+    payload: UpdateUserRequest = Body(...),
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(require_scrb_officer)
+):
+    from app.services.auth_service import update_user_status
+    updated = await update_user_status(db, user_id, payload.dict(exclude_unset=True))
+    if not updated:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"success": True, "data": updated}

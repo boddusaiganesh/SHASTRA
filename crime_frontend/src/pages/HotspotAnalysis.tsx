@@ -232,7 +232,7 @@ const HotspotAnalysis: React.FC = () => {
             <span className="text-xs bg-blue-900/40 text-blue-400 px-2 py-0.5 rounded-full border border-blue-500/30">Gemini AI</span>
           </div>
           <div className="bg-blue-950/30 border border-blue-500/20 rounded-lg p-3 mb-4">
-            <AIMarkdown text={dep.ai_summary} />
+            <AIMarkdown text={dep.ai_summary} isFallback={dep.is_fallback} />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {(Array.isArray(dep?.suggestions) ? dep.suggestions : []).map((s, i) => (

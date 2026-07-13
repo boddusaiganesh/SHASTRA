@@ -18,6 +18,14 @@ export const settingsService = {
       throw error;
     }
   },
+  updateUser: async (userId: string, data: any) => {
+    try {
+      const res = await api.patch(ENDPOINTS.SETTINGS.USERS_UPDATE(userId), data);
+      return res.data;
+    } catch (error) {
+      throw error;
+    }
+  },
   getDistricts: async () => {
     try {
       const res = await api.get(ENDPOINTS.SETTINGS.DISTRICTS);

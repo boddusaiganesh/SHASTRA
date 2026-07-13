@@ -28,4 +28,8 @@ async def resolve_district_id(db: AsyncSession, district_val: Optional[str]) -> 
     if resolved:
         return resolved
         
-    return district_val
+    from app.core.config import settings
+    if district_val in settings.KARNATAKA_DISTRICTS:
+        return district_val
+        
+    return None

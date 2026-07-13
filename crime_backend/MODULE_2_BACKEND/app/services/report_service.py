@@ -178,7 +178,9 @@ async def generate_report(
     report_data["generated_at"] = datetime.now(timezone.utc).isoformat()
     
     # Generate AI narrative
-    ai_narrative = await get_report_narrative(report_data, report_type)
+    ai_response = await get_report_narrative(report_data, report_type)
+    ai_narrative = ai_response.get("text", "")
+    report_data["is_fallback"] = ai_response.get("is_fallback", False)
     
     # Save report to database
     report = Report(

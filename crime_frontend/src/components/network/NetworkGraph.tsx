@@ -13,6 +13,7 @@ interface NetworkNode {
 interface NetworkEdge {
   source?: string; target?: string; source_node_id?: string; target_node_id?: string; relationship_type: string; strength_score: number;
   crime_types?: string[];
+  crime_ids?: string[];
   confidence_level?: string;
   edge_id?: string;
 }
@@ -28,6 +29,7 @@ interface Props {
   clusterSummary?: Record<string, { size: number; dominant_crime_type?: string; dominant_district?: string }>;
   replaceKey?: string | number;
   colorBy?: "type" | "cluster";
+  watchedNodeIds?: Set<string>;
 }
 
 export interface NetworkGraphHandle {
@@ -37,6 +39,7 @@ export interface NetworkGraphHandle {
   fitGraph: () => void;
   zoomIn: () => void;
   zoomOut: () => void;
+  highlightByCrimeIds: (crimeIds: Set<string>) => void;
 }
 
 const getDynamicLayoutOptions = (nodeCount: number, edgeCount: number) => {
@@ -126,6 +129,7 @@ const buildElements = (nodes: NetworkNode[], edges: NetworkEdge[], showClusters:
         label: e.relationship_type,
         strength: e.strength_score,
         crimeTypes: e.crime_types || [],
+        crimeIds: (e as any).crime_ids || [],
         confidence: e.confidence_level || "SUSPECTED",
       },
     }));
@@ -216,6 +220,16 @@ const getStyleSheet = (colorBy: "type" | "cluster" = "type"): any[] => [
     },
   },
   {
+    selector: "node.watched",
+    style: {
+      "background-image": "url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"%23eab308\" stroke=\"white\" stroke-width=\"1\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><polygon points=\"12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2\"></polygon></svg>')",
+      "background-fit": "cover",
+      "background-clip": "none",
+      "border-color": "#eab308",
+      "border-width": 4,
+    } as any,
+  },
+  {
     selector: "edge",
     style: {
       "width": (ele: cytoscape.EdgeSingular) => 1 + (Number(ele.data("strength")) || 50) / 30,
@@ -268,7 +282,7 @@ const getStyleSheet = (colorBy: "type" | "cluster" = "type"): any[] => [
   },
 ];
 
-const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNodeSelect, onNodeExpand, onNodeCompare, onEdgeSelect, selectedNodeId, highlightPath, showClusters = true, clusterSummary, replaceKey, colorBy = "type" }, ref) => {
+const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNodeSelect, onNodeExpand, onNodeCompare, onEdgeSelect, selectedNodeId, highlightPath, showClusters = true, clusterSummary, replaceKey, colorBy = "type", watchedNodeIds }, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<cytoscape.Core | null>(null);
   const prevIdsRef = useRef<Set<string>>(new Set());
@@ -305,14 +319,22 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNo
   }, [colorBy]);
 
   useEffect(() => {
+    if (!cyRef.current) return;
+    cyRef.current.nodes().forEach(n => {
+      if (watchedNodeIds?.has(n.id())) {
+        n.addClass("watched");
+      } else {
+        n.removeClass("watched");
+      }
+    });
+  }, [watchedNodeIds]);
+
+  useEffect(() => {
     if (!containerRef.current) return;
     const currentIds = new Set(nodes.map(n => n.node_id));
-    console.log('[NetworkGraph] useEffect[nodes,edges] fired — nodes:', nodes.length, 'edges:', edges.length, 'replaceKey:', replaceKey, 'showClusters:', showClusters);
 
     if (!cyRef.current) {
-      console.log('[NetworkGraph] Initialising new Cytoscape instance with', nodes.length, 'nodes,', edges.length, 'edges');
       const elements = buildElements(nodes, edges, showClusters, clusterSummary);
-      console.log('[NetworkGraph] buildElements result:', elements.length, 'elements (nodes+edges+parents)');
       const cy = cytoscape({
         container: containerRef.current,
         elements,
@@ -365,6 +387,14 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNo
       cy.elements().remove();
       const freshElements = buildElements(nodes, edges, showClusters, clusterSummary);
       cy.add(freshElements);
+      
+      // re-apply watched classes after rebuilding elements
+      if (watchedNodeIds) {
+        cy.nodes().forEach(n => {
+          if (watchedNodeIds.has(n.id())) n.addClass("watched");
+        });
+      }
+
       cy.layout(getDynamicLayoutOptions(nodes.length, edges.length)).run();
     } else {
       const existingIds = new Set(cy.nodes().map(n => n.id()));
@@ -385,14 +415,31 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNo
         return cy.getElementById(eid).empty();
       });
 
-      if (newNodes.length === 0 && newEdges.length === 0 && !hasRemovedNodes && !hasRemovedEdges) return;
+      if (newNodes.length === 0 && newEdges.length === 0 && !hasRemovedNodes && !hasRemovedEdges) {
+        // Just update classes for watched nodes even if no structural change
+        cy.nodes().forEach(n => {
+          if (watchedNodeIds?.has(n.id())) n.addClass("watched");
+          else n.removeClass("watched");
+        });
+        return;
+      }
 
       if (hasRemovedNodes || hasRemovedEdges || currentIds.size < existingIds.size) {
         cy.elements().remove();
-        cy.add(buildElements(nodes, edges, showClusters, clusterSummary));
+        const freshElements = buildElements(nodes, edges, showClusters, clusterSummary);
+        cy.add(freshElements);
+        if (watchedNodeIds) {
+          cy.nodes().forEach(n => {
+            if (watchedNodeIds.has(n.id())) n.addClass("watched");
+          });
+        }
         cy.layout(getDynamicLayoutOptions(nodes.length, edges.length)).run();
       } else {
         cy.add(buildElements(newNodes, newEdges, showClusters, clusterSummary));
+        cy.nodes().forEach(n => {
+          if (watchedNodeIds?.has(n.id())) n.addClass("watched");
+          else n.removeClass("watched");
+        });
         const totalNodes = cy.nodes().length;
         const totalEdges = cy.edges().length;
         cy.layout({ ...getDynamicLayoutOptions(totalNodes, totalEdges), randomize: false, fit: false, numIter: 150, animationDuration: 300 } as any).run();
@@ -455,6 +502,27 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNo
       cy.elements().not(keyEls).addClass("dimmed");
       keyEls.addClass("key-player");
       cy.animate({ fit: { eles: keyEls, padding: 80 }, duration: 500, easing: "ease-in-out-cubic" });
+    },
+    highlightByCrimeIds: (crimeIds: Set<string>) => {
+      const cy = cyRef.current;
+      if (!cy) return;
+      cy.elements().removeClass("dimmed focus-active focus-neighbor focus-edge key-player");
+      if (crimeIds.size === 0) return;
+
+      const matchingEdges = cy.edges().filter(ele => {
+        const cIds = ele.data("crimeTypes") || []; // The actual property containing list of IDs is crime_ids, let's use that if available. Wait, in buildElements, it's crimeTypes! Ah, wait, in buildElements I need to add crimeIds to edge data! Let's check buildElements.
+        const ids = ele.data("crimeIds") || [];
+        return ids.some((id: string) => crimeIds.has(id));
+      });
+      if (matchingEdges.empty()) {
+        cy.elements().addClass("dimmed");
+        return;
+      }
+      
+      const matchingNodes = matchingEdges.connectedNodes();
+      cy.elements().not(matchingEdges).not(matchingNodes).addClass("dimmed");
+      matchingEdges.addClass("focus-edge");
+      matchingNodes.addClass("focus-neighbor");
     },
     fitGraph: () => {
       const cy = cyRef.current;

@@ -593,7 +593,7 @@ async def get_node_ai_analysis(db: AsyncSession, node_id: str) -> Dict[str, Any]
             crimes = [{"crime_type": c.crime_type, "status": c.status} for c in cr.scalars().all()]
             
         analysis = await get_offender_ai_analysis(offender.to_dict(), crimes)
-        res = {"ai_analysis": analysis}
+        res = {"ai_analysis": analysis.get("text", ""), "is_fallback": analysis.get("is_fallback", False)}
         await cache_set(cache_key, res, expiry=3600)
         return res
     except Exception as e:
@@ -694,6 +694,7 @@ async def get_network_ai_summary(
         "recommended_actions": recommended_actions,
         "network_stats": network_stats,
         "generated_at": datetime.now(timezone.utc).isoformat(),
+        "is_fallback": ai_data.get("is_fallback", False),
     }
     
     await cache_set(cache_key, response, expiry=1800)

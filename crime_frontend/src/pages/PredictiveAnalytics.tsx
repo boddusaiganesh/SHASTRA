@@ -145,13 +145,13 @@ const PredictiveAnalytics: React.FC = () => {
           <h2 className="text-sm font-semibold text-white">Emerging Crime Typologies</h2>
         </div>
         <div className="space-y-3">
-          {(typologies as { crime_type?: string; typology?: string; pattern_description?: string; description?: string; warning_level?: string; trend?: string; growth_rate?: number | string; affected_districts?: string[]; districts?: string[]; ai_explanation?: string }[]).map((t, i) => (
+          {(typologies as { crime_type?: string; typology?: string; pattern_description?: string; description?: string; warning_level?: string; trend?: string; growth_rate?: number | string; affected_districts?: string[]; districts?: string[]; ai_explanation?: string; is_fallback?: boolean }[]).map((t, i) => (
             <div key={i} className="flex items-start gap-3 p-3 bg-slate-900/60 rounded-lg border border-slate-700/50">
               <div className="flex items-start gap-2">
                 <Brain className="h-4 w-4 text-purple-400 mt-0.5 flex-shrink-0" />
                 <div>
                   <p className="text-sm font-semibold text-white">{t.typology || t.crime_type}</p>
-                  {t.ai_explanation && <div className="text-xs text-purple-300 mt-1 italic"><AIMarkdown text={t.ai_explanation} /></div>}
+                  {t.ai_explanation && <div className="text-xs text-purple-300 mt-1 italic"><AIMarkdown text={t.ai_explanation} isFallback={t.is_fallback} /></div>}
                 </div>
               </div>
               <div className="flex-1">

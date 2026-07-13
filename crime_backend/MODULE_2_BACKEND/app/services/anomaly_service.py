@@ -140,7 +140,9 @@ async def get_anomaly_detail(
     
     # Get AI explanation if not already present
     if not anomaly.ai_explanation:
-        ai_explanation = await get_anomaly_explanation(detail)
+        ai_response = await get_anomaly_explanation(detail)
+        ai_explanation = ai_response.get("text", "")
+        detail["is_fallback"] = ai_response.get("is_fallback", False)
         
         # Update the DB record
         from sqlalchemy import update

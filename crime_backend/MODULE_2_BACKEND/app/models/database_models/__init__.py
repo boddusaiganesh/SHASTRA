@@ -11,6 +11,8 @@ from app.models.database_models.report_model import Report
 from app.models.database_models.system_settings_model import SystemSettings
 from app.models.database_models.audit_log_model import AuditLog
 from app.models.database_models.evidence_model import Evidence
+from app.models.database_models.watchlist_model import WatchlistEntry
+from app.models.database_models.investigation_model import SavedInvestigation
 
 __all__ = [
     "User",
@@ -31,4 +33,6 @@ __all__ = [
     "SystemSettings",
     "AuditLog",
     "Evidence",
+    "WatchlistEntry",
+    "SavedInvestigation",
 ]

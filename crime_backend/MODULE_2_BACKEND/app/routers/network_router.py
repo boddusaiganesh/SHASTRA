@@ -165,9 +165,11 @@ async def expand_node(
             "source_node_id": src_id,
             "target_node_id": tgt_id,
             "relationship_type": record["rel_type"],
-            "strength_score": rel_props.get("strength_score", 50),
-            "confidence_level": rel_props.get("confidence_level", "SUSPECTED"),
-            "crime_count": len(rel_props.get("crime_ids", []))
+            "strength_score": rel_props.get("strength", 50),
+            "confidence_level": rel_props.get("confidence", "SUSPECTED"),
+            "crime_types": rel_props.get("crime_types", []),
+            "crime_count": len(rel_props.get("crime_ids", [])),
+            "crime_ids": rel_props.get("crime_ids", [])
         })
         
     data = {
@@ -192,5 +194,52 @@ async def edge_insight(
     current_user=Depends(get_current_user),
 ):
     from app.services.gemini_service import get_edge_connection_insight
-    text = await get_edge_connection_insight(payload.node_a, payload.node_b, payload.edge)
-    return {"success": True, "data": {"insight": text}}
+    res = await get_edge_connection_insight(payload.node_a, payload.node_b, payload.edge)
+    return {"success": True, "data": {"insight": res.get("text", ""), "is_fallback": res.get("is_fallback", False)}}
+
+
+class TimelineRequest(BaseModel):
+    crime_ids: list[str]
+
+@router.post("/timeline")
+@limiter.limit("30/minute")
+async def network_timeline(
+    request: Request,
+    payload: TimelineRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """Given the crime_ids currently shown on the network graph (pulled from each
+    edge's crime_ids property), return them ordered by date for the timeline strip."""
+    import uuid as uuid_lib
+    from sqlalchemy import select
+    from app.core.security import scope_district_filter
+    from app.models.database_models.crime_model import Crime
+
+    valid_ids = []
+    for cid in payload.crime_ids:
+        try:
+            valid_ids.append(uuid_lib.UUID(cid))
+        except ValueError:
+            continue
+
+    if not valid_ids:
+        return {"success": True, "data": {"events": []}}
+
+    stmt = select(Crime).where(Crime.crime_id.in_(valid_ids))
+    stmt = scope_district_filter(stmt, current_user, Crime.district_id)
+    result = await db.execute(stmt)
+    crimes = result.scalars().all()
+
+    events = sorted([
+        {
+            "crime_id": str(c.crime_id),
+            "date": c.date_of_occurrence.isoformat() if c.date_of_occurrence else None,
+            "crime_type": c.crime_type,
+            "district_id": c.district_id,
+            "status": c.status,
+        }
+        for c in crimes if c.date_of_occurrence
+    ], key=lambda e: e["date"])
+
+    return {"success": True, "data": {"events": events}}

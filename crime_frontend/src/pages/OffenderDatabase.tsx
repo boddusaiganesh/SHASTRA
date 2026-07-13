@@ -290,10 +290,10 @@ export default function OffenderDatabase() {
               {modusOperandi && (
                 <div className="bg-slate-800/60 rounded-lg p-3 space-y-1">
                   <p className="text-xs font-semibold text-purple-400 mb-2 flex items-center gap-1"><Shield className="h-3 w-3" />Modus Operandi Analysis</p>
-                  {Object.entries(modusOperandi).map(([k, v]) => (
+                  {Object.entries(modusOperandi).filter(([k]) => k !== 'is_fallback').map(([k, v]) => (
                     <div key={k} className="flex justify-between text-xs">
                       <span className="text-slate-400 capitalize">{k.replace(/_/g, " ")}</span>
-                      <div className="text-slate-200 text-right max-w-[60%]"><AIMarkdown text={Array.isArray(v) ? v.join(", ") : String(v)} /></div>
+                      <div className="text-slate-200 text-right max-w-[60%]"><AIMarkdown text={Array.isArray(v) ? v.join(", ") : String(v)} isFallback={k === 'ai_mo_summary' ? modusOperandi.is_fallback : false} /></div>
                     </div>
                   ))}
                 </div>

@@ -192,3 +192,23 @@ def get_default_permissions(role: str) -> list:
             "view_alerts",
         ]
     return []
+
+async def update_user_status(db: AsyncSession, user_id: str, payload: dict) -> Optional[dict]:
+    import uuid
+    try:
+        uid = uuid.UUID(user_id)
+    except ValueError:
+        return None
+        
+    result = await db.execute(select(User).where(User.user_id == uid))
+    user = result.scalar_one_or_none()
+    if not user:
+        return None
+        
+    for k, v in payload.items():
+        if hasattr(user, k) and k != "user_id" and k != "username":
+            setattr(user, k, v)
+            
+    await db.commit()
+    await db.refresh(user)
+    return user.to_dict()

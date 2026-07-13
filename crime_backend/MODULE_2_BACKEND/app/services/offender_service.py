@@ -164,9 +164,10 @@ async def get_offender_profile(
     # Get AI assessment
     ai_assessment = await get_offender_ai_analysis(profile, crime_history)
     profile["ai_assessment"] = {
-        "risk_narrative": ai_assessment,
+        "risk_narrative": ai_assessment.get("text", ""),
         "reoffend_probability": offender.reoffend_probability,
         "recommended_monitoring": "Standard" if offender.risk_level == "LOW" else "Enhanced",
+        "is_fallback": ai_assessment.get("is_fallback", False),
     }
     
     return profile
@@ -302,7 +303,8 @@ async def get_modus_operandi(
     
     # Get AI MO summary
     mo_summary = await get_mo_analysis(mo_data, offender.to_dict())
-    mo_data["ai_mo_summary"] = mo_summary
+    mo_data["ai_mo_summary"] = mo_summary.get("text", "")
+    mo_data["is_fallback"] = mo_summary.get("is_fallback", False)
     
     return mo_data
 
@@ -403,9 +405,16 @@ async def update_offender(db: AsyncSession, offender_id: str, payload: dict):
     if not offender:
         return None
         
+    ALLOWED_UPDATE_FIELDS = {
+        "first_name", "last_name", "gender", "date_of_birth", "age",
+        "aliases", "contact_number", "address", "occupation", "status",
+        "gang_affiliation", "modus_operandi_summary", "known_associates",
+        "preferred_locations", "typical_targets"
+    }
+        
     for k, v in payload.items():
-        if hasattr(offender, k) and k != "offender_id":
-            if (k == "date_of_birth" or k == "last_offense_date") and isinstance(v, str):
+        if k in ALLOWED_UPDATE_FIELDS and hasattr(offender, k):
+            if k == "date_of_birth" and isinstance(v, str):
                 from datetime import datetime
                 try:
                     v = datetime.strptime(v.split("T")[0], "%Y-%m-%d").date()

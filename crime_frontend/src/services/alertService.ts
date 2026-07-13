@@ -8,8 +8,8 @@ export const alertService = {
       if (severity && severity !== "All") params.severity = severity;
       if (type && type !== "All") params.alert_type = type;
       
-      const res = await api.get(ENDPOINTS.ALERTS.LIST, { params });
-      return res.data?.data || res.data;
+      const response = await api.get(ENDPOINTS.ALERTS.LIST, { params });
+      return response.data?.data || response.data;
     } catch (error) {
       throw error;
     }

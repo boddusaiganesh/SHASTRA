@@ -282,6 +282,13 @@ async def log_crime(
     
     try:
         new_crime = await create_crime(db, crime_dict, str(current_user["user_id"]))
+        
+        # NEW: check if any watched person/location is involved in this new crime
+        from app.services.watchlist_service import check_watchlist_hits_for_crime
+        involved_ids = [v for v in [crime_dict.get("offender_id"), crime_dict.get("victim_id"), crime_dict.get("location_id")] if v]
+        if involved_ids:
+            await check_watchlist_hits_for_crime(db, str(new_crime["crime_id"]), involved_ids)
+            
         return {"success": True, "data": new_crime}
     except Exception as e:
         logger.error(f"Error creating crime: {e}")

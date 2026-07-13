@@ -107,6 +107,16 @@ const SettingsPage: React.FC = () => {
       setAddUserError(e.response?.data?.detail || e.message || "Failed to add user");
     }
   };
+  const handleToggleUser = async (userId: string, currentStatus: boolean) => {
+    try {
+      await settingsService.updateUser(userId, { is_active: !currentStatus });
+      setUsers((prev) => prev.map((u) => u.user_id === userId ? { ...u, is_active: !currentStatus } : u));
+    } catch (e) {
+      console.error(e);
+      alert("Failed to update user status");
+    }
+  };
+
 
   if (loading) return <div className="flex-1 flex items-center justify-center"><LoadingSpinner size="lg" text="Loading settings..." /></div>;
 
@@ -162,7 +172,7 @@ const SettingsPage: React.FC = () => {
           <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-x-auto custom-scrollbar">
             <table className="w-full text-sm">
               <thead><tr className="border-b border-slate-700/50">
-                {["User", "Username", "Role", "District", "Status"].map((h) => (
+                {["User", "Username", "Role", "District", "Status", "Actions"].map((h) => (
                   <th key={h} className="text-left py-3 px-4 text-xs text-slate-500">{h}</th>
                 ))}
               </tr></thead>
@@ -174,6 +184,11 @@ const SettingsPage: React.FC = () => {
                     <td className="py-3 px-4"><span className="text-xs bg-blue-900/40 text-blue-400 px-2 py-0.5 rounded-full">{u.role}</span></td>
                     <td className="py-3 px-4 text-slate-400 text-xs">{u.district_id || "State-Wide"}</td>
                     <td className="py-3 px-4"><span className={`text-xs px-2 py-0.5 rounded-full ${u.is_active || (u as any).status === 'Active' ? "bg-green-900/40 text-green-400" : "bg-slate-700 text-slate-400"}`}>{u.is_active || (u as any).status === 'Active' ? "Active" : "Inactive"}</span></td>
+                    <td className="py-3 px-4">
+                      <button onClick={() => handleToggleUser(u.user_id, u.is_active !== false)} className="text-xs px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 text-white transition-colors">
+                        {u.is_active !== false ? "Deactivate" : "Activate"}
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>

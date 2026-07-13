@@ -192,6 +192,17 @@ const CrimeMapPage: React.FC = () => {
             <div className="h-full flex items-center justify-center bg-slate-900">
               <LoadingSpinner size="lg" text="Loading crime map data..." />
             </div>
+          ) : error ? (
+            <div className="h-full flex flex-col items-center justify-center bg-slate-900">
+              <AlertTriangle className="h-10 w-10 text-red-500 mb-3" />
+              <p className="text-red-400 font-medium">{error}</p>
+              <button 
+                onClick={() => window.location.reload()}
+                className="mt-4 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition-colors"
+              >
+                Retry
+              </button>
+            </div>
           ) : (
             <CrimeMap 
               crimes={displayCrimes} 

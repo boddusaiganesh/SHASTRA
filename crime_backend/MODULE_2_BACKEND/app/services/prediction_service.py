@@ -374,7 +374,8 @@ async def get_emerging_typologies(
     # Get AI explanation for top emerging types
     for et in emerging_types[:5]:
         ai_exp = await get_emerging_typology_explanation(et)
-        et["ai_explanation"] = ai_exp
+        et["ai_explanation"] = ai_exp.get("text", "")
+        et["is_fallback"] = ai_exp.get("is_fallback", False)
     
     # Overall intelligence briefing
     overall_intel = await get_emerging_typology_explanation(
@@ -383,7 +384,8 @@ async def get_emerging_typologies(
     
     response = {
         "emerging_types": emerging_types,
-        "overall_intelligence": overall_intel,
+        "overall_intelligence": overall_intel.get("text", ""),
+        "is_fallback": overall_intel.get("is_fallback", False),
         "generated_at": datetime.now(timezone.utc).isoformat(),
     }
     
@@ -417,7 +419,8 @@ async def get_socioeconomic_correlation(
     response = {
         "correlations": correlations,
         "overlay_data": overlay_data,
-        "ai_analysis": ai_analysis,
+        "ai_analysis": ai_analysis.get("text", ""),
+        "is_fallback": ai_analysis.get("is_fallback", False),
     }
     
     await cache_set(cache_key, response, expiry=3600)

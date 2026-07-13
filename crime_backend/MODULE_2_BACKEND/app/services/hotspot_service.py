@@ -135,7 +135,7 @@ async def get_time_patterns(
 ) -> Dict[str, Any]:
     """Get hourly, daily, and monthly crime patterns"""
     
-    cache_key = f"time_patterns_v2:{district_id}:{crime_type}"
+    cache_key = f"time_patterns_v3:{district_id}:{crime_type}"
     cached = await cache_get(cache_key)
     if cached:
         return cached
@@ -294,7 +294,8 @@ async def get_deployment_suggestions(
     
     return {
         "suggestions": suggestions,
-        "ai_overall_strategy": ai_strategy,
+        "ai_overall_strategy": ai_strategy.get("text", ""),
+        "is_fallback": ai_strategy.get("is_fallback", False),
     }
 
 

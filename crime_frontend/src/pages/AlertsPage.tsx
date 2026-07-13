@@ -9,7 +9,7 @@ import LoadingSpinner from "../components/common/LoadingSpinner";
 
 const AlertsPage: React.FC = () => {
   const dispatch = useDispatch();
-  const { alerts, unreadCount, totalCount } = useSelector((s: RootState) => s.alerts);
+  const { alerts, unreadCount, totalCount, severityCounts } = useSelector((s: RootState) => s.alerts);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [severityFilter, setSeverityFilter] = useState("All");
@@ -83,7 +83,7 @@ const AlertsPage: React.FC = () => {
       {/* Summary */}
       <div className="grid grid-cols-4 gap-3">
         {["CRITICAL", "HIGH", "MEDIUM", "LOW"].map((sev) => {
-          const count = (alerts as { severity: string }[]).filter((a) => a.severity === sev).length;
+          const count = severityCounts?.[sev] || 0;
           const colors: Record<string, string> = { CRITICAL: "border-red-500/40 text-red-400", HIGH: "border-orange-500/40 text-orange-400", MEDIUM: "border-yellow-500/40 text-yellow-400", LOW: "border-blue-500/40 text-blue-400" };
           return (
             <div key={sev} className={`bg-slate-800/50 border rounded-xl p-3 text-center ${colors[sev]}`}>

@@ -383,6 +383,7 @@ async def get_network_graph(
                 "strength_score": rel.get("strength_score", 50) if rel else 50,
                 "confidence_level": rel.get("confidence_level", "SUSPECTED") if rel else "SUSPECTED",
                 "crime_count": len(rel.get("crime_ids", [])) if rel else 0,
+                "crime_ids": rel.get("crime_ids", []) if rel else [],
                 "crime_types": rel.get("crime_types", []) if rel else [],
             })
     

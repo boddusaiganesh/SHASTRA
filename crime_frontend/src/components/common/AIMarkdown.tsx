@@ -6,9 +6,10 @@ import remarkGfm from 'remark-gfm';
 interface AIMarkdownProps {
   text: string;
   className?: string;
+  isFallback?: boolean;
 }
 
-const AIMarkdown: React.FC<AIMarkdownProps> = ({ text, className = "" }) => {
+const AIMarkdown: React.FC<AIMarkdownProps> = ({ text, className = "", isFallback = false }) => {
   // Fix cases where the text was double JSON stringified or contains literal escaped newlines
   let processedText = text || "";
   if (typeof processedText === 'string') {
@@ -22,6 +23,14 @@ const AIMarkdown: React.FC<AIMarkdownProps> = ({ text, className = "" }) => {
 
   return (
     <div className={`ai-markdown-container ${className}`}>
+      {isFallback && (
+        <div className="mb-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] font-medium tracking-wide uppercase">
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+          Offline Fallback Template
+        </div>
+      )}
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{

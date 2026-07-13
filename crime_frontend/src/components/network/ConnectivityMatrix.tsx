@@ -4,7 +4,7 @@ import React, { useMemo, useState, useRef, useEffect } from 'react';
 interface NetworkNode {
   node_id: string; node_type: string; label: string; risk_score: number;
   crime_count: number; profile_data: Record<string, unknown>;
-  ai_analysis?: string; timeline?: any[];
+  ai_analysis?: string; is_fallback?: boolean; timeline?: any[];
   centrality?: { betweenness: number; degree: number; pagerank: number };
   community_id?: number;
 }

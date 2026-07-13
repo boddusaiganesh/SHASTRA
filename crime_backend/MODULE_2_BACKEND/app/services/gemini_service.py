@@ -53,21 +53,23 @@ Ensure the analysis is highly professional, uses standard law enforcement termin
         return {
             "summary_text": data.get("summary_text", "Network analysis temporarily unavailable."),
             "key_findings": data.get("key_findings", []),
-            "recommended_actions": data.get("recommended_actions", [])
+            "recommended_actions": data.get("recommended_actions", []),
+            "is_fallback": result.get("is_fallback", False)
         }
     except Exception as e:
         logger.error(f"Failed to parse Gemini JSON: {e}")
         return {
             "summary_text": result.get("text", "Network analysis temporarily unavailable."),
             "key_findings": [],
-            "recommended_actions": []
+            "recommended_actions": [],
+            "is_fallback": result.get("is_fallback", False)
         }
 
 
 async def get_deployment_suggestions_ai(
     hotspots: List[Any],
     district_id: str,
-) -> str:
+) -> Dict[str, Any]:
     """Generate AI deployment strategy for a district"""
     
     hotspot_info = []
@@ -96,13 +98,16 @@ Format as a clear operational directive suitable for a District Superintendent o
 """
     
     result = await call_gemini(prompt)
-    return result.get("text", "") or "AI deployment strategy generation temporarily unavailable. Use standard patrol protocols for identified hotspots."
+    return {
+        "text": result.get("text", "") or "AI deployment strategy generation temporarily unavailable. Use standard patrol protocols for identified hotspots.",
+        "is_fallback": result.get("is_fallback", False)
+    }
 
 
 async def get_offender_ai_analysis(
     offender_data: Dict,
     crime_history: List[Dict],
-) -> str:
+) -> Dict[str, Any]:
     """Generate AI risk assessment for an offender"""
     
     crime_summary = "\n".join([
@@ -139,10 +144,13 @@ Be specific and evidence-based.
 """
     
     result = await call_gemini(prompt)
-    return result.get("text", "") or f"Risk assessment for this offender indicates {offender_data.get('risk_level', 'MEDIUM')} risk based on crime history."
+    return {
+        "text": result.get("text", "") or f"Risk assessment for this offender indicates {offender_data.get('risk_level', 'MEDIUM')} risk based on crime history.",
+        "is_fallback": result.get("is_fallback", False)
+    }
 
 
-async def get_mo_analysis(mo_data: Dict, offender_data: Dict) -> str:
+async def get_mo_analysis(mo_data: Dict, offender_data: Dict) -> Dict[str, Any]:
     """Generate AI modus operandi analysis"""
     
     crime_types = ", ".join([ct.get("crime_type", "") for ct in mo_data.get("preferred_crime_types", [])[:3]])
@@ -176,10 +184,13 @@ Write in a professional forensic analysis style.
 """
     
     result = await call_gemini(prompt)
-    return result.get("text", "") or "MO analysis based on crime history indicates consistent behavioral patterns. Full analysis requires additional data."
+    return {
+        "text": result.get("text", "") or "MO analysis based on crime history indicates consistent behavioral patterns. Full analysis requires additional data.",
+        "is_fallback": result.get("is_fallback", False)
+    }
 
 
-async def get_anomaly_explanation(anomaly_data: Dict) -> str:
+async def get_anomaly_explanation(anomaly_data: Dict) -> Dict[str, Any]:
     """Generate AI explanation for a detected anomaly"""
     
     evidence_text = "\n".join([f"- {e}" for e in anomaly_data.get("evidence_points", [])[:5]])
@@ -208,10 +219,13 @@ Keep the analysis concise and actionable for law enforcement use.
 """
     
     result = await call_gemini(prompt)
-    return result.get("text", "") or "Anomaly detected through statistical analysis. Pattern deviates from baseline. Recommend immediate investigation."
+    return {
+        "text": result.get("text", "") or "Anomaly detected through statistical analysis. Pattern deviates from baseline. Recommend immediate investigation.",
+        "is_fallback": result.get("is_fallback", False)
+    }
 
 
-async def get_edge_connection_insight(node_a: Dict, node_b: Dict, edge: Dict) -> str:
+async def get_edge_connection_insight(node_a: Dict, node_b: Dict, edge: Dict) -> Dict[str, Any]:
     """Generate an AI explanation for why two network nodes are linked."""
     prompt = f"""
 Analyze this connection in a Karnataka State Police criminal network graph:
@@ -239,10 +253,13 @@ In 2-3 sentences, explain the likely criminological significance of this connect
 and one recommended investigative next step.
 """
     result = await call_gemini(prompt)
-    return result.get("text", "") or "This connection is based on shared crime records or associate data. Manual review recommended."
+    return {
+        "text": result.get("text", "") or "This connection is based on shared crime records or associate data. Manual review recommended.",
+        "is_fallback": result.get("is_fallback", False)
+    }
 
 
-async def get_prediction_recommended_action(prediction_data: Dict) -> str:
+async def get_prediction_recommended_action(prediction_data: Dict) -> Dict[str, Any]:
     """Generate AI recommended action for a prediction"""
     
     prompt = f"""
@@ -259,10 +276,13 @@ Provide a single, specific recommended police action in 2-3 sentences.
 """
     
     result = await call_gemini(prompt)
-    return result.get("text", "") or "Deploy additional patrol units to the identified area during predicted high-risk periods."
+    return {
+        "text": result.get("text", "") or "Deploy additional patrol units to the identified area during predicted high-risk periods.",
+        "is_fallback": result.get("is_fallback", False)
+    }
 
 
-async def get_report_narrative(report_data: Dict, report_type: str) -> str:
+async def get_report_narrative(report_data: Dict, report_type: str) -> Dict[str, Any]:
     """Generate AI executive summary narrative for a report"""
     
     prompt = f"""
@@ -289,10 +309,13 @@ Use formal government report language.
 """
     
     result = await call_gemini(prompt)
-    return result.get("text", "") or "Executive summary generation temporarily unavailable. Refer to the statistical data within this report."
+    return {
+        "text": result.get("text", "") or "Executive summary generation temporarily unavailable. Refer to the statistical data within this report.",
+        "is_fallback": result.get("is_fallback", False)
+    }
 
 
-async def get_emerging_typology_explanation(data: Dict) -> str:
+async def get_emerging_typology_explanation(data: Dict) -> Dict[str, Any]:
     """Generate AI explanation of emerging crime typologies"""
     
     if "emerging_types" in data:
@@ -334,10 +357,13 @@ Be specific to Karnataka's socioeconomic context.
 """
     
     result = await call_gemini(prompt)
-    return result.get("text", "") or "Emerging crime typology detected. Statistical analysis indicates growth trend requiring monitoring."
+    return {
+        "text": result.get("text", "") or "Emerging crime typology detected. Statistical analysis indicates growth trend requiring monitoring.",
+        "is_fallback": result.get("is_fallback", False)
+    }
 
 
-async def get_socioeconomic_ai_analysis(correlations: List[Dict], overlay_data: List[Dict]) -> str:
+async def get_socioeconomic_ai_analysis(correlations: List[Dict], overlay_data: List[Dict]) -> Dict[str, Any]:
     """Generate AI analysis of socioeconomic-crime correlations"""
     
     corr_text = "\n".join([
@@ -365,4 +391,7 @@ Reference Karnataka's specific context (urbanization, agricultural economy, tech
 """
     
     result = await call_gemini(prompt)
-    return result.get("text", "") or "Socioeconomic correlation analysis indicates multiple factors influencing crime rates. Unemployment and urbanization show strongest correlation with property crimes."
+    return {
+        "text": result.get("text", "") or "Socioeconomic correlation analysis indicates multiple factors influencing crime rates. Unemployment and urbanization show strongest correlation with property crimes.",
+        "is_fallback": result.get("is_fallback", False)
+    }

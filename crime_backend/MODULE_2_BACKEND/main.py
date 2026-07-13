@@ -43,6 +43,8 @@ from app.routers import (
     search_router,
     evidence_router,
     assistant_router,
+    watchlist_router,
+    investigations_router,
 )
 
 # Setup logging
@@ -202,10 +204,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-# Static files for evidence uploads
-import os
-UPLOAD_DIR = os.environ.get("EVIDENCE_UPLOAD_DIR", "/app/uploads")
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+
 # Include routers
 app.include_router(auth_router.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(dashboard_router.router, prefix="/api/dashboard", tags=["Dashboard"])
@@ -223,6 +222,8 @@ app.include_router(import_router.router, prefix="/api/import", tags=["Import"])
 app.include_router(search_router.router, prefix="/api/search", tags=["Search"])
 app.include_router(evidence_router.router, prefix="/api/evidence", tags=["Evidence"])
 app.include_router(assistant_router.router, prefix="/api/assistant", tags=["Assistant"])
+app.include_router(watchlist_router.router, prefix="/api/watchlist", tags=["Watchlist"])
+app.include_router(investigations_router.router, prefix="/api/investigations", tags=["Investigations"])
 
 
 @app.get("/", tags=["Health"])
