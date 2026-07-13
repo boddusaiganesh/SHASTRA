@@ -35,13 +35,16 @@ export interface NetworkGraphHandle {
   focusOnNode: (nodeId: string) => void;
   clearFocus: () => void;
   highlightKeyPlayers: (nodeIds: string[]) => void;
+  fitGraph: () => void;
+  zoomIn: () => void;
+  zoomOut: () => void;
 }
 
 const getDynamicLayoutOptions = (nodeCount: number, edgeCount: number) => {
-  const scale = 1 + Math.sqrt(Math.max(nodeCount, 1)) / 6;
+  const scale = 1 + Math.sqrt(Math.max(nodeCount, 1)) / 5;
   const avgDegree = nodeCount > 0 ? (edgeCount * 2) / nodeCount : 0;
-  const densityFactor = 1 + Math.min(avgDegree / 6, 1) * 0.4;
-  const isLarge = nodeCount > 150;
+  const densityFactor = 1 + Math.min(avgDegree / 6, 1) * 0.5;
+  const isLarge = nodeCount > 100;
 
   return {
     name: "fcose",
@@ -50,11 +53,11 @@ const getDynamicLayoutOptions = (nodeCount: number, edgeCount: number) => {
     randomize: true,
     nodeDimensionsIncludeLabels: true,
     packComponents: true,
-    nodeSeparation: Math.min(600, Math.round(160 * scale)),
-    idealEdgeLength: Math.min(520, Math.round(220 * scale * densityFactor)),
-    nodeRepulsion: Math.min(60000, Math.round(9000 * scale * scale)),
+    nodeSeparation: Math.min(900, Math.round(220 * scale)),
+    idealEdgeLength: Math.min(700, Math.round(300 * scale * densityFactor)),
+    nodeRepulsion: Math.min(120000, Math.round(15000 * scale * scale)),
     edgeElasticity: 0.35,
-    gravity: Math.max(0.02, 0.15 / scale),
+    gravity: Math.max(0.01, 0.1 / scale),
     numIter: isLarge ? 1500 : 2500,
     tile: true,
     nestingFactor: 1.2,
@@ -147,24 +150,25 @@ const getStyleSheet = (colorBy: "type" | "cluster" = "type"): any[] => [
       "border-width": 3,
       "label": "data(label)",
       "color": "#e2e8f0",
-      "font-size": "10px",
+      "font-size": "11px",
+      "font-weight": 600,
       "text-valign": "bottom",
       "text-halign": "center",
-      "text-margin-y": 4,
+      "text-margin-y": 5,
       "width": (ele: cytoscape.NodeSingular) => {
         if (ele.isParent() || ele.data("isCluster")) return "auto";
         const crimes = Number(ele.data("crimes")) || 0;
         const btw = Number(ele.data("betweenness")) || 0;
-        return Math.max(30, Math.min(80, 20 + crimes * 2 + btw * 100));
+        return Math.max(38, Math.min(100, 28 + crimes * 3 + btw * 120));
       },
       "height": (ele: cytoscape.NodeSingular) => {
         if (ele.isParent() || ele.data("isCluster")) return "auto";
         const crimes = Number(ele.data("crimes")) || 0;
         const btw = Number(ele.data("betweenness")) || 0;
-        return Math.max(30, Math.min(80, 20 + crimes * 2 + btw * 100));
+        return Math.max(38, Math.min(100, 28 + crimes * 3 + btw * 120));
       },
       "text-wrap": "wrap",
-      "text-max-width": "80px",
+      "text-max-width": "100px",
     },
   },
   {
@@ -216,12 +220,12 @@ const getStyleSheet = (colorBy: "type" | "cluster" = "type"): any[] => [
     selector: "edge",
     style: {
       "width": (ele: cytoscape.EdgeSingular) => 1 + (Number(ele.data("strength")) || 50) / 30,
-      "line-color": "#334155",
-      "target-arrow-color": "#334155",
+      "line-color": "#475569",
+      "target-arrow-color": "#475569",
       "target-arrow-shape": "triangle",
       "curve-style": "bezier",
-      "label": "data(label)",
-      "font-size": "8px",
+      "label": "",  // hide edge labels by default — too cluttered at scale
+      "font-size": "0px",
       "color": "#64748b",
       "text-rotation": "autorotate",
       // @ts-ignore
@@ -230,7 +234,12 @@ const getStyleSheet = (colorBy: "type" | "cluster" = "type"): any[] => [
   },
   {
     selector: "edge:selected",
-    style: { "line-color": "#3b82f6", "target-arrow-color": "#3b82f6" },
+    style: {
+      "line-color": "#3b82f6",
+      "target-arrow-color": "#3b82f6",
+      "label": "data(label)",
+      "font-size": "9px",
+    },
   },
   {
     selector: "edge.focus-edge",
@@ -312,9 +321,12 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNo
         elements,
         style: getStyleSheet(colorBy),
         layout: getDynamicLayoutOptions(nodes.length, edges.length),
-        minZoom: 0.2,
-        maxZoom: 3,
+        minZoom: 0.05,
+        maxZoom: 4,
+        wheelSensitivity: 0.3,
       });
+      // Fit graph to viewport with padding once layout settles
+      cy.one("layoutstop", () => { cy.fit(undefined, 60); });
 
       cy.on("tap", "node", (evt: cytoscape.EventObject) => {
         const nodeId = evt.target.id();
@@ -478,13 +490,28 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNo
     highlightKeyPlayers: (nodeIds: string[]) => {
       const cy = cyRef.current;
       if (!cy) return;
-      cy.elements().removeClass("dimmed focus-active focus-neighbor focus-edge");
-      cy.elements().removeClass("key-player");
+      cy.elements().removeClass("dimmed focus-active focus-neighbor focus-edge key-player");
+      if (nodeIds.length === 0) return;
       const keyEls = cy.collection();
       nodeIds.forEach((id) => keyEls.merge(cy.getElementById(id)));
       cy.elements().not(keyEls).addClass("dimmed");
       keyEls.addClass("key-player");
       cy.animate({ fit: { eles: keyEls, padding: 80 }, duration: 500, easing: "ease-in-out-cubic" });
+    },
+    fitGraph: () => {
+      const cy = cyRef.current;
+      if (!cy) return;
+      cy.animate({ fit: { eles: cy.elements(), padding: 60 }, duration: 400, easing: "ease-in-out-cubic" });
+    },
+    zoomIn: () => {
+      const cy = cyRef.current;
+      if (!cy) return;
+      cy.animate({ zoom: Math.min(cy.zoom() * 1.35, cy.maxZoom()), duration: 200 });
+    },
+    zoomOut: () => {
+      const cy = cyRef.current;
+      if (!cy) return;
+      cy.animate({ zoom: Math.max(cy.zoom() / 1.35, cy.minZoom()), duration: 200 });
     },
   }));
 

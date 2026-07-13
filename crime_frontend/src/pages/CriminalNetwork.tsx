@@ -581,8 +581,26 @@ const CriminalNetwork: React.FC = () => {
                 />
               )}
               
-              <div className="absolute bottom-4 left-4 bg-slate-900/90 backdrop-blur border border-slate-700/50 rounded-lg p-2">
-                <p className="text-xs text-slate-400">Click to explore • Double-click to expand • Shift-click to compare • Scroll to zoom</p>
+              {/* Floating zoom controls */}
+              <div className="absolute bottom-4 left-4 flex flex-col gap-1 z-10">
+                <button
+                  onClick={() => graphRef.current?.zoomIn()}
+                  title="Zoom In"
+                  className="w-8 h-8 flex items-center justify-center bg-slate-800/95 border border-slate-600 rounded-lg text-slate-300 hover:text-white hover:bg-slate-700 text-base font-bold shadow transition-colors"
+                >+</button>
+                <button
+                  onClick={() => graphRef.current?.zoomOut()}
+                  title="Zoom Out"
+                  className="w-8 h-8 flex items-center justify-center bg-slate-800/95 border border-slate-600 rounded-lg text-slate-300 hover:text-white hover:bg-slate-700 text-base font-bold shadow transition-colors"
+                >−</button>
+                <button
+                  onClick={() => graphRef.current?.fitGraph()}
+                  title="Fit to screen"
+                  className="w-8 h-8 flex items-center justify-center bg-slate-800/95 border border-slate-600 rounded-lg text-slate-300 hover:text-white hover:bg-slate-700 text-sm shadow transition-colors"
+                >⊡</button>
+              </div>
+              <div className="absolute bottom-4 left-14 bg-slate-900/80 backdrop-blur border border-slate-700/50 rounded-lg px-3 py-1.5">
+                <p className="text-xs text-slate-500">Click node • Double-click expand • Shift-click compare • Scroll / ± to zoom</p>
               </div>
               
               {edgeInsight && (
