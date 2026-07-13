@@ -311,7 +311,7 @@ const CriminalNetwork: React.FC = () => {
   const nodeTypeCounts = nodes.reduce((acc, n) => { acc[n.node_type] = (acc[n.node_type] || 0) + 1; return acc; }, {} as Record<string, number>);
 
 
-  if (loading) return <div className="flex-1 flex items-center justify-center"><LoadingSpinner size="lg" text="Building criminal network..." /></div>;
+  if (loading) return <div className="flex-1 flex items-center justify-center"><LoadingSpinner size="lg" text="Building criminal network..." showProgress /></div>;
 
   const NodeIcon = selectedNode ? (nodeTypeIcons[selectedNode.node_type] || Users) : Users;
 
