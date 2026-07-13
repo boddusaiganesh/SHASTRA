@@ -75,6 +75,7 @@ export const ENDPOINTS = {
     GENERATE: "/reports/generate",
     SAVED_LIST: "/reports/history",
     DOWNLOAD: (id: string) => `/reports/${id}/download`,
+    DELETE: (id: string) => `/reports/${id}`,
   },
   // Settings
   SETTINGS: {

@@ -36,4 +36,12 @@ export const reportService = {
       return null;
     }
   },
+  deleteReport: async (id: string) => {
+    try {
+      const res = await api.delete(ENDPOINTS.REPORTS.DELETE(id));
+      return res.data;
+    } catch (error) {
+      throw error;
+    }
+  },
 };

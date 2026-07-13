@@ -271,6 +271,23 @@ async def get_report_by_id(db: AsyncSession, report_id: str) -> Optional[Dict[st
     data["file_url"] = report.file_path or None
     return data
 
+async def delete_report(db: AsyncSession, report_id: str) -> bool:
+    """Delete a report by ID"""
+    try:
+        report_uuid = uuid.UUID(report_id)
+    except ValueError:
+        return False
+        
+    result = await db.execute(select(Report).where(Report.report_id == report_uuid))
+    report = result.scalar_one_or_none()
+    
+    if not report:
+        return False
+        
+    await db.delete(report)
+    await db.commit()
+    return True
+
 def export_report_csv(report_data: dict) -> bytes:
     import io
     import csv

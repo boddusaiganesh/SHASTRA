@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { FileText, Download, Plus, CheckCircle, Clock, Loader2, Eye, X } from "lucide-react";
+import { FileText, Download, Plus, CheckCircle, Clock, Loader2, Eye, X, Trash2 } from "lucide-react";
 import { reportService } from "../services/reportService";
 import { useDistricts } from "../hooks/useDistricts";
 import LoadingSpinner from "../components/common/LoadingSpinner";
@@ -44,6 +44,20 @@ const ReportsPage: React.FC = () => {
       }
     } catch (error) {
       setSuccessMsg("Failed to load PDF viewer.");
+      setTimeout(() => setSuccessMsg(""), 3000);
+    }
+  };
+
+  const handleDelete = async (reportId: string) => {
+    if (!confirm("Are you sure you want to delete this report?")) return;
+    try {
+      await reportService.deleteReport(reportId);
+      setSavedReports(prev => prev.filter(r => r.report_id !== reportId));
+      setTotalCount(prev => Math.max(0, prev - 1));
+      setSuccessMsg("Report deleted successfully");
+      setTimeout(() => setSuccessMsg(""), 3000);
+    } catch (error) {
+      setSuccessMsg("Failed to delete report.");
       setTimeout(() => setSuccessMsg(""), 3000);
     }
   };
@@ -212,6 +226,13 @@ const ReportsPage: React.FC = () => {
                   className="flex items-center gap-1 px-3 py-1.5 text-xs text-blue-400 hover:text-blue-300 hover:bg-blue-900/20 rounded-lg transition-colors"
                 >
                   <Download className="h-4 w-4" /> CSV
+                </button>
+                <button
+                  onClick={() => handleDelete(report.report_id)}
+                  className="flex items-center justify-center p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-colors ml-2"
+                  title="Delete Report"
+                >
+                  <Trash2 className="h-4 w-4" />
                 </button>
               </div>
             </div>

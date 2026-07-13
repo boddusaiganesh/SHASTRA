@@ -85,3 +85,26 @@ async def download(
         media_type=media_type,
         headers={"Content-Disposition": f"attachment; filename=report_{report_id}.{ext}"}
     )
+
+@router.delete("/{report_id}")
+async def delete_report_endpoint(
+    report_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(require_role(["SCRB_OFFICER", "DISTRICT_OFFICER"]))
+):
+    from app.services.report_service import delete_report
+    
+    # Simple check for district officers
+    if current_user["role"] == "DISTRICT_OFFICER":
+        data = await get_report_by_id(db, report_id)
+        if not data:
+            raise HTTPException(status_code=404, detail="Report not found")
+        report_district = data.get("parameters", {}).get("district_id")
+        if report_district and report_district != current_user.get("district_id"):
+            raise HTTPException(status_code=403, detail="Access denied. District officers can only delete reports for their own district.")
+            
+    success = await delete_report(db, report_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Report not found or could not be deleted")
+        
+    return {"success": True, "message": "Report deleted successfully"}
