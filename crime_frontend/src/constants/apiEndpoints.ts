@@ -63,6 +63,7 @@ export const ENDPOINTS = {
     LIST: "/anomalies/list",
     DETAIL: (id: string) => `/anomalies/detail/${id}`,
     UPDATE_STATUS: (id: string) => `/anomalies/update-status/${id}`,
+    SCAN: "/anomalies/scan",
   },
   // Alerts
   ALERTS: {

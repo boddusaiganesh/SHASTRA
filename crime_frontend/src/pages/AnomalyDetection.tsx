@@ -62,6 +62,17 @@ const AnomalyDetection: React.FC = () => {
     }
   };
 
+  const handleTriggerScan = async () => {
+    setLoading(true);
+    try {
+      await anomalyService.triggerScan();
+      await fetch();
+    } catch (e) {
+      console.error("Failed to run anomaly scan:", e);
+      setLoading(false);
+    }
+  };
+
   const safeAnomalies = Array.isArray(anomalies) ? anomalies : [];
   const filtered = safeAnomalies; // Server-side filtering is now active
 
@@ -74,9 +85,14 @@ const AnomalyDetection: React.FC = () => {
           <h1 className="text-xl font-bold text-white">Anomaly Detection</h1>
           <p className="text-sm text-slate-400">AI-detected statistical deviations in crime patterns</p>
         </div>
-        <button onClick={fetch} className="flex items-center gap-2 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm rounded-lg transition-colors">
-          <RefreshCw className="h-4 w-4" /> Refresh
-        </button>
+        <div className="flex items-center gap-3">
+          <button onClick={handleTriggerScan} className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded-lg transition-colors font-medium">
+            <AlertOctagon className={`h-4 w-4 ${loading ? 'animate-pulse' : ''}`} /> Run AI Scan
+          </button>
+          <button onClick={fetch} className="flex items-center gap-2 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm rounded-lg transition-colors">
+            <RefreshCw className="h-4 w-4" /> Refresh
+          </button>
+        </div>
       </div>
 
       {/* Summary Cards */}

@@ -65,3 +65,38 @@ async def update_status(
         db, anomaly_id, body.get("status"), body.get("assigned_officer"), body.get("notes")
     )
     return {"success": True, "data": data}
+
+@router.post("/scan")
+@limiter.limit("5/minute")
+async def trigger_anomaly_scan(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    from app.core.security import require_role
+    # Only SCRB officers can trigger manual state-wide scans
+    if current_user["role"] not in ["SCRB_OFFICER", "ADMIN"]:
+        from fastapi import status
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied. Only SCRB officers can trigger manual scans.")
+        
+    from app.ml_models.anomaly_detection import run_full_anomaly_scan
+    from app.models.database_models.anomaly_model import Anomaly
+    
+    anomalies = await run_full_anomaly_scan(db)
+    generated = 0
+    if anomalies:
+        for anomaly_data in anomalies:
+            anomaly = Anomaly(
+                anomaly_type=anomaly_data["anomaly_type"],
+                severity=anomaly_data["severity"],
+                district_id=anomaly_data["district_id"],
+                description=anomaly_data["description"],
+                evidence_points=anomaly_data["evidence_points"],
+                anomaly_score=anomaly_data["anomaly_score"],
+                ai_explanation="Detected via ML Isolation Forest algorithm.",
+            )
+            db.add(anomaly)
+        await db.commit()
+        generated = len(anomalies)
+        
+    return {"success": True, "message": f"Scan complete. Found {generated} anomalies.", "count": generated}

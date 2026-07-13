@@ -215,6 +215,12 @@ def init_scheduler():
             id="anomaly_detection_job",
             replace_existing=True,
         )
+        # Run initial anomaly detection immediately on startup
+        scheduler.add_job(
+            run_anomaly_detection,
+            id="anomaly_detection_startup",
+            replace_existing=True,
+        )
         
         # 2. Crime forecasting - weekly on specified day
         day_str = settings.FORECAST_UPDATE_DAY[:3].lower()

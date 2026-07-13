@@ -105,4 +105,12 @@ export const anomalyService = {
       throw error;
     }
   },
+  triggerScan: async () => {
+    try {
+      const res = await api.post(ENDPOINTS.ANOMALIES.SCAN);
+      return res.data;
+    } catch (error) {
+      throw error;
+    }
+  },
 };
