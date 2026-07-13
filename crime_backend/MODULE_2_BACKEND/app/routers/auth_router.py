@@ -31,12 +31,14 @@ async def login(request: Request, response: Response, body: LoginRequest, db: As
     token_data = await create_user_token(user)
     
     # Set the HTTPOnly cookie
+    samesite_val = settings.COOKIE_SAMESITE.lower()
+    is_secure = settings.ENVIRONMENT == "production" or samesite_val == "none"
     response.set_cookie(
         key="auth_token",
         value=token_data["auth_token"],
         httponly=True,
-        samesite="lax",
-        secure=settings.ENVIRONMENT == "production",
+        samesite=samesite_val,
+        secure=is_secure,
         max_age=token_data["expires_in"]
     )
     
@@ -48,11 +50,13 @@ async def login(request: Request, response: Response, body: LoginRequest, db: As
 async def logout(response: Response, current_user=Depends(get_current_user)):
     """Invalidate the current JWT token and delete the cookie"""
     await blacklist_token(current_user["token"])
+    samesite_val = settings.COOKIE_SAMESITE.lower()
+    is_secure = settings.ENVIRONMENT == "production" or samesite_val == "none"
     response.delete_cookie(
         key="auth_token",
         httponly=True,
-        samesite="lax",
-        secure=settings.ENVIRONMENT == "production",
+        samesite=samesite_val,
+        secure=is_secure,
     )
     return {"success": True, "message": "Logged out successfully"}
 

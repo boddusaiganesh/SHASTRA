@@ -142,6 +142,8 @@ async def get_map_data(
             from io import StringIO
             from fastapi.responses import StreamingResponse
             
+            await cache_set(cache_key, {"data": formatted_data}, expiry=300)
+            
             output = StringIO()
             writer = csv.DictWriter(output, fieldnames=["crime_id", "crime_type", "date_time", "location", "district", "police_station", "status", "latitude", "longitude"])
             writer.writeheader()

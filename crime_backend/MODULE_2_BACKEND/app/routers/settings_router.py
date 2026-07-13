@@ -77,16 +77,24 @@ async def list_users(
     data = await get_all_users(db, page, page_size)
     return {"success": True, "data": data}
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from sqlalchemy.exc import IntegrityError
+from app.core.config import USER_ROLES
 
 class CreateUserRequest(BaseModel):
     username: str
     password: str
     role: str
+    full_name: str
     district_id: Optional[str] = None
     email: Optional[str] = None
-    full_name: Optional[str] = None
+
+    @field_validator("role")
+    @classmethod
+    def validate_role(cls, v):
+        if v not in USER_ROLES:
+            raise ValueError(f"role must be one of {USER_ROLES}")
+        return v
 
 @router.post("/users/add")
 async def add_user(

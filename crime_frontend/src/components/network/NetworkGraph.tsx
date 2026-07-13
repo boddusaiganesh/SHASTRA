@@ -27,6 +27,8 @@ interface Props {
   crimeTypeLens?: string | null;
   showClusters?: boolean;
   clusterSummary?: Record<string, { size: number; dominant_crime_type?: string; dominant_district?: string }>;
+  replaceKey?: string | number;
+  colorBy?: "type" | "cluster";
 }
 
 export interface NetworkGraphHandle {
@@ -59,6 +61,13 @@ const getDynamicLayoutOptions = (nodeCount: number, edgeCount: number) => {
     gravityRangeCompound: 1.5,
     gravityCompound: 1.0,
   } as any;
+};
+
+const getEdgeId = (e: NetworkEdge, i?: number) => {
+  if (e.edge_id) return e.edge_id;
+  const s = e.source || e.source_node_id || "";
+  const t = e.target || e.target_node_id || "";
+  return i !== undefined ? `e${i}_${s}_${t}` : `${s}_${t}`;
 };
 
 const buildElements = (nodes: NetworkNode[], edges: NetworkEdge[], showClusters: boolean, clusterSummary?: Record<string, any>) => {
@@ -109,7 +118,7 @@ const buildElements = (nodes: NetworkNode[], edges: NetworkEdge[], showClusters:
     })
     .map((e, i) => ({
       data: {
-        id: e.edge_id || `e${i}_${e.source_node_id}_${e.target_node_id}`,
+        id: getEdgeId(e, i),
         source: e.source || e.source_node_id || "",
         target: e.target || e.target_node_id || "",
         label: e.relationship_type,
@@ -122,11 +131,14 @@ const buildElements = (nodes: NetworkNode[], edges: NetworkEdge[], showClusters:
   return [...clusterParents, ...memberNodes, ...edgeEls];
 };
 
-const styleSheet: any[] = [
+const getStyleSheet = (colorBy: "type" | "cluster" = "type"): any[] => [
   {
     selector: "node",
     style: {
       "background-color": (ele: cytoscape.NodeSingular) => {
+        if (colorBy === "type") {
+          return NODE_COLORS[ele.data("type") as string] || "#6B7280";
+        }
         const commColors = ["#ef4444", "#3b82f6", "#22c55e", "#f59e0b", "#a855f7", "#ec4899", "#14b8a6", "#f97316"];
         const cId = ele.data("community") as number;
         return commColors[cId % commColors.length] || NODE_COLORS[ele.data("type") as string] || "#6B7280";
@@ -140,13 +152,15 @@ const styleSheet: any[] = [
       "text-halign": "center",
       "text-margin-y": 4,
       "width": (ele: cytoscape.NodeSingular) => {
-        const crimes = ele.data("crimes") || 0;
-        const btw = ele.data("betweenness") || 0;
+        if (ele.isParent() || ele.data("isCluster")) return "auto";
+        const crimes = Number(ele.data("crimes")) || 0;
+        const btw = Number(ele.data("betweenness")) || 0;
         return Math.max(30, Math.min(80, 20 + crimes * 2 + btw * 100));
       },
       "height": (ele: cytoscape.NodeSingular) => {
-        const crimes = ele.data("crimes") || 0;
-        const btw = ele.data("betweenness") || 0;
+        if (ele.isParent() || ele.data("isCluster")) return "auto";
+        const crimes = Number(ele.data("crimes")) || 0;
+        const btw = Number(ele.data("betweenness")) || 0;
         return Math.max(30, Math.min(80, 20 + crimes * 2 + btw * 100));
       },
       "text-wrap": "wrap",
@@ -180,9 +194,28 @@ const styleSheet: any[] = [
     },
   },
   {
+    selector: "node.focus-active",
+    style: {
+      "border-color": "#22d3ee",
+      "border-width": 5,
+      "overlay-color": "#22d3ee",
+      "overlay-opacity": 0.18,
+      "overlay-padding": 8,
+      "z-index": 999,
+    } as any,
+  },
+  {
+    selector: "node.focus-neighbor",
+    style: {
+      "border-color": "#38bdf8",
+      "border-width": 4,
+      "z-index": 998,
+    },
+  },
+  {
     selector: "edge",
     style: {
-      "width": (ele: cytoscape.EdgeSingular) => 1 + ele.data("strength") / 30,
+      "width": (ele: cytoscape.EdgeSingular) => 1 + (Number(ele.data("strength")) || 50) / 30,
       "line-color": "#334155",
       "target-arrow-color": "#334155",
       "target-arrow-shape": "triangle",
@@ -198,6 +231,15 @@ const styleSheet: any[] = [
   {
     selector: "edge:selected",
     style: { "line-color": "#3b82f6", "target-arrow-color": "#3b82f6" },
+  },
+  {
+    selector: "edge.focus-edge",
+    style: {
+      "line-color": "#38bdf8",
+      "target-arrow-color": "#38bdf8",
+      "width": (ele: cytoscape.EdgeSingular) => 2 + (Number(ele.data("strength")) || 50) / 25,
+      "z-index": 997,
+    } as any,
   },
   {
     selector: ".dimmed",
@@ -218,34 +260,18 @@ const styleSheet: any[] = [
   },
 ];
 
-/**
- * NetworkGraph Component
- * 
- * Renders an interactive network graph using Cytoscape.js and fcose layout.
- * Used for visualizing criminal networks, relationships, and connections.
- * 
- * Features:
- * - Dynamic layout scaling based on node/edge counts
- * - Expandable nodes (double-click to expand)
- * - Node and Edge selection handling
- * - Lens effects for filtering by crime type
- * - Imperative handle methods to focus, clear, and highlight key players
- * 
- * @param props.nodes Array of network nodes
- * @param props.edges Array of network edges connecting the nodes
- * @param props.onNodeSelect Callback triggered on single node click
- * @param props.onNodeExpand Callback triggered on node double-click
- * @param props.onNodeCompare Callback triggered on shift + node click
- * @param props.onEdgeSelect Callback triggered on edge click
- * @param props.selectedNodeId Currently selected node to highlight
- * @param props.highlightPath Array of node/edge IDs to highlight (dimming others)
- * @param props.crimeTypeLens Crime type string to filter edges/nodes visually
- * @param ref Forwarded ref exposing NetworkGraphHandle methods (focusOnNode, clearFocus, highlightKeyPlayers)
- */
-const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNodeSelect, onNodeExpand, onNodeCompare, onEdgeSelect, selectedNodeId, highlightPath, crimeTypeLens, showClusters = true, clusterSummary }, ref) => {
+const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNodeSelect, onNodeExpand, onNodeCompare, onEdgeSelect, selectedNodeId, highlightPath, crimeTypeLens, showClusters = true, clusterSummary, replaceKey, colorBy = "type" }, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<cytoscape.Core | null>(null);
   const prevIdsRef = useRef<Set<string>>(new Set());
+  const lastReplaceKeyRef = useRef(replaceKey);
+  const crimeTypeLensRef = useRef(crimeTypeLens);
+  const propsRef = useRef({ nodes, edges, onNodeSelect, onNodeExpand, onNodeCompare, onEdgeSelect });
+
+  useEffect(() => {
+    propsRef.current = { nodes, edges, onNodeSelect, onNodeExpand, onNodeCompare, onEdgeSelect };
+    crimeTypeLensRef.current = crimeTypeLens;
+  });
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -267,6 +293,12 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNo
   }, []);
 
   useEffect(() => {
+    if (cyRef.current) {
+      cyRef.current.style(getStyleSheet(colorBy));
+    }
+  }, [colorBy]);
+
+  useEffect(() => {
     if (!containerRef.current) return;
     const currentIds = new Set(nodes.map(n => n.node_id));
 
@@ -274,7 +306,7 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNo
       const cy = cytoscape({
         container: containerRef.current,
         elements: buildElements(nodes, edges, showClusters, clusterSummary),
-        style: styleSheet,
+        style: getStyleSheet(colorBy),
         layout: getDynamicLayoutOptions(nodes.length, edges.length),
         minZoom: 0.2,
         maxZoom: 3,
@@ -282,57 +314,88 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNo
 
       cy.on("tap", "node", (evt: cytoscape.EventObject) => {
         const nodeId = evt.target.id();
-        const node = nodes.find((n) => n.node_id === nodeId);
+        const node = propsRef.current.nodes.find((n) => n.node_id === nodeId);
         if (node) {
           if ((evt.originalEvent as MouseEvent).shiftKey) {
-            onNodeCompare?.(node);
+            propsRef.current.onNodeCompare?.(node);
           } else {
-            onNodeSelect?.(node);
+            propsRef.current.onNodeSelect?.(node);
           }
         }
       });
 
       cy.on("dblclick", "node", (evt: cytoscape.EventObject) => {
         const nodeId = evt.target.id();
-        const node = nodes.find((n) => n.node_id === nodeId);
-        if (node) onNodeExpand?.(node);
+        const node = propsRef.current.nodes.find((n) => n.node_id === nodeId);
+        if (node) propsRef.current.onNodeExpand?.(node);
       });
 
       cy.on("tap", "edge", (evt: cytoscape.EventObject) => {
         const edgeData = evt.target.data();
-        onEdgeSelect?.(edgeData.source, edgeData.target, edgeData);
+        propsRef.current.onEdgeSelect?.(edgeData.source, edgeData.target, edgeData);
       });
 
       cyRef.current = cy;
       prevIdsRef.current = currentIds;
+      lastReplaceKeyRef.current = replaceKey;
       return;
     }
 
     const cy = cyRef.current;
-    const existingIds = new Set(cy.nodes().map(n => n.id()));
-    const newNodes = nodes.filter(n => !existingIds.has(n.node_id));
-    const newEdges = edges.filter(e => {
-      const eid = e.edge_id || `${e.source_node_id}_${e.target_node_id}`;
-      return cy.getElementById(eid).empty();
-    });
+    const isReplace = replaceKey !== lastReplaceKeyRef.current;
+    lastReplaceKeyRef.current = replaceKey;
 
-    if (newNodes.length === 0 && newEdges.length === 0) return;
+    if (isReplace) {
+      const nextIds = new Set(nodes.map(n => n.node_id));
+      const nextEdgeIds = new Set(edges.map((e, i) => getEdgeId(e, i)));
 
-    if (currentIds.size < existingIds.size) {
-      // Full graph shrunk — full rebuild
-      cy.elements().remove();
-      cy.add(buildElements(nodes, edges, showClusters, clusterSummary));
+      cy.nodes().forEach(n => { if (!nextIds.has(n.id())) n.remove(); });
+      cy.edges().forEach(e => { if (!nextEdgeIds.has(e.id())) e.remove(); });
+
+      const existingIds = new Set(cy.nodes().map(n => n.id()));
+      const existingEdgeIds = new Set(cy.edges().map(e => e.id()));
+      const toAdd = buildElements(
+        nodes.filter(n => !existingIds.has(n.node_id)),
+        edges.filter((e, i) => !existingEdgeIds.has(getEdgeId(e, i))),
+        showClusters, clusterSummary
+      );
+      if (toAdd.length > 0) cy.add(toAdd);
       cy.layout(getDynamicLayoutOptions(nodes.length, edges.length)).run();
     } else {
-      // Incremental expand
-      cy.add(buildElements(newNodes, newEdges, showClusters, clusterSummary));
-      const totalNodes = cy.nodes().length;
-      const totalEdges = cy.edges().length;
-      cy.layout({ ...getDynamicLayoutOptions(totalNodes, totalEdges), randomize: false, fit: false, numIter: 150, animationDuration: 300 } as any).run();
+      const existingIds = new Set(cy.nodes().map(n => n.id()));
+      let hasRemovedNodes = false;
+      cy.nodes().forEach(n => {
+        if (!currentIds.has(n.id())) hasRemovedNodes = true;
+      });
+
+      const currentEdgeIds = new Set(edges.map((e, i) => getEdgeId(e, i)));
+      let hasRemovedEdges = false;
+      cy.edges().forEach(e => {
+        if (!currentEdgeIds.has(e.id())) hasRemovedEdges = true;
+      });
+
+      const newNodes = nodes.filter(n => !existingIds.has(n.node_id));
+      const newEdges = edges.filter((e, i) => {
+        const eid = getEdgeId(e, i);
+        return cy.getElementById(eid).empty();
+      });
+
+      if (newNodes.length === 0 && newEdges.length === 0 && !hasRemovedNodes && !hasRemovedEdges) return;
+
+      if (hasRemovedNodes || hasRemovedEdges || currentIds.size < existingIds.size) {
+        cy.elements().remove();
+        cy.add(buildElements(nodes, edges, showClusters, clusterSummary));
+        cy.layout(getDynamicLayoutOptions(nodes.length, edges.length)).run();
+      } else {
+        cy.add(buildElements(newNodes, newEdges, showClusters, clusterSummary));
+        const totalNodes = cy.nodes().length;
+        const totalEdges = cy.edges().length;
+        cy.layout({ ...getDynamicLayoutOptions(totalNodes, totalEdges), randomize: false, fit: false, numIter: 150, animationDuration: 300 } as any).run();
+      }
     }
 
     prevIdsRef.current = currentIds;
-  }, [nodes, edges, showClusters, clusterSummary]);
+  }, [nodes, edges, showClusters, clusterSummary, replaceKey]);
 
   useEffect(() => {
     if (!cyRef.current) return;
@@ -346,7 +409,6 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNo
     const nonMatching = cyRef.current.edges().not(matchingEdges);
     nonMatching.addClass("lens-dimmed");
 
-    // Dim nodes that have NO matching edge and aren't isolated-by-design
     const connectedNodeIds = new Set(matchingEdges.map((e) => [(e as cytoscape.EdgeSingular).source().id(), (e as cytoscape.EdgeSingular).target().id()]).flat());
     cyRef.current.nodes().forEach((n) => {
       if (!connectedNodeIds.has(n.id())) n.addClass("lens-dimmed");
@@ -360,10 +422,24 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNo
       const node = cy.getElementById(nodeId);
       if (node.empty()) return;
       
+      const neighborEdges = node.connectedEdges();
+      const neighborNodes = node.neighborhood().nodes();
       const neighborhood = node.closedNeighborhood();
+
+      cy.elements().removeClass("focus-active focus-neighbor focus-edge dimmed");
+
       cy.elements().addClass("dimmed");
       neighborhood.removeClass("dimmed");
       neighborhood.removeClass("lens-dimmed");
+
+      node.addClass("focus-active");
+      neighborNodes.addClass("focus-neighbor");
+      neighborEdges.addClass("focus-edge");
+
+      neighborhood.forEach((ele) => {
+        const parent = ele.isChild() ? ele.parent() : null;
+        if (parent && !parent.empty()) parent.removeClass("dimmed");
+      });
 
       cy.animate({
         fit: { eles: neighborhood, padding: 60 },
@@ -374,7 +450,17 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNo
     clearFocus: () => {
       const cy = cyRef.current;
       if (!cy) return;
-      cy.elements().removeClass("dimmed");
+      cy.elements().removeClass("dimmed focus-active focus-neighbor focus-edge");
+
+      cy.edges().removeClass("lens-dimmed");
+      cy.nodes().removeClass("lens-dimmed");
+      if (crimeTypeLensRef.current) {
+        const matchingEdges = cy.edges().filter((e) => (e.data("crimeTypes") || []).includes(crimeTypeLensRef.current!));
+        cy.edges().not(matchingEdges).addClass("lens-dimmed");
+        const connectedIds = new Set(matchingEdges.map((e) => [(e as cytoscape.EdgeSingular).source().id(), (e as cytoscape.EdgeSingular).target().id()]).flat());
+        cy.nodes().forEach((n) => { if (!connectedIds.has(n.id())) n.addClass("lens-dimmed"); });
+      }
+
       cy.animate({
         fit: { eles: cy.elements(), padding: 50 },
         duration: 500,
@@ -384,7 +470,7 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNo
     highlightKeyPlayers: (nodeIds: string[]) => {
       const cy = cyRef.current;
       if (!cy) return;
-      cy.elements().removeClass("dimmed");
+      cy.elements().removeClass("dimmed focus-active focus-neighbor focus-edge");
       cy.elements().removeClass("key-player");
       const keyEls = cy.collection();
       nodeIds.forEach((id) => keyEls.merge(cy.getElementById(id)));
@@ -396,6 +482,7 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNo
 
   useEffect(() => {
     if (!cyRef.current) return;
+    cyRef.current.elements(":selected").unselect();
     if (selectedNodeId) {
       cyRef.current.getElementById(selectedNodeId).select();
     }

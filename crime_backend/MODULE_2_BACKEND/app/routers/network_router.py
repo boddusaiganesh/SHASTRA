@@ -37,6 +37,8 @@ async def fetch_node_detail(
     current_user=Depends(get_current_user),
 ):
     data = await get_node_detail(db, node_id)
+    if data and isinstance(data, dict) and data.get("error") == "neo4j_offline":
+        raise HTTPException(status_code=503, detail="Node detail is temporarily unavailable (graph database offline).")
     if not data:
         raise HTTPException(status_code=404, detail="Node not found")
     return {"success": True, "data": data}
@@ -100,24 +102,26 @@ async def expand_node(
     """Return only the immediate neighbors of one node — for incremental graph expansion."""
     from app.core.neo4j_connection import run_neo4j_query, normalize_node
     
-    match_clause = "MATCH (n)-[r]-(connected)"
+    root_where = "n.offender_id = $id OR n.victim_id = $id OR n.location_id = $id OR n.org_id = $id OR elementId(n) = $id OR toLower(coalesce(n.offender_id, '')) = toLower($id) OR toLower(coalesce(n.victim_id, '')) = toLower($id)"
     if node_type == "criminal":
-        match_clause = "MATCH (n:Criminal {offender_id: $id})-[r]-(connected)"
+        match_clause = f"MATCH (n)-[r]-(connected:Criminal) WHERE ({root_where})"
     elif node_type == "victim":
-        match_clause = "MATCH (n:Victim {victim_id: $id})-[r]-(connected)"
+        match_clause = f"MATCH (n)-[r]-(connected:Victim) WHERE ({root_where})"
     elif node_type == "location":
-        match_clause = "MATCH (n:Location {location_id: $id})-[r]-(connected)"
+        match_clause = f"MATCH (n)-[r]-(connected:Location) WHERE ({root_where})"
     elif node_type == "organization":
-        match_clause = "MATCH (n:Organization {org_id: $id})-[r]-(connected)"
+        match_clause = f"MATCH (n)-[r]-(connected:Organization) WHERE ({root_where})"
     else:
-        match_clause = "MATCH (n)-[r]-(connected) WHERE n.offender_id = $id OR n.victim_id = $id OR n.location_id = $id OR n.org_id = $id OR elementId(n) = $id"
+        match_clause = f"MATCH (n)-[r]-(connected) WHERE ({root_where})"
 
     query = f"""
     {match_clause}
+    WITH n, r, connected, coalesce(r.strength_score, 0) AS s
+    ORDER BY s DESC
+    LIMIT 25
     RETURN n, elementId(n) AS n_eid, labels(n) AS labels_n,
            connected, elementId(connected) AS connected_eid, labels(connected) AS labels_connected,
            type(r) AS rel_type, properties(r) AS r_props
-    LIMIT 25
     """
     try:
         results = await run_neo4j_query(query, {"id": node_id})

@@ -35,14 +35,21 @@ const CrimeMapPage: React.FC = () => {
     const controller = new AbortController();
     const fetchData = async () => {
       setLoading(true);
-      const data = await crimeService.getMapData({
-        crime_type: filters.crimeType !== "All" ? filters.crimeType : undefined,
-        district_id: filters.district !== "All Districts" ? filters.district : undefined,
-        date_from: filters.dateFrom || undefined,
-        date_to: filters.dateTo || undefined,
-      }, { signal: controller.signal });
-      dispatch(setMapCrimes(data));
-      setLoading(false);
+      try {
+        const data = await crimeService.getMapData({
+          crime_type: filters.crimeType !== "All" ? filters.crimeType : undefined,
+          district_id: filters.district !== "All Districts" ? filters.district : undefined,
+          date_from: filters.dateFrom || undefined,
+          date_to: filters.dateTo || undefined,
+        }, { signal: controller.signal });
+        dispatch(setMapCrimes(data));
+      } catch (e: any) {
+        if (e.name !== "CanceledError" && e.name !== "AbortError") {
+          console.error("Failed to load map data:", e);
+        }
+      } finally {
+        setLoading(false);
+      }
     };
     fetchData();
     return () => controller.abort();

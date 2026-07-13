@@ -8,7 +8,7 @@ from app.core.database import get_db
 from app.core.security import get_current_user, require_role
 
 router = APIRouter()
-UPLOAD_DIR = "app/uploads"
+UPLOAD_DIR = os.environ.get("EVIDENCE_UPLOAD_DIR", "/app/uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "pdf", "mp4", "docx", "mp3", "wav"}
@@ -70,13 +70,14 @@ async def upload_evidence(
     magic_signatures = {
         "jpg": [b"\xff\xd8\xff"], "jpeg": [b"\xff\xd8\xff"],
         "png": [b"\x89PNG\r\n\x1a\n"], "pdf": [b"%PDF-"],
-        "docx": [b"PK\x03\x04"], 
         "mp3": [b"ID3", b"\xff\xfb", b"\xff\xf3", b"\xff\xfa", b"\xff\xf2"],
     }
     
     is_valid = True
     if ext in magic_signatures:
         is_valid = any(first_chunk.startswith(sig) for sig in magic_signatures[ext])
+    elif ext == "docx":
+        is_valid = first_chunk.startswith(b"PK\x03\x04") and any(marker in first_chunk for marker in [b"word/", b"[Content_Types].xml", b"docProps"])
     elif ext == "mp4":
         is_valid = b"ftyp" in first_chunk[:32] or b"moov" in first_chunk[:32] or b"mdat" in first_chunk[:32]
     elif ext == "wav":

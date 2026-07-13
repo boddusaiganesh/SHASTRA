@@ -6,7 +6,6 @@ import { Bell, X } from "lucide-react";
 import { RootState } from "./store/store";
 import { setAlerts, addAlert } from "./store/alertsSlice";
 import { alertService } from "./services/alertService";
-import { API_BASE_URL } from "./constants/apiEndpoints";
 
 import Navbar from "./components/common/Navbar";
 import Sidebar from "./components/common/Sidebar";
@@ -64,35 +63,50 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
         });
       });
 
-      alertService.getAlerts().then((data) => dispatch(setAlerts(data)));
+      alertService.getAlerts()
+        .then((data) => dispatch(setAlerts(data)))
+        .catch((e) => console.error("Failed to load initial alerts", e));
       
       let ws: WebSocket;
       let retryDelay = 1000;
       let closedByUs = false;
 
       const connect = () => {
-        const base = import.meta.env.VITE_WS_URL || API_BASE_URL.replace(/^http/, "ws") + "/alerts/ws";
-        ws = new WebSocket(base);
+        try {
+          const rawUrl = import.meta.env.VITE_WS_URL;
+          const base = rawUrl?.startsWith("ws")
+            ? rawUrl
+            : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}${
+                rawUrl || "/api/alerts/ws"
+              }`;
+          ws = new WebSocket(base);
 
-        ws.onopen = () => { 
-          retryDelay = 1000;
-        };
-        ws.onmessage = (event) => {
-          try {
-            const msg = JSON.parse(event.data);
-            if (msg.type === "NEW_ALERT") {
-              dispatch(addAlert(msg.data));
-              addToast(msg.data);
+          ws.onopen = () => { 
+            retryDelay = 1000;
+          };
+          ws.onmessage = (event) => {
+            try {
+              const msg = JSON.parse(event.data);
+              if (msg.type === "NEW_ALERT") {
+                dispatch(addAlert(msg.data));
+                addToast(msg.data);
+              }
+            } catch (e) {
+              console.error("WS message parse error", e);
             }
-          } catch (e) {
-            console.error("WS message parse error", e);
+          };
+          ws.onclose = (event) => {
+            if (closedByUs || event.code === 1008) return;
+            setTimeout(connect, retryDelay);
+            retryDelay = Math.min(retryDelay * 2, 30000);
+          };
+        } catch (err) {
+          console.error("Failed to construct WebSocket connection:", err);
+          if (!closedByUs) {
+            setTimeout(connect, retryDelay);
+            retryDelay = Math.min(retryDelay * 2, 30000);
           }
-        };
-        ws.onclose = (event) => {
-          if (closedByUs || event.code === 1008) return;
-          setTimeout(connect, retryDelay);
-          retryDelay = Math.min(retryDelay * 2, 30000);
-        };
+        }
       };
 
       connect();

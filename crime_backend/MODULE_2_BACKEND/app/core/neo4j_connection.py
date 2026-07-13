@@ -101,10 +101,10 @@ async def find_shortest_path(node_id_1: str, node_id_2: str, max_hops: int = 5) 
     """Find the shortest relationship path between two entities in the graph."""
     query = f"""
     MATCH (a), (b)
-    WHERE (a.offender_id = $id1 OR a.victim_id = $id1 OR a.location_id = $id1 OR a.org_id = $id1)
-    AND   (b.offender_id = $id2 OR b.victim_id = $id2 OR b.location_id = $id2 OR b.org_id = $id2)
+    WHERE (a.offender_id = $id1 OR a.victim_id = $id1 OR a.location_id = $id1 OR a.org_id = $id1 OR elementId(a) = $id1 OR toLower(coalesce(a.offender_id, '')) = toLower($id1) OR toLower(coalesce(a.victim_id, '')) = toLower($id1))
+    AND   (b.offender_id = $id2 OR b.victim_id = $id2 OR b.location_id = $id2 OR b.org_id = $id2 OR elementId(b) = $id2 OR toLower(coalesce(b.offender_id, '')) = toLower($id2) OR toLower(coalesce(b.victim_id, '')) = toLower($id2))
     MATCH path = shortestPath((a)-[*..{max_hops}]-(b))
-    RETURN [n IN nodes(path) | {{id: coalesce(n.offender_id, n.victim_id, n.location_id, n.org_id), name: n.name}}] AS path_nodes,
+    RETURN [n IN nodes(path) | {{id: coalesce(n.offender_id, n.victim_id, n.location_id, n.org_id, elementId(n)), name: n.name}}] AS path_nodes,
            [r IN relationships(path) | type(r)] AS path_rels
     LIMIT 1
     """
@@ -293,7 +293,7 @@ async def get_network_graph(
     params = {"node_limit": node_limit, "limit": node_limit * 3}
 
     if search_query:
-        where_clauses.append("(n.name CONTAINS $search OR n.offender_id = $search OR n.victim_id = $search OR n.location_id = $search OR n.org_id = $search)")
+        where_clauses.append("(toLower(n.name) CONTAINS toLower($search) OR toLower(coalesce(n.offender_id, '')) = toLower($search) OR toLower(coalesce(n.victim_id, '')) = toLower($search) OR toLower(coalesce(n.location_id, '')) = toLower($search) OR toLower(coalesce(n.org_id, '')) = toLower($search))")
         params["search"] = search_query
 
     if district_id:
@@ -312,20 +312,24 @@ async def get_network_graph(
     if "district_id" not in params:
         params["district_id"] = district_id if district_id else None
 
+    connected_label_filter = label_filter.replace("n:", "connected:")
     query = f"""
     MATCH (n)
     WHERE {" AND ".join(where_clauses)}
-    OPTIONAL MATCH (n)-[r]-()
+    OPTIONAL MATCH (n)-[r]-(m)
+    WHERE ($crime_type IS NULL OR $crime_type IN coalesce(r.crime_types, []) OR $crime_type IN coalesce(m.crime_types, []))
     WITH n, count(r) AS degree
     ORDER BY degree DESC, n.risk_score DESC
     LIMIT $node_limit
     CALL {{
       WITH n
       OPTIONAL MATCH (n)-[r]-(connected)
-      WHERE ($crime_type IS NULL
-         OR $crime_type IN coalesce(r.crime_types, [])
-         OR $crime_type IN coalesce(connected.crime_types, []))
-        AND ($district_id IS NULL OR connected.district_id = $district_id)
+      WHERE ({connected_label_filter})
+        AND ($crime_type IS NULL
+           OR $crime_type IN coalesce(r.crime_types, [])
+           OR $crime_type IN coalesce(connected.crime_types, []))
+      WITH r, connected, coalesce(r.strength_score, 0) AS s
+      ORDER BY s DESC
       RETURN r, connected
       LIMIT 25
     }}
@@ -337,6 +341,7 @@ async def get_network_graph(
     # Process results into nodes and edges
     nodes_map = {}
     edges = []
+    root_ids = set()
     
     for record in results:
         # Process main node
@@ -347,6 +352,7 @@ async def get_network_graph(
             eid = record.get("n_eid")
             normalized = normalize_node(node, labels_n, eid)
             node_id = normalized["node_id"]
+            root_ids.add(node_id)
             
             if node_id not in nodes_map:
                 nodes_map[node_id] = normalized
@@ -389,6 +395,13 @@ async def get_network_graph(
     edges = list(seen_edges.values())
     
     nodes = list(nodes_map.values())
+    if len(nodes) > node_limit:
+        kept = [n for n in nodes if n["node_id"] in root_ids][:node_limit]
+        remaining_budget = max(0, node_limit - len(kept))
+        others = sorted((n for n in nodes if n["node_id"] not in root_ids), key=lambda n: n.get("crime_count", 0), reverse=True)
+        nodes = kept + others[:remaining_budget]
+        kept_ids = {n["node_id"] for n in nodes}
+        edges = [e for e in edges if e["source_node_id"] in kept_ids and e["target_node_id"] in kept_ids]
     
     return {
         "nodes": nodes,

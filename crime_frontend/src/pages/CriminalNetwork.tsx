@@ -21,6 +21,8 @@ interface NetworkEdge {
   source_node_id: string; target_node_id: string; relationship_type: string; strength_score: number;
   crime_types?: string[];
   confidence_level?: string;
+  source?: string;
+  target?: string;
 }
 
 const nodeTypeIcons: Record<string, React.FC<{ className?: string }>> = {
@@ -51,6 +53,8 @@ const CriminalNetwork: React.FC = () => {
   const [crimeTypeLens, setCrimeTypeLens] = useState("all");
   const [showIsolated, setShowIsolated] = useState(false);
   const [showClusters, setShowClusters] = useState(true);
+  const [colorBy, setColorBy] = useState<"type" | "cluster">("type");
+  const [replaceKey, setReplaceKey] = useState(0);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<"ok" | "offline" | "no_data">("ok");
   const [errorMessage, setErrorMessage] = useState("");
@@ -118,6 +122,7 @@ const CriminalNetwork: React.FC = () => {
           setStatus("ok");
           setNodes(g.nodes as NetworkNode[]);
           setEdges(g.edges as NetworkEdge[]);
+          setReplaceKey((k) => k + 1);
           setKeyPlayers(g.key_players || []);
           setIsFallbackMode(g.source === "postgres_fallback");
           setClusterSummary(g.cluster_summary || {});
@@ -270,8 +275,9 @@ const CriminalNetwork: React.FC = () => {
           }
         });
         
+        const getEdgeKey = (edge: any) => edge.edge_id || `${edge.source_node_id || edge.source}_${edge.target_node_id || edge.target}`;
         res.edges.forEach((e: any) => {
-          if (!newEdges.find(existing => existing.edge_id === e.edge_id)) {
+          if (!newEdges.find(existing => getEdgeKey(existing) === getEdgeKey(e))) {
             newEdges.push(e);
             added = true;
           }
@@ -298,7 +304,8 @@ const CriminalNetwork: React.FC = () => {
     }
     
     return result;
-  }, [nodes, edges, nodeTypeFilter, searchQuery, showIsolated]);
+    // Note: nodeTypeFilter and searchQuery filtering happens server-side via networkService.getGraphData
+  }, [nodes, edges, showIsolated]);
 
   const nodeTypeCounts = nodes.reduce((acc, n) => { acc[n.node_type] = (acc[n.node_type] || 0) + 1; return acc; }, {} as Record<string, number>);
 
@@ -463,6 +470,14 @@ const CriminalNetwork: React.FC = () => {
             >
               {showClusters ? "Clusters: On" : "Clusters: Off"}
             </button>
+            <button
+              onClick={() => setColorBy(colorBy === "type" ? "cluster" : "type")}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+                colorBy === "cluster" ? "bg-indigo-900/40 text-indigo-400" : "bg-slate-800 text-slate-400 hover:text-white"
+              }`}
+            >
+              {colorBy === "type" ? "Color: Type" : "Color: Cluster"}
+            </button>
             <span className="text-xs text-slate-500 ml-2">{filteredNodes.length} nodes • {edges.length} connections</span>
           </div>
           <div className="ml-auto flex items-center gap-3">
@@ -552,6 +567,8 @@ const CriminalNetwork: React.FC = () => {
                   crimeTypeLens={crimeTypeLens === "all" ? null : crimeTypeLens}
                   showClusters={showClusters}
                   clusterSummary={clusterSummary}
+                  replaceKey={replaceKey}
+                  colorBy={colorBy}
                 />
               ) : (
                 <ConnectivityMatrix 

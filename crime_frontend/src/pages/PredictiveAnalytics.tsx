@@ -23,19 +23,24 @@ const PredictiveAnalytics: React.FC = () => {
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      const [f, r, t, rm, s] = await Promise.all([
-        predictionService.getForecast(districtFilter, dateFrom, dateTo),
-        predictionService.getHighRiskAreas(districtFilter, dateFrom, dateTo),
-        predictionService.getEmergingTypologies(districtFilter, dateFrom, dateTo),
-        predictionService.getRiskMap(districtFilter, dateFrom, dateTo),
-        predictionService.getSocioeconomicData({ district_id: districtFilter === "All" ? undefined : districtFilter }),
-      ]);
-      setForecast(Array.isArray(f) ? f : ((f as any)?.forecast || []));
-      setRiskAreas(Array.isArray(r) ? r : ((r as any)?.predictions || (r as any)?.areas || []));
-      setTypologies(Array.isArray(t) ? t : ((t as any)?.emerging_types || (t as any)?.typologies || []));
-      setRiskMapData(Array.isArray(rm) ? rm : ((rm as any)?.district_risks || (rm as any)?.districts || []));
-      setSocioData(Array.isArray((s as any)?.overlay_data) ? (s as any).overlay_data : []);
-      setLoading(false);
+      try {
+        const [f, r, t, rm, s] = await Promise.all([
+          predictionService.getForecast(districtFilter, dateFrom, dateTo),
+          predictionService.getHighRiskAreas(districtFilter, dateFrom, dateTo),
+          predictionService.getEmergingTypologies(districtFilter, dateFrom, dateTo),
+          predictionService.getRiskMap(districtFilter, dateFrom, dateTo),
+          predictionService.getSocioeconomicData({ district_id: districtFilter === "All" ? undefined : districtFilter }),
+        ]);
+        setForecast(Array.isArray(f) ? f : ((f as any)?.forecast || []));
+        setRiskAreas(Array.isArray(r) ? r : ((r as any)?.predictions || (r as any)?.areas || []));
+        setTypologies(Array.isArray(t) ? t : ((t as any)?.emerging_types || (t as any)?.typologies || []));
+        setRiskMapData(Array.isArray(rm) ? rm : ((rm as any)?.district_risks || (rm as any)?.districts || []));
+        setSocioData(Array.isArray((s as any)?.overlay_data) ? (s as any).overlay_data : []);
+      } catch (e) {
+        console.error("Failed to load predictive analytics data:", e);
+      } finally {
+        setLoading(false);
+      }
     };
     load();
   }, [districtFilter, dateFrom, dateTo]);

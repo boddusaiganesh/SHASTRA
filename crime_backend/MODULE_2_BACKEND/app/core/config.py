@@ -37,14 +37,16 @@ class Settings(BaseSettings):
     # Gemini AI
     GEMINI_API_KEY: str = ""
     GEMINI_API_KEYS: str = ""
-    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GEMINI_MODEL: str = "gemini-1.5-pro"
     GEMINI_MAX_TOKENS: int = 2048
     GEMINI_TEMPERATURE: float = 0.3
 
-    # JWT
+    # JWT & Cookie
     JWT_SECRET_KEY: str = "CHANGE_THIS_IN_PRODUCTION_64_CHARS_MIN"
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRY_HOURS: int = 8
+    COOKIE_SAMESITE: str = "lax"
+    EVIDENCE_UPLOAD_DIR: str = os.getenv("EVIDENCE_UPLOAD_DIR", "/app/uploads")
 
     # Server
     BACKEND_PORT: int = 8000

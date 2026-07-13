@@ -50,8 +50,8 @@ const ConnectivityMatrix: React.FC<MatrixProps> = ({ nodes, edges, onCellClick }
   const edgeMap = useMemo(() => {
     const m = new Map<string, NetworkEdge>();
     edges.forEach(e => {
-      const src = e.source_node_id;
-      const tgt = e.target_node_id;
+      const src = e.source_node_id || e.source;
+      const tgt = e.target_node_id || e.target;
       if (src && tgt) {
         m.set(`${src}_${tgt}`, e);
         m.set(`${tgt}_${src}`, e); // undirected lookup

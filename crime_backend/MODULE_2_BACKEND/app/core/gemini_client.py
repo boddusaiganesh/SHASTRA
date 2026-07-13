@@ -7,6 +7,7 @@ from typing import Optional
 import logging
 import hashlib
 import re
+import asyncio
 
 from app.core.config import settings
 
@@ -39,6 +40,7 @@ Guidelines:
 _available_models: list[str] = []
 _current_key_index = 0
 _current_model_index = 0
+_rotation_lock = asyncio.Lock()
 
 def _rank_model(model_name: str) -> tuple:
     """Helper to rank models: higher version first, pro over flash"""
@@ -85,21 +87,22 @@ async def init_gemini_models():
     except Exception as e:
         logger.error(f"Failed to rank Gemini models at startup: {e}")
 
-def get_next_key_and_model() -> tuple[Optional[str], Optional[str]]:
-    """Get the next API key and Model using round-robin"""
+async def get_next_key_and_model() -> tuple[Optional[str], Optional[str]]:
+    """Get the next API key and Model using round-robin safely under async lock"""
     global _current_key_index, _current_model_index
     keys = settings.get_gemini_api_keys()
     if not keys:
         return None, None
     
-    key = keys[_current_key_index % len(keys)]
-    _current_key_index += 1
-    
-    model_name = settings.GEMINI_MODEL
-    if _available_models:
-        model_name = _available_models[_current_model_index % len(_available_models)]
-        _current_model_index += 1
+    async with _rotation_lock:
+        key = keys[_current_key_index % len(keys)]
+        _current_key_index += 1
         
+        model_name = settings.GEMINI_MODEL
+        if _available_models:
+            model_name = _available_models[_current_model_index % len(_available_models)]
+            _current_model_index += 1
+            
     if model_name.startswith('models/'):
         model_name = model_name[7:]
         
@@ -167,7 +170,7 @@ async def call_gemini(prompt: str, use_cache: bool = True) -> Dict[str, Any]:
     for attempt in range(max_retries):
         model_name = "unknown"
         try:
-            api_key, model_name = get_next_key_and_model()
+            api_key, model_name = await get_next_key_and_model()
             if not api_key:
                 logger.error("No API key available for Gemini request.")
                 return {"text": generate_fallback_response(prompt), "is_fallback": True}

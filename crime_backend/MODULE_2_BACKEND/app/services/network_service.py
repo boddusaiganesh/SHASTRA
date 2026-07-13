@@ -301,13 +301,26 @@ async def build_network_from_postgres(
         if district_id:
             link_q = link_q.join(Crime).where(Crime.district_id == district_id)
         if matching_crime_ids is not None:
-            link_q = link_q.where(CrimeVictimLink.crime_id.in_(matching_crime_ids))   # NEW
+            link_q = link_q.where(CrimeVictimLink.crime_id.in_(matching_crime_ids))
         cv_links = (await db.execute(link_q)).scalars().all()
-        for cvl in cv_links:
-            off_links = (await db.execute(
-                select(CrimeOffenderLink).where(CrimeOffenderLink.crime_id == cvl.crime_id)
+        
+        cv_crime_ids = {cvl.crime_id for cvl in cv_links}
+        off_links_by_crime = {}
+        crimes_by_id = {}
+        if cv_crime_ids:
+            all_off_links = (await db.execute(
+                select(CrimeOffenderLink).where(CrimeOffenderLink.crime_id.in_(cv_crime_ids))
             )).scalars().all()
-            crime = (await db.execute(select(Crime).where(Crime.crime_id == cvl.crime_id))).scalar_one_or_none()
+            for ol in all_off_links:
+                off_links_by_crime.setdefault(ol.crime_id, []).append(ol)
+            all_crimes = (await db.execute(
+                select(Crime).where(Crime.crime_id.in_(cv_crime_ids))
+            )).scalars().all()
+            crimes_by_id = {c.crime_id: c for c in all_crimes}
+
+        for cvl in cv_links:
+            off_links = off_links_by_crime.get(cvl.crime_id, [])
+            crime = crimes_by_id.get(cvl.crime_id)
             for ol in off_links:
                 if any(n["node_id"] == str(ol.offender_id) for n in nodes) and \
                    any(n["node_id"] == str(cvl.victim_id) for n in nodes):
@@ -354,7 +367,7 @@ async def build_network_from_postgres(
                 "risk_score": l.risk_score or 0,
                 "crime_count": l.total_crimes or 0,
                 "size": 25,
-                "color": "#a855f7",
+                "color": "#22c55e",
                 "profile_data": {"district_id": l.district_id},
             })
             location_ids_in_graph.add(str(l.location_id))
@@ -364,7 +377,7 @@ async def build_network_from_postgres(
                 import uuid
                 crime_q = select(Crime).where(Crime.location_id.in_([uuid.UUID(lid) for lid in location_ids_in_graph]))
                 if matching_crime_ids is not None:
-                    crime_q = crime_q.where(Crime.crime_id.in_(matching_crime_ids))   # NEW
+                    crime_q = crime_q.where(Crime.crime_id.in_(matching_crime_ids))
                 crimes_at_locations = (await db.execute(crime_q)).scalars().all()
                 crime_ids_by_location = {}
                 for c in crimes_at_locations:
@@ -372,23 +385,31 @@ async def build_network_from_postgres(
                         crime_ids_by_location.setdefault(str(c.location_id), []).append(c.crime_id)
 
                 existing_offender_ids = {n["node_id"] for n in nodes if n["node_type"] == "criminal"}
+                all_loc_crime_ids = {cid for cids in crime_ids_by_location.values() for cid in cids}
+                loc_offender_links_by_crime = {}
+                if all_loc_crime_ids:
+                    all_loc_off_links = (await db.execute(
+                        select(CrimeOffenderLink).where(CrimeOffenderLink.crime_id.in_(all_loc_crime_ids))
+                    )).scalars().all()
+                    for ol in all_loc_off_links:
+                        loc_offender_links_by_crime.setdefault(ol.crime_id, []).append(ol)
+
                 for loc_id, crime_ids in crime_ids_by_location.items():
                     if not crime_ids:
                         continue
-                    link_q = select(CrimeOffenderLink).where(CrimeOffenderLink.crime_id.in_(crime_ids))
-                    offender_links = (await db.execute(link_q)).scalars().all()
-                    for ol in offender_links:
-                        offender_id = str(ol.offender_id)
-                        if offender_id in existing_offender_ids:
-                            edges.append({
-                                "edge_id": f"{offender_id}_{loc_id}",
-                                "source_node_id": offender_id,
-                                "target_node_id": loc_id,
-                                "relationship_type": "FREQUENTED",
-                                "strength_score": 55,
-                                "confidence_level": "SUSPECTED",
-                                "crime_types": [crime_type] if crime_type else [],
-                            })
+                    for cid in crime_ids:
+                        for ol in loc_offender_links_by_crime.get(cid, []):
+                            offender_id = str(ol.offender_id)
+                            if offender_id in existing_offender_ids:
+                                edges.append({
+                                    "edge_id": f"{offender_id}_{loc_id}",
+                                    "source_node_id": offender_id,
+                                    "target_node_id": loc_id,
+                                    "relationship_type": "FREQUENTED",
+                                    "strength_score": 55,
+                                    "confidence_level": "SUSPECTED",
+                                    "crime_types": [crime_type] if crime_type else [],
+                                })
             except Exception as e:
                 logger.warning(f"Failed to link locations to crimes/offenders in fallback: {e}")
 
@@ -427,7 +448,9 @@ async def get_node_detail(
         import uuid
         parsed_id = uuid.UUID(node_id)
     except ValueError:
-        from app.core.neo4j_connection import run_neo4j_query
+        from app.core.neo4j_connection import run_neo4j_query, get_neo4j_driver
+        if get_neo4j_driver() is None:
+            return {"error": "neo4j_offline"}
         query = "MATCH (n) WHERE elementId(n) = $node_id RETURN labels(n)[0] AS label, properties(n) AS props"
         res = await run_neo4j_query(query, {"node_id": node_id})
         if res and res[0]:

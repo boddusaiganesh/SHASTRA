@@ -40,17 +40,26 @@ const AnomalyDetection: React.FC = () => {
 
   const fetch = async () => {
     setLoading(true);
-    const data: any = await anomalyService.getList(page, pageSize, severityFilter, statusFilter, districtFilter);
-    setAnomalies(Array.isArray(data) ? data : (data?.anomalies || []));
-    setTotalCount(data?.total_count || 0);
-    setLoading(false);
+    try {
+      const data: any = await anomalyService.getList(page, pageSize, severityFilter, statusFilter, districtFilter);
+      setAnomalies(Array.isArray(data) ? data : (data?.anomalies || []));
+      setTotalCount(data?.total_count || 0);
+    } catch (e) {
+      console.error("Failed to fetch anomalies:", e);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { fetch(); }, [page, severityFilter, statusFilter, districtFilter]);
 
   const handleUpdateStatus = async (id: string, status: string) => {
-    await anomalyService.updateStatus(id, status);
-    setAnomalies((prev) => prev.map((a) => a.anomaly_id === id ? { ...a, status } : a));
+    try {
+      await anomalyService.updateStatus(id, status);
+      setAnomalies((prev) => prev.map((a) => a.anomaly_id === id ? { ...a, status } : a));
+    } catch (e) {
+      console.error("Failed to update anomaly status:", e);
+    }
   };
 
   const safeAnomalies = Array.isArray(anomalies) ? anomalies : [];

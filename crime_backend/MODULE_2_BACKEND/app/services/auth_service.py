@@ -95,6 +95,12 @@ async def get_user_by_id(db: AsyncSession, user_id: str) -> Optional[Dict[str, A
 
 async def create_user(db: AsyncSession, user_data: Dict[str, Any]) -> Dict[str, Any]:
     """Create a new user"""
+    role = user_data.get("role")
+    if role not in ["SCRB_OFFICER", "DISTRICT_OFFICER", "INVESTIGATOR"]:
+        raise ValueError(f"Invalid role '{role}'. Must be one of: SCRB_OFFICER, DISTRICT_OFFICER, INVESTIGATOR")
+        
+    if not user_data.get("full_name") or not str(user_data.get("full_name")).strip():
+        raise ValueError("full_name is required and cannot be empty")
     
     # Check if username already exists
     result = await db.execute(

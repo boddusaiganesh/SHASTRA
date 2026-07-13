@@ -106,8 +106,13 @@ async def lifespan(app: FastAPI):
     
     print("✅ All systems operational. Backend ready on port", settings.BACKEND_PORT)
     
+    import asyncio
+    from app.core.websocket import start_alert_subscriber
+    alert_task = asyncio.create_task(start_alert_subscriber())
+    
     yield
     
+    alert_task.cancel()
     print("🔄 Shutting down SHASTRA Intelligence Platform Backend...")
     if _db_ready:
         pass
@@ -199,7 +204,8 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Static files for evidence uploads
 import os
-os.makedirs("app/uploads", exist_ok=True)
+UPLOAD_DIR = os.environ.get("EVIDENCE_UPLOAD_DIR", "/app/uploads")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 # Include routers
 app.include_router(auth_router.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(dashboard_router.router, prefix="/api/dashboard", tags=["Dashboard"])
