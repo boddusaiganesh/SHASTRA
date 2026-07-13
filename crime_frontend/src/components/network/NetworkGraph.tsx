@@ -301,11 +301,15 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNo
   useEffect(() => {
     if (!containerRef.current) return;
     const currentIds = new Set(nodes.map(n => n.node_id));
+    console.log('[NetworkGraph] useEffect[nodes,edges] fired — nodes:', nodes.length, 'edges:', edges.length, 'replaceKey:', replaceKey, 'showClusters:', showClusters);
 
     if (!cyRef.current) {
+      console.log('[NetworkGraph] Initialising new Cytoscape instance with', nodes.length, 'nodes,', edges.length, 'edges');
+      const elements = buildElements(nodes, edges, showClusters, clusterSummary);
+      console.log('[NetworkGraph] buildElements result:', elements.length, 'elements (nodes+edges+parents)');
       const cy = cytoscape({
         container: containerRef.current,
-        elements: buildElements(nodes, edges, showClusters, clusterSummary),
+        elements,
         style: getStyleSheet(colorBy),
         layout: getDynamicLayoutOptions(nodes.length, edges.length),
         minZoom: 0.2,
@@ -343,23 +347,20 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNo
 
     const cy = cyRef.current;
     const isReplace = replaceKey !== lastReplaceKeyRef.current;
+    console.log('[NetworkGraph] cy already exists — isReplace:', isReplace, 'cy nodes:', cy.nodes().length, 'cy edges:', cy.edges().length);
+    console.log('[NetworkGraph] classes on cy nodes sample:', cy.nodes().slice(0, 3).map(n => n.id() + ':' + n.classes().join(',')));
     lastReplaceKeyRef.current = replaceKey;
 
     if (isReplace) {
-      const nextIds = new Set(nodes.map(n => n.node_id));
-      const nextEdgeIds = new Set(edges.map((e, i) => getEdgeId(e, i)));
-
-      cy.nodes().forEach(n => { if (!nextIds.has(n.id())) n.remove(); });
-      cy.edges().forEach(e => { if (!nextEdgeIds.has(e.id())) e.remove(); });
-
-      const existingIds = new Set(cy.nodes().map(n => n.id()));
-      const existingEdgeIds = new Set(cy.edges().map(e => e.id()));
-      const toAdd = buildElements(
-        nodes.filter(n => !existingIds.has(n.node_id)),
-        edges.filter((e, i) => !existingEdgeIds.has(getEdgeId(e, i))),
-        showClusters, clusterSummary
-      );
-      if (toAdd.length > 0) cy.add(toAdd);
+      // Full wipe + re-add on every server-side filter change.
+      // This is the only safe way to guarantee no stale 'dimmed'/'lens-dimmed'
+      // classes survive from previous interactions (Highlight Key Players, focus, lens).
+      console.log('[NetworkGraph] isReplace=true — full wipe and rebuild');
+      cy.elements().remove();
+      const freshElements = buildElements(nodes, edges, showClusters, clusterSummary);
+      console.log('[NetworkGraph] freshElements count:', freshElements.length);
+      cy.add(freshElements);
+      console.log('[NetworkGraph] after full re-add: cy nodes:', cy.nodes().length, 'cy edges:', cy.edges().length);
       cy.layout(getDynamicLayoutOptions(nodes.length, edges.length)).run();
     } else {
       const existingIds = new Set(cy.nodes().map(n => n.id()));
@@ -401,15 +402,22 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNo
     if (!cyRef.current) return;
     cyRef.current.edges().removeClass("lens-dimmed");
     cyRef.current.nodes().removeClass("lens-dimmed");
-    if (!crimeTypeLens) return;
+    console.log('[NetworkGraph] crimeTypeLens changed to:', crimeTypeLens, '| cy nodes:', cyRef.current.nodes().length, 'cy edges:', cyRef.current.edges().length);
+    if (!crimeTypeLens) {
+      console.log('[NetworkGraph] lens is null — all lens-dimmed cleared, nodes should be visible');
+      return;
+    }
 
     const matchingEdges = cyRef.current.edges().filter(
       (e) => (e.data("crimeTypes") || []).includes(crimeTypeLens)
     );
+    console.log('[NetworkGraph] lens matchingEdges:', matchingEdges.length, '/ total edges:', cyRef.current.edges().length);
+    console.log('[NetworkGraph] sample edge crimeTypes:', cyRef.current.edges().slice(0,3).map(e => e.data('crimeTypes')));
     const nonMatching = cyRef.current.edges().not(matchingEdges);
     nonMatching.addClass("lens-dimmed");
 
     const connectedNodeIds = new Set(matchingEdges.map((e) => [(e as cytoscape.EdgeSingular).source().id(), (e as cytoscape.EdgeSingular).target().id()]).flat());
+    console.log('[NetworkGraph] lens connectedNodeIds:', connectedNodeIds.size, '/ total nodes:', cyRef.current.nodes().length);
     cyRef.current.nodes().forEach((n) => {
       if (!connectedNodeIds.has(n.id())) n.addClass("lens-dimmed");
     });
