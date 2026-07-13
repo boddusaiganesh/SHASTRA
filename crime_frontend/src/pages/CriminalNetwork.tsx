@@ -564,7 +564,7 @@ const CriminalNetwork: React.FC = () => {
                   onEdgeSelect={handleEdgeSelect}
                   selectedNodeId={selectedNode?.node_id} 
                   highlightPath={highlightPath}
-                  crimeTypeLens={crimeTypeLens === "all" ? null : crimeTypeLens}
+                  crimeTypeLens={null /* server already filters by crime type — lens overlay not needed */}
                   showClusters={showClusters}
                   clusterSummary={clusterSummary}
                   replaceKey={replaceKey}
