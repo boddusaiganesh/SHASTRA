@@ -115,8 +115,9 @@ const CriminalNetwork: React.FC = () => {
         if (g && g.status === "offline") {
           setStatus("offline");
           setErrorMessage(g.error || "Graph database is disconnected");
-        } else if (g && g.status === "no_data") {
+        } else if (g && (g.status === "no_data" || (g.nodes && g.nodes.length === 0))) {
           setStatus("no_data");
+          setWarningMessage(g.warning || "No graph data available");
           setErrorMessage("No graph data available");
         } else if (g) {
           setStatus("ok");

@@ -304,6 +304,7 @@ async def get_network_graph(
         where_clauses.append(
             "("
             "  $crime_type IN coalesce(n.crime_types, [])"
+            "  OR n.dominant_crime_type = $crime_type"  # Location nodes store this as a string, not array
             "  OR EXISTS { MATCH (n)-[rel]-() WHERE $crime_type IN coalesce(rel.crime_types, []) }"
             ")"
         )

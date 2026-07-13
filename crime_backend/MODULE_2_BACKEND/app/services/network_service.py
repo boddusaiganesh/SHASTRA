@@ -192,6 +192,7 @@ async def build_network_from_postgres(
             return {
                 "nodes": [], "edges": [], "total_nodes": 0, "total_edges": 0,
                 "network_density": 0, "key_players": [],
+                "status": "no_data",
                 "warning": f"No records found for crime type '{crime_type}'"
                            + (" in the selected district." if district_id else "."),
             }
@@ -299,7 +300,8 @@ async def build_network_from_postgres(
 
         link_q = select(CrimeVictimLink)
         if district_id:
-            link_q = link_q.join(Crime).where(Crime.district_id == district_id)
+            # Explicit join condition to avoid SQLAlchemy auto-join ambiguity
+            link_q = link_q.join(Crime, Crime.crime_id == CrimeVictimLink.crime_id).where(Crime.district_id == district_id)
         if matching_crime_ids is not None:
             link_q = link_q.where(CrimeVictimLink.crime_id.in_(matching_crime_ids))
         cv_links = (await db.execute(link_q)).scalars().all()
@@ -322,8 +324,12 @@ async def build_network_from_postgres(
             off_links = off_links_by_crime.get(cvl.crime_id, [])
             crime = crimes_by_id.get(cvl.crime_id)
             for ol in off_links:
-                if any(n["node_id"] == str(ol.offender_id) for n in nodes) and \
-                   any(n["node_id"] == str(cvl.victim_id) for n in nodes):
+                # When node_type=="victim", offenders were not loaded into nodes,
+                # so we only draw edges between entities that are actually in the graph.
+                # Both sides must be present — but skip the check if node_type forces only one type.
+                source_present = node_type == "victim" or any(n["node_id"] == str(ol.offender_id) for n in nodes)
+                target_present = any(n["node_id"] == str(cvl.victim_id) for n in nodes)
+                if source_present and target_present and node_type != "victim":
                     edges.append({
                         "edge_id": f"{ol.offender_id}_{cvl.victim_id}",
                         "source_node_id": str(ol.offender_id),
@@ -347,7 +353,10 @@ async def build_network_from_postgres(
         if district_id:
             lq = lq.where(Location.district_id == district_id)
         if search_query:
-            lq = lq.where(Location.address.ilike(f"%{search_query}%"))
+            lq = lq.where(
+                (Location.address.ilike(f"%{search_query}%")) |
+                (Location.location_name.ilike(f"%{search_query}%"))
+            )
         if location_ids_for_crime_type is not None:
             if not location_ids_for_crime_type:
                 locations = []
@@ -400,16 +409,20 @@ async def build_network_from_postgres(
                     for cid in crime_ids:
                         for ol in loc_offender_links_by_crime.get(cid, []):
                             offender_id = str(ol.offender_id)
-                            if offender_id in existing_offender_ids:
-                                edges.append({
-                                    "edge_id": f"{offender_id}_{loc_id}",
-                                    "source_node_id": offender_id,
-                                    "target_node_id": loc_id,
-                                    "relationship_type": "FREQUENTED",
-                                    "strength_score": 55,
-                                    "confidence_level": "SUSPECTED",
-                                    "crime_types": [crime_type] if crime_type else [],
-                                })
+                            # Only draw edge when offender is present in graph
+                            # (skip this check only when node_type=="location" since
+                            # offenders are not loaded in that mode)
+                            if node_type == "location" or offender_id in existing_offender_ids:
+                                if node_type != "location":  # don't add edges to absent offenders
+                                    edges.append({
+                                        "edge_id": f"{offender_id}_{loc_id}",
+                                        "source_node_id": offender_id,
+                                        "target_node_id": loc_id,
+                                        "relationship_type": "FREQUENTED",
+                                        "strength_score": 55,
+                                        "confidence_level": "SUSPECTED",
+                                        "crime_types": [crime_type] if crime_type else [],
+                                    })
             except Exception as e:
                 logger.warning(f"Failed to link locations to crimes/offenders in fallback: {e}")
 
