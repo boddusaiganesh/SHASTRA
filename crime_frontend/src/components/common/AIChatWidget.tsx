@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { MessageSquare, X, Send, Bot, User, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import api from '../../services/api';
@@ -20,6 +20,7 @@ export default function AIChatWidget() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const controls = useDragControls();
+  const isDragging = useRef(false);
 
   const sendMessage = async () => {
     if (!input.trim()) return;
@@ -42,25 +43,28 @@ export default function AIChatWidget() {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    <motion.div 
+      className="fixed bottom-6 right-6 z-50 flex flex-col items-end"
+      drag
+      dragControls={controls}
+      dragListener={false}
+      dragMomentum={false}
+      onDragStart={() => { isDragging.current = true; }}
+      onDragEnd={() => { setTimeout(() => { isDragging.current = false; }, 150); }}
+      style={{ touchAction: 'none' }}
+    >
       <AnimatePresence>
         {isOpen && (
             <motion.div
-              drag
-              dragControls={controls}
-              dragListener={false}
-              dragMomentum={false}
               initial={{ opacity: 0, y: 20, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.95 }}
-              className="absolute bottom-16 right-0 w-80 md:w-96 h-[500px] bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+              className="w-80 md:w-96 h-[500px] bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl flex flex-col overflow-hidden mb-4"
               style={{ originX: 1, originY: 1 }}
             >
               {/* Header */}
               <div 
-                onPointerDown={(e) => controls.start(e)}
-                style={{ touchAction: 'none' }}
-                className="chat-drag-handle bg-slate-800 p-4 border-b border-slate-700 flex justify-between items-center cursor-move select-none hover:bg-slate-750 transition-colors"
+                className="bg-slate-800 p-4 border-b border-slate-700 flex justify-between items-center"
               >
                 <div className="flex items-center gap-2">
                   <div className="p-1.5 bg-blue-500/20 rounded-lg text-blue-400">
@@ -141,11 +145,19 @@ export default function AIChatWidget() {
       </AnimatePresence>
 
       <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="h-14 w-14 bg-blue-600 hover:bg-blue-500 text-white rounded-full shadow-xl flex items-center justify-center transition-transform hover:scale-105"
+        onPointerDown={(e) => controls.start(e)}
+        onClick={(e) => {
+          if (isDragging.current) {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+          }
+          setIsOpen(!isOpen);
+        }}
+        className="h-14 w-14 bg-blue-600 hover:bg-blue-500 text-white rounded-full shadow-xl flex items-center justify-center transition-transform hover:scale-105 cursor-move"
       >
         {isOpen ? <X className="h-6 w-6" /> : <MessageSquare className="h-6 w-6" />}
       </button>
-    </div>
+    </motion.div>
   );
 }
