@@ -352,10 +352,28 @@ def export_report_pdf(report_data: dict) -> bytes:
     ai_narrative = report_data.get("ai_narrative")
     if ai_narrative:
         story.append(Paragraph("Executive Summary (AI Generated)", h2_style))
-        # Narrative might have multiple paragraphs separated by newlines
+        import re
         for p in ai_narrative.split("\n"):
-            if p.strip():
-                story.append(Paragraph(escape(p.strip()), narrative_style))
+            p = p.strip()
+            if not p:
+                continue
+                
+            if p in ["***", "---"]:
+                story.append(Spacer(1, 15))
+                continue
+                
+            # Escape first so our injected tags aren't escaped
+            clean_p = escape(p)
+            
+            # Convert bullets
+            if clean_p.startswith("* ") or clean_p.startswith("- "):
+                clean_p = "&bull; " + clean_p[2:]
+            
+            # Convert markdown bold and italic to reportlab XML tags
+            clean_p = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', clean_p)
+            clean_p = re.sub(r'\*([^\*]+)\*', r'<i>\1</i>', clean_p)
+            
+            story.append(Paragraph(clean_p, narrative_style))
         story.append(Spacer(1, 20))
     
     # Data Tables
