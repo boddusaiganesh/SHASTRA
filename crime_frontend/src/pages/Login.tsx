@@ -55,8 +55,8 @@ export default function Login() {
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-indigo-600" />
 
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 mb-4 shadow-lg shadow-blue-500/30">
-              <Shield className="h-8 w-8 text-white" />
+            <div className="inline-flex items-center justify-center h-20 w-20 rounded-2xl bg-slate-900 border border-indigo-500/30 mb-4 shadow-[0_0_20px_rgba(79,70,229,0.4)] overflow-hidden">
+              <img src="/shastra_logo.png" alt="SHASTRA Logo" className="h-full w-full object-cover scale-110" />
             </div>
             <h1 className="text-2xl font-bold text-white tracking-tight">Karnataka State Police</h1>
             <p className="text-blue-400 text-sm font-semibold tracking-wide mt-1">SHASTRA Platform</p>

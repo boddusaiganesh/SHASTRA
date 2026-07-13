@@ -82,8 +82,8 @@ const Navbar: React.FC<Props> = ({ alertCount = 0 }) => {
       <header className="h-14 bg-slate-900/95 backdrop-blur border-b border-slate-700/50 flex items-center px-4 gap-4 z-40 sticky top-0">
       {/* Logo */}
       <div className="flex items-center gap-2">
-        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
-          <Shield className="h-4 w-4 text-white" />
+        <div className="h-9 w-9 rounded-full bg-slate-900 border border-indigo-500/30 flex items-center justify-center flex-shrink-0 overflow-hidden shadow-[0_0_10px_rgba(79,70,229,0.3)]">
+          <img src="/shastra_logo.png" alt="SHASTRA Logo" className="h-full w-full object-cover scale-110" />
         </div>
         <div className="hidden sm:block">
           <p className="text-xs font-bold text-white leading-tight">Karnataka Police</p>
