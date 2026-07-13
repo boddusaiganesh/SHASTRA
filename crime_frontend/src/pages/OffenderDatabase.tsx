@@ -186,9 +186,10 @@ export default function OffenderDatabase() {
 
       <div className="flex-1 min-h-0 flex overflow-hidden">
         {/* List */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-2">
-          {(Array.isArray(offenders) ? offenders : []).map((o, i) => {
-             const statusVal = o.status || o.offender_status;
+        <div className="flex-1 overflow-y-auto custom-scrollbar">
+          <div className="p-4 space-y-2">
+            {(Array.isArray(offenders) ? offenders : []).map((o, i) => {
+               const statusVal = o.status || o.offender_status;
              return (
             <motion.div key={o.offender_id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.03 }}
               onClick={() => handleSelectOffender(o)}
@@ -222,9 +223,10 @@ export default function OffenderDatabase() {
               <ChevronRight className="h-4 w-4 text-slate-600" />
             </motion.div>
           )})}
+          </div>
           
           {/* Pagination Controls */}
-          <div className="p-4 border-t border-slate-700/50 flex items-center justify-between bg-slate-900 mt-4 -mx-4 -mb-4 sticky bottom-0">
+          <div className="p-4 border-t border-slate-700/50 flex items-center justify-between bg-slate-900 sticky bottom-0">
             <span className="text-sm text-slate-400">
               Showing {offenders.length} records {totalCount > 0 && `of ${totalCount} total`}
             </span>
