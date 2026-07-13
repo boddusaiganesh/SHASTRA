@@ -7,9 +7,10 @@ import uuid
 from app.core.database import get_db
 from app.core.security import get_current_user, require_role
 
+from app.core.config import settings
+
 router = APIRouter()
-UPLOAD_DIR = os.environ.get("EVIDENCE_UPLOAD_DIR", "/app/uploads")
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+UPLOAD_DIR = settings.EVIDENCE_UPLOAD_DIR
 
 ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "pdf", "mp4", "docx", "mp3", "wav"}
 MAX_UPLOAD_BYTES = 25 * 1024 * 1024   # 25 MB
@@ -130,3 +131,30 @@ async def download_evidence(
         raise HTTPException(status_code=404, detail="Evidence not found")
 
     return FileResponse(item.file_path, filename=item.description)
+
+@router.delete("/{evidence_id}")
+async def delete_evidence(
+    evidence_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(require_role(["SCRB_OFFICER", "DISTRICT_OFFICER", "INVESTIGATOR"]))
+):
+    from sqlalchemy import select
+    from app.models.database_models.evidence_model import Evidence
+    from app.models.database_models.crime_model import Crime
+    from app.core.security import scope_district_filter
+
+    query = select(Evidence).join(Crime, Evidence.crime_id == Crime.crime_id).where(Evidence.evidence_id == evidence_id)
+    query = scope_district_filter(query, current_user, Crime.district_id)
+
+    result = await db.execute(query)
+    item = result.scalar_one_or_none()
+    if not item:
+        raise HTTPException(status_code=404, detail="Evidence not found")
+
+    if os.path.exists(item.file_path):
+        os.remove(item.file_path)
+
+    await db.delete(item)
+    await db.commit()
+
+    return {"success": True, "message": "Evidence deleted successfully"}

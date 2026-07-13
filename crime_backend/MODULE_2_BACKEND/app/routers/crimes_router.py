@@ -6,7 +6,7 @@ from typing import Optional
 import logging
 
 from app.core.database import get_db
-from app.core.security import get_current_user, scope_district_filter, require_role
+from app.core.security import get_current_user, scope_district_filter, require_role, scope_district_param
 from app.core.redis_connection import cache_get, cache_set
 from app.models.database_models.crime_model import Crime, District, PoliceStation, CrimeVictimLink, CrimeOffenderLink
 from app.models.response_models.crime_response import CreateCrimeRequest
@@ -39,8 +39,9 @@ async def get_map_data(
         from sqlalchemy import func
         
         resolved_district = await resolve_district_id(db, district_id)
+        effective_district = scope_district_param(resolved_district, current_user)
         
-        cache_key = f"crimes_map_data:{file_format}:{crime_type}:{resolved_district}:{date_from}:{date_to}:{limit}:{min_lat}:{max_lat}:{min_lng}:{max_lng}"
+        cache_key = f"crimes_map_data:{file_format}:{crime_type}:{effective_district}:{date_from}:{date_to}:{limit}:{min_lat}:{max_lat}:{min_lng}:{max_lng}"
         cached_data = await cache_get(cache_key)
         if cached_data:
             if file_format == "csv":
@@ -187,11 +188,12 @@ async def filter_crimes(
     count_base = select(func.count(Crime.crime_id))
 
     resolved_district_id = await resolve_district_id(db, district_id) if district_id else None
+    effective_district_id = scope_district_param(resolved_district_id, current_user)
 
     def apply_filter_conditions(query):
         query = scope_district_filter(query, current_user, Crime.district_id)
-        if resolved_district_id:
-            query = query.where(Crime.district_id == resolved_district_id)
+        if effective_district_id:
+            query = query.where(Crime.district_id == effective_district_id)
         if crime_type:
             query = query.where(Crime.crime_type == crime_type)
         if status:

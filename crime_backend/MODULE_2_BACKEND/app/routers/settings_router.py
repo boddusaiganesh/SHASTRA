@@ -10,16 +10,6 @@ from app.models.database_models.crime_model import District
 
 router = APIRouter()
 
-@router.get("/profile")
-async def get_profile(
-    db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_user)
-):
-    data = await get_user_by_id(db, current_user["user_id"])
-    if not data:
-        raise HTTPException(status_code=404, detail="User not found")
-    return {"success": True, "data": data}
-
 @router.post("/datasources/{source_id}/sync")
 async def sync_datasource(
     source_id: str,

@@ -18,17 +18,10 @@ const Navbar: React.FC<Props> = ({ alertCount = 0 }) => {
   const [now, setNow] = useState(dayjs());
   const { t, i18n } = useTranslation();
 
-  const [usingMockData, setUsingMockData] = useState((window as any).__using_mock_data || false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<{crimes: any[], offenders: any[], victims: any[]}>({crimes: [], offenders: [], victims: []});
   const [isSearching, setIsSearching] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
-
-  useEffect(() => {
-    const handleMockData = () => setUsingMockData(true);
-    window.addEventListener("mock-data-detected", handleMockData);
-    return () => window.removeEventListener("mock-data-detected", handleMockData);
-  }, []);
 
   useEffect(() => {
     const t = setInterval(() => setNow(dayjs()), 1000);
@@ -199,12 +192,6 @@ const Navbar: React.FC<Props> = ({ alertCount = 0 }) => {
         <span className="hidden sm:inline">Logout</span>
       </button>
     </header>
-    {usingMockData && (
-      <div className="bg-amber-500/10 border-b border-amber-500/30 text-amber-400 text-xs py-1.5 px-4 text-center font-medium z-30 flex items-center justify-center gap-1.5 backdrop-blur-sm flex-shrink-0">
-        <AlertTriangle className="h-3.5 w-3.5 text-amber-500 animate-pulse" />
-        <span>Offline Mode: Backend connection unavailable. Displaying simulated mock intelligence data.</span>
-      </div>
-    )}
   </>
 );
 };

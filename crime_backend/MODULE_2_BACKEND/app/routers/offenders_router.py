@@ -117,9 +117,18 @@ async def edit_offender(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(require_role(["SCRB_OFFICER", "DISTRICT_OFFICER", "INVESTIGATOR"])),
 ):
-    from app.services.offender_service import update_offender
+    from app.services.offender_service import update_offender, get_offender_profile
     from app.utils.audit import log_action
     
+    profile_data = await get_offender_profile(db, offender_id)
+    if not profile_data:
+        raise HTTPException(status_code=404, detail="Offender not found")
+    if current_user["role"] == "DISTRICT_OFFICER" and profile_data.get("district_id") != current_user.get("district_id"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+        
+    if current_user["role"] == "DISTRICT_OFFICER":
+        payload.pop("district_id", None)
+        
     data = await update_offender(db, offender_id, payload)
     if not data:
         raise HTTPException(status_code=404, detail="Offender not found")

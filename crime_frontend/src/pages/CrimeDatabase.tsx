@@ -26,6 +26,7 @@ export default function CrimeDatabase() {
   const [evidence, setEvidence] = useState<any[]>([]);
   const [uploading, setUploading] = useState(false);
   const [crimeToDelete, setCrimeToDelete] = useState<string | null>(null);
+  const [viewingDocument, setViewingDocument] = useState<{url: string, type: string, name: string} | null>(null);
 
   // Added missing dispatch/navigate variables if needed, though they aren't used for logout here
 
@@ -227,16 +228,49 @@ export default function CrimeDatabase() {
                   {evidence.map(ev => (
                     <div key={ev.evidence_id} className="bg-slate-700/50 p-3 rounded-lg flex items-center justify-between text-sm">
                       <div>
+                        <p className="text-white break-all text-left font-medium">
+                          {ev.file_name || ev.description || "Attachment"}
+                        </p>
+                        <p className="text-xs text-slate-400 mt-1">Uploaded: {new Date(ev.uploaded_at).toLocaleString()}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={async () => {
+                            const { getAuthenticatedBlobUrl } = await import("../utils/buildApiUrl");
+                            const url = await getAuthenticatedBlobUrl(`/evidence/download/${ev.evidence_id}`);
+                            setViewingDocument({ url, type: "application/pdf", name: ev.file_name || ev.description || "Document" });
+                          }}
+                          className="px-2 py-1 bg-blue-500/20 text-blue-400 hover:bg-blue-500/40 rounded text-xs transition-colors"
+                        >
+                          View
+                        </button>
                         <button
                           onClick={async () => {
                             const { downloadAuthenticated } = await import("../utils/buildApiUrl");
                             await downloadAuthenticated(`/evidence/download/${ev.evidence_id}`);
                           }}
-                          className="text-blue-400 hover:underline break-all text-left"
+                          className="px-2 py-1 bg-slate-600 hover:bg-slate-500 text-white rounded text-xs transition-colors"
                         >
-                          {ev.file_name || ev.description || "Attachment"}
+                          Download
                         </button>
-                        <p className="text-xs text-slate-400 mt-1">Uploaded: {new Date(ev.uploaded_at).toLocaleString()}</p>
+                        <button
+                          onClick={async () => {
+                            if (window.confirm("Are you sure you want to delete this attachment?")) {
+                               try {
+                                 const api = (await import("../services/api")).default;
+                                 await api.delete(`/evidence/${ev.evidence_id}`);
+                                 const eRes = await api.get(`/evidence/${selectedCrime}`);
+                                 setEvidence(eRes.data?.data || eRes.data || []);
+                               } catch (err) {
+                                 console.error(err);
+                                 alert("Failed to delete attachment");
+                               }
+                            }
+                          }}
+                          className="px-2 py-1 bg-red-500/20 text-red-400 hover:bg-red-500/40 rounded text-xs transition-colors"
+                        >
+                          Delete
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -263,6 +297,28 @@ export default function CrimeDatabase() {
             <div className="flex justify-center gap-3 mt-2">
               <button onClick={() => setCrimeToDelete(null)} className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors text-sm">Cancel</button>
               <button onClick={confirmDelete} className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg transition-colors text-sm">Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {viewingDocument && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-slate-800 rounded-xl w-full max-w-5xl h-[85vh] shadow-2xl flex flex-col">
+            <div className="p-4 border-b border-slate-700 flex justify-between items-center">
+              <h2 className="text-lg font-semibold text-white">Viewing: {viewingDocument.name}</h2>
+              <button 
+                onClick={() => {
+                   window.URL.revokeObjectURL(viewingDocument.url);
+                   setViewingDocument(null);
+                }} 
+                className="text-slate-400 hover:text-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="flex-1 bg-slate-900 p-2 overflow-hidden">
+               <iframe src={viewingDocument.url} className="w-full h-full bg-white rounded" title="Document Viewer" />
             </div>
           </div>
         </div>

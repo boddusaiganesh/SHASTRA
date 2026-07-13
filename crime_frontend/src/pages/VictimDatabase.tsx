@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, UserPlus, FileText, User, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, UserPlus, FileText, User, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
 import { victimService } from '../services/victimService';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store/store';
@@ -17,16 +17,19 @@ export default function VictimDatabase() {
   const districts = useDistricts();
   
   const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [registerError, setRegisterError] = useState<string | null>(null);
   const [newVictim, setNewVictim] = useState({ first_name: "", last_name: "", age: "", gender: "", phone_number: "", district_id: "" });
   
   const handleRegisterVictim = async () => {
+    setRegisterError(null);
     try {
       await victimService.register(newVictim);
       setShowRegisterModal(false);
       setNewVictim({ first_name: "", last_name: "", age: "", gender: "", phone_number: "", district_id: "" });
       handleSearch();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setRegisterError(err.response?.data?.detail || err.message || "Registration failed");
     }
   };
   
@@ -237,6 +240,12 @@ export default function VictimDatabase() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-xl w-full max-w-md space-y-4">
             <h2 className="text-lg font-bold text-white mb-2">Register Victim</h2>
+            {registerError && (
+              <div className="bg-red-900/50 border border-red-500/50 text-red-200 px-3 py-2 rounded text-sm flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                {registerError}
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-4">
               <input type="text" placeholder="First Name" value={newVictim.first_name} onChange={(e) => setNewVictim({...newVictim, first_name: e.target.value})} className="col-span-1 px-3 py-2 bg-slate-800 text-white rounded border border-slate-700 focus:border-emerald-500 outline-none" />
               <input type="text" placeholder="Last Name" value={newVictim.last_name} onChange={(e) => setNewVictim({...newVictim, last_name: e.target.value})} className="col-span-1 px-3 py-2 bg-slate-800 text-white rounded border border-slate-700 focus:border-emerald-500 outline-none" />

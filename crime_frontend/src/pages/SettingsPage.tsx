@@ -28,6 +28,8 @@ const SettingsPage: React.FC = () => {
   const pageSize = 20;
   const [loading, setLoading] = useState(true);
   const [saveMsg, setSaveMsg] = useState("");
+  const [saveThresholdError, setSaveThresholdError] = useState<string | null>(null);
+  const [addUserError, setAddUserError] = useState<string | null>(null);
   const [newUser, setNewUser] = useState({ username: "", full_name: "", role: "INVESTIGATOR", password: "", district: "" });
 
   useEffect(() => {
@@ -77,20 +79,33 @@ const SettingsPage: React.FC = () => {
 
   const handleSaveThresholds = async () => {
     if (!thresholds) return;
-    await settingsService.updateAlertThresholds(thresholds as any);
-    setSaveMsg("Thresholds saved!");
-    setTimeout(() => setSaveMsg(""), 2500);
+    setSaveThresholdError(null);
+    try {
+      await settingsService.updateAlertThresholds(thresholds as any);
+      setSaveMsg("Thresholds saved!");
+      setTimeout(() => setSaveMsg(""), 2500);
+    } catch (e: any) {
+      console.error(e);
+      setSaveThresholdError(e.response?.data?.detail || e.message || "Failed to save thresholds");
+    }
   };
 
   const handleAddUser = async () => {
     if (!newUser.username || !newUser.full_name) return;
+    setAddUserError(null);
     const payload = {
       ...newUser,
       district_id: newUser.district || undefined
     };
-    const result = await settingsService.addUser(payload as any);
-    setUsers((prev) => [...prev, ((result as any).data || (result as any).user) as User]);
-    setNewUser({ username: "", full_name: "", role: "INVESTIGATOR", password: "", district: "" });
+    try {
+      const result = await settingsService.addUser(payload as any);
+      setUsers((prev) => [...prev, ((result as any).data || (result as any).user) as User]);
+      setUsersTotalCount((prev) => prev + 1);
+      setNewUser({ username: "", full_name: "", role: "INVESTIGATOR", password: "", district: "" });
+    } catch (e: any) {
+      console.error(e);
+      setAddUserError(e.response?.data?.detail || e.message || "Failed to add user");
+    }
   };
 
   if (loading) return <div className="flex-1 flex items-center justify-center"><LoadingSpinner size="lg" text="Loading settings..." /></div>;
@@ -128,6 +143,7 @@ const SettingsPage: React.FC = () => {
           {/* Add User Form */}
           <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4">
             <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2"><Plus className="h-4 w-4 text-blue-400" />Add New User</h3>
+            {addUserError && <div className="text-sm text-red-400 mb-3 bg-red-900/30 p-2 rounded">{addUserError}</div>}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-3">
               <input placeholder="Username" value={newUser.username} onChange={(e) => setNewUser({ ...newUser, username: e.target.value })} className={inputCls} />
               <input placeholder="Full Name" value={newUser.full_name} onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })} className={inputCls} />
@@ -208,6 +224,7 @@ const SettingsPage: React.FC = () => {
               <Save className="h-4 w-4" /> Save Changes
             </button>
             {saveMsg && <span className="text-xs text-green-400 ml-2">{saveMsg}</span>}
+            {saveThresholdError && <span className="text-xs text-red-400 block mt-2">{saveThresholdError}</span>}
           </div>
         </div>
       )}

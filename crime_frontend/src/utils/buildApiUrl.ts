@@ -23,3 +23,11 @@ export const downloadAuthenticated = async (path: string, params?: Record<string
   document.body.removeChild(a);
   window.URL.revokeObjectURL(blobUrl);
 };
+
+export const getAuthenticatedBlobUrl = async (path: string, params?: Record<string, string>) => {
+  const api = (await import("../services/api")).default;
+  const response = await api.get(path, { params, responseType: "blob" });
+  
+  const contentType = response.headers["content-type"] || "application/octet-stream";
+  return window.URL.createObjectURL(new Blob([response.data], { type: contentType }));
+};

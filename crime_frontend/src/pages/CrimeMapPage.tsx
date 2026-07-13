@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { motion } from "framer-motion";
-import { MapPin, Info, X } from "lucide-react";
+import { MapPin, Info, X, AlertTriangle } from "lucide-react";
 import { RootState } from "../store/store";
 import { setMapCrimes, setFilters } from "../store/crimesSlice";
 import { crimeService } from "../services/crimeService";
@@ -22,6 +22,7 @@ const CrimeMapPage: React.FC = () => {
   const dispatch = useDispatch();
   const { mapCrimes, filters } = useSelector((s: RootState) => s.crimes);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [pinsTruncated, setPinsTruncated] = useState(false);
   const [selectedCrime, setSelectedCrime] = useState<Crime | null>(null);
   const [showCaseModal, setShowCaseModal] = useState(false);
@@ -35,6 +36,7 @@ const CrimeMapPage: React.FC = () => {
     const controller = new AbortController();
     const fetchData = async () => {
       setLoading(true);
+      setError(null);
       try {
         const data = await crimeService.getMapData({
           crime_type: filters.crimeType !== "All" ? filters.crimeType : undefined,
@@ -46,6 +48,7 @@ const CrimeMapPage: React.FC = () => {
       } catch (e: any) {
         if (e.name !== "CanceledError" && e.name !== "AbortError") {
           console.error("Failed to load map data:", e);
+          setError(e.response?.data?.detail || e.message || "Failed to load map data");
         }
       } finally {
         setLoading(false);
@@ -174,6 +177,15 @@ const CrimeMapPage: React.FC = () => {
             <div className={`absolute left-1/2 -translate-x-1/2 z-[1000] bg-blue-500/90 text-blue-50 px-4 py-2 rounded-full shadow-lg text-sm font-medium flex items-center gap-2 ${pinsTruncated ? 'top-16' : 'top-4'}`}>
               <Info size={16} />
               Showing crimes from the last 180 days. Use the date filter to see older records.
+            </div>
+          )}
+          {error && (
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[1000] bg-red-900/90 border border-red-500/50 text-red-100 px-6 py-4 rounded-xl shadow-2xl flex flex-col items-center gap-3 backdrop-blur-sm max-w-md">
+              <AlertTriangle size={32} className="text-red-400" />
+              <div className="text-center">
+                <h3 className="font-bold text-lg">Failed to Load Map Data</h3>
+                <p className="text-sm text-red-200 mt-1">{error}</p>
+              </div>
             </div>
           )}
           {loading ? (

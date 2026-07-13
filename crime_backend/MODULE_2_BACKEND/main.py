@@ -241,7 +241,6 @@ async def health_check():
             "database": await get_db_health(),
             "redis": await get_redis_health(),
             "neo4j": get_neo4j_health(),
-            "scheduler": "running" if _db_ready else "stopped",
         }
     }
 

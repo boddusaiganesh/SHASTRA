@@ -95,7 +95,7 @@ const CriminalNetwork: React.FC = () => {
     const handle = setTimeout(async () => {
       setLoading(true);
       try {
-        const [g, ai] = await Promise.all([
+        const [gResult, aiResult] = await Promise.allSettled([
           networkService.getGraphData(
             searchQuery || undefined,
             crimeTypeLens === "all" ? undefined : crimeTypeLens,
@@ -111,6 +111,9 @@ const CriminalNetwork: React.FC = () => {
             { signal: controller.signal }
           ),
         ]);
+        
+        const g = gResult.status === "fulfilled" ? gResult.value : null;
+        const ai = aiResult.status === "fulfilled" ? aiResult.value : null;
         
         if (g && g.status === "offline") {
           setStatus("offline");
@@ -262,6 +265,10 @@ const CriminalNetwork: React.FC = () => {
   };
 
   const handleNodeExpand = async (node: NetworkNode) => {
+    if (isFallbackMode) {
+      setWarningMessage("Node expansion is not available in fallback mode (Neo4j is offline).");
+      return;
+    }
     try {
       const res = await networkService.expandNode(node.node_id);
       if (res && res.nodes && res.edges) {
@@ -576,8 +583,23 @@ const CriminalNetwork: React.FC = () => {
                   nodes={filteredNodes}
                   edges={edges}
                   onCellClick={(nodeA, nodeB) => {
-                    const targetNode = filteredNodes.find(n => n.node_id === nodeB) || filteredNodes.find(n => n.node_id === nodeA);
-                    if (targetNode) navigateToNode(targetNode);
+                    const edge = edges.find((e) => 
+                      (e.source_node_id === nodeA && e.target_node_id === nodeB) ||
+                      (e.source_node_id === nodeB && e.target_node_id === nodeA)
+                    );
+                    if (edge) {
+                      const mappedEdgeData = {
+                        strength: edge.strength_score,
+                        crimeTypes: edge.crime_types || [],
+                        confidence: edge.confidence_level,
+                        label: edge.relationship_type,
+                        ...edge
+                      };
+                      handleEdgeSelect(nodeA, nodeB, mappedEdgeData);
+                    } else {
+                      const targetNode = filteredNodes.find(n => n.node_id === nodeB) || filteredNodes.find(n => n.node_id === nodeA);
+                      if (targetNode) navigateToNode(targetNode);
+                    }
                   }}
                 />
               )}
