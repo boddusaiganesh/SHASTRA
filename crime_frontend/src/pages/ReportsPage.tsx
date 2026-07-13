@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { FileText, Download, Plus, CheckCircle, Clock, Loader2 } from "lucide-react";
+import { FileText, Download, Plus, CheckCircle, Clock, Loader2, Eye, X } from "lucide-react";
 import { reportService } from "../services/reportService";
 import { useDistricts } from "../hooks/useDistricts";
 import LoadingSpinner from "../components/common/LoadingSpinner";
@@ -30,6 +30,23 @@ const ReportsPage: React.FC = () => {
   const [page, setPage] = useState(1);
   const [pageSize] = useState(20);
   const [totalCount, setTotalCount] = useState(0);
+  const [viewingPdf, setViewingPdf] = useState<string | null>(null);
+
+  const handleViewPdf = async (reportId: string) => {
+    try {
+      const blob = await reportService.download(reportId, "pdf");
+      if (blob) {
+        const url = URL.createObjectURL(blob);
+        setViewingPdf(url);
+      } else {
+        setSuccessMsg(`Failed to load report ${reportId}.`);
+        setTimeout(() => setSuccessMsg(""), 4000);
+      }
+    } catch (error) {
+      setSuccessMsg("Failed to load PDF viewer.");
+      setTimeout(() => setSuccessMsg(""), 3000);
+    }
+  };
 
   useEffect(() => {
     reportService.getSavedList(page, pageSize).then((d: any) => {
@@ -179,6 +196,12 @@ const ReportsPage: React.FC = () => {
                   {report.status || "Ready"}
                 </span>
                 <button
+                  onClick={() => handleViewPdf(report.report_id)}
+                  className="flex items-center gap-1 px-3 py-1.5 text-xs text-emerald-400 hover:text-emerald-300 hover:bg-emerald-900/20 rounded-lg transition-colors"
+                >
+                  <Eye className="h-4 w-4" /> View
+                </button>
+                <button
                   onClick={() => handleDownload(report.report_id, 'pdf')}
                   className="flex items-center gap-1 px-3 py-1.5 text-xs text-blue-400 hover:text-blue-300 hover:bg-blue-900/20 rounded-lg transition-colors"
                 >
@@ -219,6 +242,28 @@ const ReportsPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {viewingPdf && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center p-4 border-b border-slate-700">
+              <h2 className="text-lg font-bold text-white">Report Viewer</h2>
+              <button 
+                onClick={() => {
+                  URL.revokeObjectURL(viewingPdf);
+                  setViewingPdf(null);
+                }} 
+                className="text-slate-400 hover:text-white"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="flex-1 p-2 bg-slate-800">
+              <iframe src={viewingPdf} className="w-full h-full rounded border border-slate-700 bg-white" title="PDF Viewer" />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
