@@ -29,13 +29,9 @@ export default function Login() {
     try {
       const response = await authService.login({ username, password });
       dispatch(loginSuccess({ ...response, isAuthenticated: true, isLoading: false, error: null }));
-      navigate('/');
-    } catch (err: any) {
-      if (err?.response?.status === 429) {
-        dispatch(loginFailure('Too many login attempts. Please try again later.'));
-      } else {
-        dispatch(loginFailure(err?.response?.data?.detail || err.message || 'Login failed'));
-      }
+      navigate('/dashboard');
+    } catch (err: unknown) {
+      dispatch(loginFailure((err as Error).message || 'Login failed'));
     }
   };
 

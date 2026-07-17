@@ -11,6 +11,7 @@ import Navbar from "./components/common/Navbar";
 import Sidebar from "./components/common/Sidebar";
 
 import Login from "./pages/Login";
+import LandingPage from "./pages/LandingPage";
 import Dashboard from "./pages/Dashboard";
 import CrimeMapPage from "./pages/CrimeMapPage";
 import HotspotAnalysis from "./pages/HotspotAnalysis";
@@ -168,7 +169,8 @@ export default function App() {
     <Router>
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/map" element={<ProtectedRoute><CrimeMapPage /></ProtectedRoute>} />
         <Route path="/crimes" element={<ProtectedRoute><CrimeDatabase /></ProtectedRoute>} />
         <Route path="/hotspots" element={<ProtectedRoute><HotspotAnalysis /></ProtectedRoute>} />

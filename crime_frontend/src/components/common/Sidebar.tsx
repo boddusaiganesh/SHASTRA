@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 
 const navItems = [
-  { path: "/",          label: "Dashboard",             icon: LayoutDashboard },
+  { path: "/dashboard", label: "Dashboard",             icon: LayoutDashboard },
   { path: "/map",       label: "Crime Map",             icon: Map },
   { path: "/hotspots",  label: "Hotspot Analysis",      icon: Flame },
   { path: "/crimes",    label: "Crime Database",        icon: Database },

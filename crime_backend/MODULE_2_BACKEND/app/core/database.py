@@ -106,6 +106,30 @@ async def init_db():
         return False
 
     try:
+        # Run in separate connections/transactions or execute them and catch errors,
+        # since CREATE EXTENSION cannot run in a nested subtransaction easily in some environments.
+        # But engine.begin() starts a transaction, so we can try creating them in separate connections.
+        try:
+            async with engine.begin() as conn:
+                # Enable PostGIS extension
+                try:
+                    await conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgis;"))
+                except Exception as pe:
+                    logger.warning(f"Could not enable postgis extension (continuing): {pe}")
+                
+                try:
+                    await conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
+                except Exception as te:
+                    logger.warning(f"Could not enable pg_trgm extension (continuing): {te}")
+                
+                # Create all tables
+                await conn.run_sync(Base.metadata.create_all)
+            logger.info("Database tables created successfully")
+        except Exception as conn_err:
+            # Fallback to direct run without extensions in a single connection
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+            logger.info("Database tables created successfully (without extensions)")
         # Seed initial data
         await seed_initial_data()
         return True
