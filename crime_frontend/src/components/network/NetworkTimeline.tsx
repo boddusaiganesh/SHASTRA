@@ -6,9 +6,10 @@ interface Props {
   events: TimelineEvent[];
   onSelectDate?: (date: string | null) => void;
   selectedDate?: string | null;
+  isFallbackMode?: boolean;
 }
 
-const NetworkTimeline: React.FC<Props> = ({ events, onSelectDate, selectedDate }) => {
+const NetworkTimeline: React.FC<Props> = ({ events, onSelectDate, selectedDate, isFallbackMode }) => {
   const sorted = useMemo(() => [...events].sort((a, b) => a.date.localeCompare(b.date)), [events]);
   if (sorted.length === 0) return null;
 
@@ -19,7 +20,14 @@ const NetworkTimeline: React.FC<Props> = ({ events, onSelectDate, selectedDate }
   return (
     <div className="h-20 bg-slate-900/95 border-t border-slate-700/50 px-4 py-2 relative">
       <div className="flex items-center justify-between mb-1">
-        <span className="text-xs text-slate-400">Timeline · {sorted.length} linked crimes</span>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-slate-400">Timeline · {sorted.length} linked crimes</span>
+          {isFallbackMode && (
+            <span className="px-1.5 py-0.5 text-[9px] font-medium tracking-wider text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded uppercase">
+              Degraded Data
+            </span>
+          )}
+        </div>
         {selectedDate && (
           <button onClick={() => onSelectDate?.(null)} className="text-xs text-blue-400 hover:underline">Clear selection</button>
         )}

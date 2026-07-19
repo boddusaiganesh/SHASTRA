@@ -44,6 +44,41 @@ async def seed_all_data(session: AsyncSession):
         from app.core.config import KARNATAKA_DISTRICTS, CRIME_TYPES, CRIME_STATUS_VALUES
         from datetime import timedelta
 
+        # Approximate centroid coordinates for Karnataka districts
+        DISTRICT_COORDS = {
+            "Bengaluru Urban": (12.9716, 77.5946),
+            "Bengaluru Rural": (13.2924, 77.5350),
+            "Mysuru": (12.2958, 76.6394),
+            "Belagavi": (15.8497, 74.4977),
+            "Hubballi-Dharwad": (15.4589, 75.0078),
+            "Mangaluru City": (12.9141, 74.8560),
+            "Dakshina Kannada": (12.8703, 75.1232),
+            "Kalaburagi": (17.3297, 76.8343),
+            "Ballari": (15.1394, 76.9214),
+            "Tumakuru": (13.3392, 77.1016),
+            "Udupi": (13.3409, 74.7421),
+            "Shivamogga": (13.9299, 75.5681),
+            "Davanagere": (14.4644, 75.9218),
+            "Hassan": (13.0033, 76.1004),
+            "Vijayapura": (16.8302, 75.7100),
+            "Bidar": (17.9104, 77.5199),
+            "Raichur": (16.2076, 77.3621),
+            "Koppal": (15.3468, 76.1558),
+            "Gadag": (15.4287, 75.6328),
+            "Haveri": (14.7953, 75.4013),
+            "Uttara Kannada": (14.8051, 74.5959),
+            "Chikkamagaluru": (13.3161, 75.7720),
+            "Kodagu": (12.3375, 75.8069),
+            "Mandya": (12.5218, 76.8951),
+            "Chamarajanagara": (11.9261, 76.9406),
+            "Ramanagara": (12.7209, 77.2816),
+            "Chikkaballapura": (13.4325, 77.7275),
+            "Kolar": (13.1367, 78.1291),
+            "Chitradurga": (14.2251, 76.3980),
+            "Bagalkote": (16.1817, 75.6958),
+            "Yadgiri": (16.7645, 77.1404),
+        }
+
         # Seed all 31 Districts and 1 Police Station per district
         districts = []
         stations = []
@@ -53,9 +88,13 @@ async def seed_all_data(session: AsyncSession):
         for idx, d_data in enumerate(KARNATAKA_DISTRICTS):
             d_id = d_data["district_id"]
             district_ids.append(d_id)
-            # Base latitude and longitude for Karnataka (approx 12-18 N, 74-78 E)
-            base_lat = 15.3173 + random.uniform(-2, 2)
-            base_lon = 75.7139 + random.uniform(-1.5, 1.5)
+            d_name = d_data["district_name"]
+            
+            if d_name in DISTRICT_COORDS:
+                base_lat, base_lon = DISTRICT_COORDS[d_name]
+            else:
+                base_lat = 15.3173 + random.uniform(-2, 2)
+                base_lon = 75.7139 + random.uniform(-1.5, 1.5)
             
             district = District(
                 district_id=d_id,

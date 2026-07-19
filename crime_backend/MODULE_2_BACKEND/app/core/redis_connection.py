@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 _redis_client: Optional[aioredis.Redis] = None
 
 
-async def init_redis():
+async def init_redis() -> bool:
     """Initialize Redis connection"""
     global _redis_client
     try:
@@ -30,9 +30,11 @@ async def init_redis():
         )
         await _redis_client.ping()
         logger.info("Redis connected successfully")
+        return True
     except Exception as e:
         logger.warning(f"Redis connection failed (non-critical): {e}")
         _redis_client = None
+        return False
 
 
 async def close_redis():

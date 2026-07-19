@@ -169,7 +169,7 @@ def _arima_like_forecast(
             if day_of_week not in weekly_patterns:
                 weekly_patterns[day_of_week] = []
             weekly_patterns[day_of_week].append(counts[i])
-        except:
+        except ValueError:
             pass
     
     avg_by_day = {
@@ -241,7 +241,7 @@ def _simple_moving_average_forecast(
     if historical_data:
         try:
             last_date = date.fromisoformat(historical_data[-1]["date"])
-        except:
+        except ValueError:
             pass
     
     forecast_list = []
@@ -282,8 +282,8 @@ def _extract_seasonal_factors(forecast_df) -> List[str]:
                      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
             factors.append(f"High season: {months[int(monthly.idxmax()) - 1]}")
             factors.append(f"Low season: {months[int(monthly.idxmin()) - 1]}")
-    except:
-        pass
+    except Exception as e:
+        logger.warning(f"Failed to extract seasonal factors: {e}")
     
     if not factors:
         factors = [

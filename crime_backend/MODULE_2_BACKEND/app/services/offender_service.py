@@ -233,7 +233,7 @@ async def get_modus_operandi(
                 time_category_counts["EVENING"] += count
             else:
                 time_category_counts["NIGHT"] += count
-        except Exception:
+        except ValueError:
             pass
     
     preferred_time = max(time_category_counts, key=time_category_counts.get)

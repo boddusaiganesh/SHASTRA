@@ -223,7 +223,7 @@ def analyze_peak_time(time_data: List[str]) -> Dict[str, str]:
         try:
             hour = int(t.split(":")[0])
             hours.append(hour)
-        except:
+        except (ValueError, TypeError, IndexError):
             pass
     
     if not hours:
@@ -248,7 +248,7 @@ def analyze_peak_days(dates: List[str]) -> List[str]:
         try:
             dt = date.fromisoformat(d)
             days.append(dt.strftime("%A"))
-        except:
+        except ValueError:
             pass
     
     if not days:

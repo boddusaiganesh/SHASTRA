@@ -46,6 +46,7 @@ const CriminalNetwork: React.FC = () => {
     suspicious_pairs: { offender_1: string; offender_2: string; connection_type: string; confidence: string }[];
     recommended_actions: string[];
     network_stats: { total_criminals: number; high_risk_count: number; active_count: number; network_density: number };
+    is_fallback?: boolean;
   } | null>(null);
   
   const [selectedNode, setSelectedNode] = useState<NetworkNode | null>(null);
@@ -702,7 +703,6 @@ const CriminalNetwork: React.FC = () => {
                   onEdgeSelect={handleEdgeSelect}
                   selectedNodeId={selectedNode?.node_id} 
                   highlightPath={highlightPath}
-                  crimeTypeLens={null /* server already filters by crime type — lens overlay not needed */}
                   showClusters={showClusters}
                   clusterSummary={clusterSummary}
                   replaceKey={replaceKey}
@@ -740,6 +740,7 @@ const CriminalNetwork: React.FC = () => {
                   onNodeSelect={navigateToNode}
                   selectedNodeId={selectedNode?.node_id}
                   watchedNodeIds={watchedNodeIds}
+                  isFallbackMode={isFallbackMode}
                 />
               )}
               
@@ -812,7 +813,8 @@ const CriminalNetwork: React.FC = () => {
             <NetworkTimeline 
               events={timelineEvents} 
               onSelectDate={setSelectedTimelineDate} 
-              selectedDate={selectedTimelineDate} 
+              selectedDate={selectedTimelineDate}
+              isFallbackMode={isFallbackMode}
             />
           </div>
         </div>

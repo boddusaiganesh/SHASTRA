@@ -135,13 +135,14 @@ def generate_prompt_hash(prompt: str) -> str:
 
 from typing import Optional, Dict, Any
 
-async def call_gemini(prompt: str, use_cache: bool = True) -> Dict[str, Any]:
+async def call_gemini(prompt: str, use_cache: bool = True, category: str = "report") -> Dict[str, Any]:
     """
     Call Gemini API with caching support
     
     Args:
         prompt: The prompt to send to Gemini
         use_cache: Whether to use Redis cache for this request
+        category: The category of the response for fallback matching
     
     Returns:
         A dict containing the text response and a boolean indicating if it was a fallback:
@@ -173,7 +174,7 @@ async def call_gemini(prompt: str, use_cache: bool = True) -> Dict[str, Any]:
             api_key, model_name = await get_next_key_and_model()
             if not api_key:
                 logger.error("No API key available for Gemini request.")
-                return {"text": generate_fallback_response(prompt), "is_fallback": True}
+                return {"text": generate_fallback_response(category), "is_fallback": True}
                 
             # Configure with the selected key
             genai.configure(api_key=api_key)
@@ -201,42 +202,35 @@ async def call_gemini(prompt: str, use_cache: bool = True) -> Dict[str, Any]:
         except Exception as e:
             logger.error(f"Gemini API error on attempt {attempt + 1} with model {model_name}: {e}")
             if attempt == max_retries - 1:
-                return {"text": generate_fallback_response(prompt), "is_fallback": True}
+                return {"text": generate_fallback_response(category), "is_fallback": True}
             continue # Try next key/model
             
     logger.error("All Gemini API attempts failed. Using fallback.")
-    return {"text": generate_fallback_response(prompt), "is_fallback": True}
+    return {"text": generate_fallback_response(category), "is_fallback": True}
 
 
-def generate_fallback_response(prompt: str) -> str:
+def generate_fallback_response(category: str) -> str:
     """Generate a fallback response when Gemini is unavailable"""
-    if "network" in prompt.lower() or "criminal" in prompt.lower():
-        return ("Based on the available data, the criminal network analysis shows interconnected "
+    templates = {
+        "network": ("Based on the available data, the criminal network analysis shows interconnected "
                 "relationships between multiple suspects. Further investigation recommended to "
                 "establish confirmed links. Priority should be given to high-risk individuals "
-                "with multiple crime associations.")
-    elif "deployment" in prompt.lower() or "patrol" in prompt.lower():
-        return ("Based on crime pattern analysis, recommend increased patrol presence during "
+                "with multiple crime associations."),
+        "deployment": ("Based on crime pattern analysis, recommend increased patrol presence during "
                 "identified peak hours. Focus resources on high-risk hotspot areas. "
-                "Coordinate with local intelligence units for targeted interventions.")
-    elif "offender" in prompt.lower() or "risk" in prompt.lower():
-        return ("Risk assessment indicates elevated concern based on crime history and "
+                "Coordinate with local intelligence units for targeted interventions."),
+        "offender_risk": ("Risk assessment indicates elevated concern based on crime history and "
                 "behavioral patterns. Standard monitoring protocols recommended. "
-                "Previous crime patterns suggest continued criminal activity is probable.")
-    elif "anomaly" in prompt.lower() or "unusual" in prompt.lower():
-        return ("The detected anomaly represents a deviation from established baseline patterns. "
+                "Previous crime patterns suggest continued criminal activity is probable."),
+        "anomaly": ("The detected anomaly represents a deviation from established baseline patterns. "
                 "This warrants immediate investigative attention. Cross-reference with related "
-                "cases and known criminal activity in the affected area.")
-    elif "prediction" in prompt.lower() or "forecast" in prompt.lower():
-        return ("Predictive analysis indicates elevated risk in identified areas for the "
+                "cases and known criminal activity in the affected area."),
+        "prediction": ("Predictive analysis indicates elevated risk in identified areas for the "
                 "forecast period. Preventive deployment recommended. Historical patterns "
-                "suggest correlation with seasonal and socioeconomic factors.")
-    elif "report" in prompt.lower() or "summary" in prompt.lower():
-        return ("The crime intelligence report for the specified period indicates significant "
+                "suggest correlation with seasonal and socioeconomic factors."),
+        "report": ("The crime intelligence report for the specified period indicates significant "
                 "patterns requiring strategic attention. Key findings include spatial clustering "
                 "of incidents and temporal patterns aligned with historical trends. "
-                "Recommend resource optimization based on identified hotspots.")
-    else:
-        return ("Intelligence analysis based on available data indicates patterns requiring "
-                "law enforcement attention. Recommend review of identified areas and "
-                "implementation of targeted policing strategies.")
+                "Recommend resource optimization based on identified hotspots."),
+    }
+    return templates.get(category, templates["report"])

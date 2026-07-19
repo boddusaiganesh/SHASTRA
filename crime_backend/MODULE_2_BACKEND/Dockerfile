@@ -15,6 +15,9 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Install cmdstan for Prophet forecasting
+RUN python -c "import cmdstanpy; cmdstanpy.install_cmdstan()"
+
 # Copy application code
 COPY . .
 

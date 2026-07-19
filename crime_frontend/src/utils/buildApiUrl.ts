@@ -10,7 +10,7 @@ export const downloadAuthenticated = async (path: string, params?: Record<string
   const api = (await import("../services/api")).default;
   const response = await api.get(path, { params, responseType: "blob" });
   
-  const disposition: string = response.headers["content-disposition"] || "";
+  const disposition: string = (response.headers["content-disposition"] as string) || "";
   const match = disposition.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
   const filename = match ? decodeURIComponent(match[1]) : path.split("/").pop() || "download";
 
@@ -28,6 +28,6 @@ export const getAuthenticatedBlobUrl = async (path: string, params?: Record<stri
   const api = (await import("../services/api")).default;
   const response = await api.get(path, { params, responseType: "blob" });
   
-  const contentType = response.headers["content-type"] || "application/octet-stream";
+  const contentType = (response.headers["content-type"] as string) || "application/octet-stream";
   return window.URL.createObjectURL(new Blob([response.data], { type: contentType }));
 };

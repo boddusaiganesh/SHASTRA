@@ -96,7 +96,7 @@ def _analyze_time_patterns(crimes: List[Dict[str, Any]]) -> Dict[str, Any]:
             try:
                 hour = int(time_str.split(":")[0])
                 hours.append(hour)
-            except:
+            except ValueError:
                 pass
         
         day = crime.get("day_of_week")
@@ -304,7 +304,7 @@ def _calculate_crime_interval(crimes: List[Dict[str, Any]]) -> int:
         if date_str:
             try:
                 dates.append(date.fromisoformat(str(date_str)))
-            except:
+            except ValueError:
                 pass
     
     dates.sort()
@@ -360,7 +360,7 @@ def _identify_behavioral_signatures(
         if t:
             try:
                 hours.append(int(t.split(":")[0]))
-            except:
+            except ValueError:
                 pass
     
     if hours:

@@ -338,6 +338,7 @@ async def build_network_from_postgres(
                         "strength_score": 70,
                         "confidence_level": "CONFIRMED",
                         "crime_types": [crime.crime_type] if crime else [],
+                        "crime_id": str(crime.crime_id) if crime else None,
                     })
 
     # --- Locations ---
@@ -377,7 +378,11 @@ async def build_network_from_postgres(
                 "crime_count": l.total_crimes or 0,
                 "size": 25,
                 "color": "#22c55e",
-                "profile_data": {"district_id": l.district_id},
+                "profile_data": {
+                    "district_id": l.district_id,
+                    "latitude": l.latitude,
+                    "longitude": l.longitude
+                },
             })
             location_ids_in_graph.add(str(l.location_id))
 
@@ -422,6 +427,7 @@ async def build_network_from_postgres(
                                         "strength_score": 55,
                                         "confidence_level": "SUSPECTED",
                                         "crime_types": [crime_type] if crime_type else [],
+                                        "crime_id": str(cid),
                                     })
             except Exception as e:
                 logger.warning(f"Failed to link locations to crimes/offenders in fallback: {e}")
@@ -429,6 +435,26 @@ async def build_network_from_postgres(
     
     import asyncio
     from functools import partial
+    
+    # Merge duplicate edges
+    merged_edges = {}
+    for e in edges:
+        eid = e["edge_id"]
+        cid = e.pop("crime_id", None)
+        if eid not in merged_edges:
+            e["crime_ids"] = [cid] if cid else []
+            merged_edges[eid] = e
+        else:
+            existing = merged_edges[eid]
+            if cid and cid not in existing["crime_ids"]:
+                existing["crime_ids"].append(cid)
+            for ct in e.get("crime_types", []):
+                if ct not in existing["crime_types"]:
+                    existing["crime_types"].append(ct)
+            existing["strength_score"] = min(100, existing["strength_score"] + 10)
+    
+    edges = list(merged_edges.values())
+    
     loop = asyncio.get_running_loop()
     
     centrality, communities = await asyncio.gather(

@@ -46,7 +46,7 @@ Based on this raw intelligence, provide a professional criminal network briefing
 Ensure the analysis is highly professional, uses standard law enforcement terminology (e.g. 'subjects', 'nodes', 'nexus', 'modus operandi'), and does not hallucinate facts outside the provided context.
 """
     
-    result = await call_gemini(prompt)
+    result = await call_gemini(prompt, category="network")
     import json
     try:
         data = json.loads(result.get("text", "{}"))
@@ -97,7 +97,7 @@ Create a professional deployment strategy covering:
 Format as a clear operational directive suitable for a District Superintendent of Police.
 """
     
-    result = await call_gemini(prompt)
+    result = await call_gemini(prompt, category="offender_risk")
     return {
         "text": result.get("text", "") or "AI deployment strategy generation temporarily unavailable. Use standard patrol protocols for identified hotspots.",
         "is_fallback": result.get("is_fallback", False)
@@ -143,7 +143,7 @@ Provide:
 Be specific and evidence-based.
 """
     
-    result = await call_gemini(prompt)
+    result = await call_gemini(prompt, category="deployment")
     return {
         "text": result.get("text", "") or f"Risk assessment for this offender indicates {offender_data.get('risk_level', 'MEDIUM')} risk based on crime history.",
         "is_fallback": result.get("is_fallback", False)
@@ -183,7 +183,7 @@ Provide a professional MO profile covering:
 Write in a professional forensic analysis style.
 """
     
-    result = await call_gemini(prompt)
+    result = await call_gemini(prompt, category="anomaly")
     return {
         "text": result.get("text", "") or "MO analysis based on crime history indicates consistent behavioral patterns. Full analysis requires additional data.",
         "is_fallback": result.get("is_fallback", False)
@@ -218,7 +218,7 @@ Provide:
 Keep the analysis concise and actionable for law enforcement use.
 """
     
-    result = await call_gemini(prompt)
+    result = await call_gemini(prompt, category="anomaly")
     return {
         "text": result.get("text", "") or "Anomaly detected through statistical analysis. Pattern deviates from baseline. Recommend immediate investigation.",
         "is_fallback": result.get("is_fallback", False)
@@ -252,7 +252,7 @@ CONFIDENCE: {edge.get('confidence') or edge.get('confidence_level', 'SUSPECTED')
 In 2-3 sentences, explain the likely criminological significance of this connection
 and one recommended investigative next step.
 """
-    result = await call_gemini(prompt)
+    result = await call_gemini(prompt, category="report")
     return {
         "text": result.get("text", "") or "This connection is based on shared crime records or associate data. Manual review recommended.",
         "is_fallback": result.get("is_fallback", False)
@@ -275,7 +275,7 @@ PREDICTION:
 Provide a single, specific recommended police action in 2-3 sentences.
 """
     
-    result = await call_gemini(prompt)
+    result = await call_gemini(prompt, category="report")
     return {
         "text": result.get("text", "") or "Deploy additional patrol units to the identified area during predicted high-risk periods.",
         "is_fallback": result.get("is_fallback", False)
@@ -308,7 +308,7 @@ Write a professional 3-paragraph executive summary suitable for senior SCRB offi
 Use formal government report language.
 """
     
-    result = await call_gemini(prompt)
+    result = await call_gemini(prompt, category="report")
     return {
         "text": result.get("text", "") or "Executive summary generation temporarily unavailable. Refer to the statistical data within this report.",
         "is_fallback": result.get("is_fallback", False)
@@ -356,7 +356,7 @@ Provide a 2-sentence explanation of:
 Be specific to Karnataka's socioeconomic context.
 """
     
-    result = await call_gemini(prompt)
+    result = await call_gemini(prompt, category="report")
     return {
         "text": result.get("text", "") or "Emerging crime typology detected. Statistical analysis indicates growth trend requiring monitoring.",
         "is_fallback": result.get("is_fallback", False)
@@ -390,7 +390,7 @@ Provide a 3-paragraph criminological analysis covering:
 Reference Karnataka's specific context (urbanization, agricultural economy, tech hub growth).
 """
     
-    result = await call_gemini(prompt)
+    result = await call_gemini(prompt, category="prediction")
     return {
         "text": result.get("text", "") or "Socioeconomic correlation analysis indicates multiple factors influencing crime rates. Unemployment and urbanization show strongest correlation with property crimes.",
         "is_fallback": result.get("is_fallback", False)

@@ -293,7 +293,7 @@ export default function OffenderDatabase() {
                   {Object.entries(modusOperandi).filter(([k]) => k !== 'is_fallback').map(([k, v]) => (
                     <div key={k} className="flex justify-between text-xs">
                       <span className="text-slate-400 capitalize">{k.replace(/_/g, " ")}</span>
-                      <div className="text-slate-200 text-right max-w-[60%]"><AIMarkdown text={Array.isArray(v) ? v.join(", ") : String(v)} isFallback={k === 'ai_mo_summary' ? modusOperandi.is_fallback : false} /></div>
+                      <div className="text-slate-200 text-right max-w-[60%]"><AIMarkdown text={Array.isArray(v) ? v.join(", ") : String(v)} isFallback={k === 'ai_mo_summary' ? (modusOperandi.is_fallback as boolean) : false} /></div>
                     </div>
                   ))}
                 </div>

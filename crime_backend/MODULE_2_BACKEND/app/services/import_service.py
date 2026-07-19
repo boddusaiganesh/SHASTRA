@@ -102,8 +102,8 @@ async def _import_crime(db: AsyncSession, data: dict, user_id: str):
             if oid:
                 try:
                     db.add(CrimeOffenderLink(link_id=uuid.uuid4(), crime_id=crime.crime_id, offender_id=uuid.UUID(oid)))
-                except:
-                    pass
+                except Exception as e:
+                    logger.warning(f"Failed to add offender link: {e}")
 
     victim_ids_str = data.get("victim_ids") or data.get("victim_id")
     if victim_ids_str:
@@ -112,8 +112,8 @@ async def _import_crime(db: AsyncSession, data: dict, user_id: str):
             if vid:
                 try:
                     db.add(CrimeVictimLink(link_id=uuid.uuid4(), crime_id=crime.crime_id, victim_id=uuid.UUID(vid)))
-                except:
-                    pass
+                except Exception as e:
+                    logger.warning(f"Failed to add victim link: {e}")
 
 async def _import_offender(db: AsyncSession, data: dict):
     try:

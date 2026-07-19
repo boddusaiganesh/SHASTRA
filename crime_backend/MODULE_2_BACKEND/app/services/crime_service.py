@@ -3,7 +3,7 @@ Crime Service - Business logic for crime data operations
 """
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_, or_, desc
+from sqlalchemy import select, func, and_, or_, desc, delete
 from typing import Optional, Dict, Any
 from datetime import datetime, timezone
 import uuid
@@ -159,6 +159,8 @@ async def get_crimes_filtered(
 async def create_crime(db: AsyncSession, crime_data: Dict[str, Any], user_id: str) -> Dict[str, Any]:
     """Create a new crime record"""
     from datetime import date as date_type
+    from app.models.database_models.crime_model import CrimeOffenderLink, CrimeVictimLink
+    from app.core.neo4j_connection import create_criminal_relationship
     
     # Generate reference number
     ref_no = f"KSP/{datetime.now(timezone.utc).year}/{str(uuid.uuid4())[:8].upper()}"
@@ -192,9 +194,27 @@ async def create_crime(db: AsyncSession, crime_data: Dict[str, Any], user_id: st
     )
     
     db.add(crime)
+    await db.flush()  # get crime.crime_id before commit
+
+    for offender_id in crime_data.get("offender_ids", []):
+        db.add(CrimeOffenderLink(link_id=uuid.uuid4(), crime_id=crime.crime_id, offender_id=uuid.UUID(offender_id)))
+    for victim_id in crime_data.get("victim_ids", []):
+        db.add(CrimeVictimLink(link_id=uuid.uuid4(), crime_id=crime.crime_id, victim_id=uuid.UUID(victim_id)))
+
     await db.commit()
     await db.refresh(crime)
     
+    # Best-effort graph sync
+    for offender_id in crime_data.get("offender_ids", []):
+        try:
+            await create_criminal_relationship(
+                offender_id=offender_id,
+                crime_id=str(crime.crime_id),
+                crime_type=crime.crime_type,
+            )
+        except Exception as e:
+            logger.warning(f"Neo4j sync skipped for crime {crime.crime_id}: {e}")
+            
     return crime.to_dict()
 
 
@@ -237,6 +257,47 @@ async def update_crime_record(db: AsyncSession, crime_id: str, payload: dict, cu
         if k in ALLOWED_UPDATE_FIELDS and hasattr(crime, k):
             setattr(crime, k, v)
             
+    from app.models.database_models.crime_model import CrimeOffenderLink, CrimeVictimLink
+    from app.core.neo4j_connection import create_criminal_relationship
+    
+    # Handle offender updates if provided
+    if "offender_ids" in payload:
+        new_offenders = set(payload["offender_ids"])
+        existing_links = await db.execute(select(CrimeOffenderLink).where(CrimeOffenderLink.crime_id == cid))
+        existing_offenders = {str(link.offender_id) for link in existing_links.scalars().all()}
+        
+        # Remove old
+        to_remove = existing_offenders - new_offenders
+        if to_remove:
+            await db.execute(delete(CrimeOffenderLink).where(
+                and_(CrimeOffenderLink.crime_id == cid, CrimeOffenderLink.offender_id.in_([uuid.UUID(o) for o in to_remove]))
+            ))
+            
+        # Add new
+        to_add = new_offenders - existing_offenders
+        for offender_id in to_add:
+            db.add(CrimeOffenderLink(link_id=uuid.uuid4(), crime_id=cid, offender_id=uuid.UUID(offender_id)))
+            try:
+                await create_criminal_relationship(offender_id, str(cid), crime.crime_type)
+            except Exception as e:
+                logger.warning(f"Neo4j sync skipped for crime {cid}: {e}")
+
+    # Handle victim updates if provided
+    if "victim_ids" in payload:
+        new_victims = set(payload["victim_ids"])
+        existing_links = await db.execute(select(CrimeVictimLink).where(CrimeVictimLink.crime_id == cid))
+        existing_victims = {str(link.victim_id) for link in existing_links.scalars().all()}
+        
+        to_remove = existing_victims - new_victims
+        if to_remove:
+            await db.execute(delete(CrimeVictimLink).where(
+                and_(CrimeVictimLink.crime_id == cid, CrimeVictimLink.victim_id.in_([uuid.UUID(v) for v in to_remove]))
+            ))
+            
+        to_add = new_victims - existing_victims
+        for victim_id in to_add:
+            db.add(CrimeVictimLink(link_id=uuid.uuid4(), crime_id=cid, victim_id=uuid.UUID(victim_id)))
+            
     await db.commit()
     await db.refresh(crime)
     return crime.to_dict()
@@ -251,6 +312,20 @@ async def delete_crime_record(db: AsyncSession, crime_id: str) -> bool:
     crime = result.scalar_one_or_none()
     if not crime:
         return False
+        
+    from app.models.database_models.crime_model import CrimeOffenderLink, CrimeVictimLink
+    
+    # Delete links first
+    await db.execute(delete(CrimeOffenderLink).where(CrimeOffenderLink.crime_id == cid))
+    await db.execute(delete(CrimeVictimLink).where(CrimeVictimLink.crime_id == cid))
+    
+    # Optionally: remove from Neo4j, though graph cleanup is usually handled async or by orphan sweeps
+    try:
+        from app.core.neo4j_connection import run_neo4j_query
+        await run_neo4j_query("MATCH (c:Crime {crime_id: $cid}) DETACH DELETE c", {"cid": str(cid)})
+    except Exception as e:
+        logger.warning(f"Failed to delete crime {cid} from Neo4j: {e}")
+        
     await db.delete(crime)
     await db.commit()
     return True

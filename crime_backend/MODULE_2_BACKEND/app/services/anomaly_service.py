@@ -133,8 +133,8 @@ async def get_anomaly_detail(
                         "status": crime.status,
                         "severity": crime.severity,
                     })
-            except:
-                pass
+            except Exception as e:
+                logger.warning(f"Failed to fetch related case {case_id}: {e}")
     
     detail["related_cases"] = related_cases
     
@@ -203,7 +203,7 @@ async def update_anomaly_status(
     if assigned_officer:
         try:
             update_values["assigned_officer_id"] = uuid.UUID(assigned_officer)
-        except:
+        except ValueError:
             pass
     
     await db.execute(

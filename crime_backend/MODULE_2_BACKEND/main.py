@@ -67,6 +67,10 @@ _db_ready = False
 async def lifespan(app: FastAPI):
     """Startup and shutdown events"""
     global _db_ready
+    _db_ready = False
+    _redis_ready = False
+    _neo4j_ready = False
+    
     print("🚀 Starting SHASTRA - Crime Intelligence Platform Backend...")
     
     try:
@@ -79,10 +83,13 @@ async def lifespan(app: FastAPI):
         print(f"⚠️  Database not available: {e} — continuing in degraded mode")
     
     try:
-        await init_redis()
-        print("✅ Redis connected")
+        if await init_redis():
+            _redis_ready = True
+            print("✅ Redis connected")
+        else:
+            print("⚠️  Redis unavailable — continuing in degraded mode")
     except Exception as e:
-        print(f"❌ Redis connection failed: {e}")
+        print(f"⚠️  Redis unavailable: {e} — continuing in degraded mode")
         
     try:
         from app.core.gemini_client import init_gemini_models
@@ -95,6 +102,7 @@ async def lifespan(app: FastAPI):
     
     try:
         if await init_neo4j():
+            _neo4j_ready = True
             print("✅ Neo4j Graph Database connected")
         else:
             print("⚠️  Neo4j unavailable — continuing in degraded mode")
@@ -106,7 +114,10 @@ async def lifespan(app: FastAPI):
     else:
         print("⚠️  Database not available for scheduler")
     
-    print("✅ All systems operational. Backend ready on port", settings.BACKEND_PORT)
+    if _db_ready and _redis_ready and _neo4j_ready:
+        print("✅ All systems operational. Backend ready on port", settings.BACKEND_PORT)
+    else:
+        print("⚠️  Backend ready on port", settings.BACKEND_PORT, "— running in DEGRADED mode (see warnings above)")
     
     import asyncio
     from app.core.websocket import start_alert_subscriber

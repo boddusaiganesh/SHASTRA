@@ -92,3 +92,5 @@ class CreateCrimeRequest(BaseModel):
     property_stolen: Optional[str] = None
     property_value: Optional[float] = None
     fir_number: Optional[str] = None
+    offender_ids: List[str] = []
+    victim_ids: List[str] = []

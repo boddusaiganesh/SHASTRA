@@ -58,7 +58,7 @@ def calculate_offender_recidivism_risk(offender: Dict[str, Any]) -> Dict[str, An
                 factors.append("Offense within the past year")
             elif days_since > 1095:  # 3+ years
                 base_prob -= 10.0
-        except Exception:
+        except ValueError:
             pass
 
     # Status weight

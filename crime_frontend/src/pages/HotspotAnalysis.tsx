@@ -74,7 +74,7 @@ const HotspotAnalysis: React.FC = () => {
   if (loading) return <div className="flex-1 flex items-center justify-center"><LoadingSpinner size="lg" text="Analyzing hotspots..." /></div>;
   if (error) return <div className="flex-1 flex flex-col items-center justify-center text-slate-400 gap-4"><AlertTriangle className="h-12 w-12 text-red-500" /><p>{error}</p><button onClick={() => fetch()} className="px-4 py-2 bg-slate-800 rounded-lg text-white hover:bg-slate-700">Retry</button></div>;
 
-  const dep = deployment as { suggestions: { area: string; patrol_timing: string; officers_needed: number; priority: string; reason: string }[]; ai_summary: string } | null;
+  const dep = deployment as { suggestions: { area: string; patrol_timing: string; officers_needed: number; priority: string; reason: string }[]; ai_summary: string; is_fallback?: boolean } | null;
 
   return (
     <div className="flex-1 min-h-0 w-full overflow-y-auto custom-scrollbar p-6 space-y-6">

@@ -286,7 +286,7 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNo
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<cytoscape.Core | null>(null);
   const prevIdsRef = useRef<Set<string>>(new Set());
-  const lastReplaceKeyRef = useRef<number | null>(null);
+  const lastReplaceKeyRef = useRef<string | number | undefined>(undefined);
   const propsRef = useRef({ nodes, edges, onNodeSelect, onNodeExpand, onNodeCompare, onEdgeSelect });
 
   useEffect(() => {
@@ -510,7 +510,6 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNo
       if (crimeIds.size === 0) return;
 
       const matchingEdges = cy.edges().filter(ele => {
-        const cIds = ele.data("crimeTypes") || []; // The actual property containing list of IDs is crime_ids, let's use that if available. Wait, in buildElements, it's crimeTypes! Ah, wait, in buildElements I need to add crimeIds to edge data! Let's check buildElements.
         const ids = ele.data("crimeIds") || [];
         return ids.some((id: string) => crimeIds.has(id));
       });

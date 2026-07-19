@@ -2,7 +2,7 @@ import React from "react";
 import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard, Map, Flame, Network, Users, Brain,
-  AlertOctagon, Bell, FileText, Settings, Shield, ChevronLeft, ChevronRight, PieChart, Database,
+  AlertOctagon, Bell, FileText, Settings, ChevronLeft, ChevronRight, PieChart, Database,
 } from "lucide-react";
 
 const navItems = [

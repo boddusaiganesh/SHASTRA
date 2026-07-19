@@ -2,7 +2,7 @@
 Prediction Response Models
 """
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional, List
 
 
@@ -45,6 +45,8 @@ class HistoricalDataPoint(BaseModel):
 
 
 class ForecastResponse(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+    
     forecast: List[ForecastDataPoint]
     historical: List[HistoricalDataPoint]
     model_accuracy: float

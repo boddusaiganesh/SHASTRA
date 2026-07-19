@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { AnimatePresence, motion } from "framer-motion";
@@ -10,21 +10,23 @@ import { alertService } from "./services/alertService";
 import Navbar from "./components/common/Navbar";
 import Sidebar from "./components/common/Sidebar";
 
-import Login from "./pages/Login";
-import LandingPage from "./pages/LandingPage";
-import Dashboard from "./pages/Dashboard";
-import CrimeMapPage from "./pages/CrimeMapPage";
-import HotspotAnalysis from "./pages/HotspotAnalysis";
-import CriminalNetwork from "./pages/CriminalNetwork";
-import AnomalyDetection from "./pages/AnomalyDetection";
-import PredictiveAnalytics from "./pages/PredictiveAnalytics";
-import CrimeDatabase from "./pages/CrimeDatabase";
-import OffenderDatabase from "./pages/OffenderDatabase";
-import AlertsPage from "./pages/AlertsPage";
-import ReportsPage from "./pages/ReportsPage";
-import SettingsPage from "./pages/SettingsPage";
-import VictimDatabase from "./pages/VictimDatabase";
-import SocioEconomicInsights from "./pages/SocioEconomicInsights";
+import LoadingSpinner from "./components/common/LoadingSpinner";
+
+const Login = React.lazy(() => import("./pages/Login"));
+const LandingPage = React.lazy(() => import("./pages/LandingPage"));
+const Dashboard = React.lazy(() => import("./pages/Dashboard"));
+const CrimeMapPage = React.lazy(() => import("./pages/CrimeMapPage"));
+const HotspotAnalysis = React.lazy(() => import("./pages/HotspotAnalysis"));
+const CriminalNetwork = React.lazy(() => import("./pages/CriminalNetwork"));
+const AnomalyDetection = React.lazy(() => import("./pages/AnomalyDetection"));
+const PredictiveAnalytics = React.lazy(() => import("./pages/PredictiveAnalytics"));
+const CrimeDatabase = React.lazy(() => import("./pages/CrimeDatabase"));
+const OffenderDatabase = React.lazy(() => import("./pages/OffenderDatabase"));
+const AlertsPage = React.lazy(() => import("./pages/AlertsPage"));
+const ReportsPage = React.lazy(() => import("./pages/ReportsPage"));
+const SettingsPage = React.lazy(() => import("./pages/SettingsPage"));
+const VictimDatabase = React.lazy(() => import("./pages/VictimDatabase"));
+const SocioEconomicInsights = React.lazy(() => import("./pages/SocioEconomicInsights"));
 import AIChatWidget from "./components/common/AIChatWidget";
 import AIMarkdown from "./components/common/AIMarkdown";
 
@@ -167,24 +169,26 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 export default function App() {
   return (
     <Router>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        <Route path="/map" element={<ProtectedRoute><CrimeMapPage /></ProtectedRoute>} />
-        <Route path="/crimes" element={<ProtectedRoute><CrimeDatabase /></ProtectedRoute>} />
-        <Route path="/hotspots" element={<ProtectedRoute><HotspotAnalysis /></ProtectedRoute>} />
-        <Route path="/network" element={<ProtectedRoute><CriminalNetwork /></ProtectedRoute>} />
-        <Route path="/anomalies" element={<ProtectedRoute><AnomalyDetection /></ProtectedRoute>} />
-        <Route path="/predictions" element={<ProtectedRoute><PredictiveAnalytics /></ProtectedRoute>} />
-        <Route path="/offenders" element={<ProtectedRoute><OffenderDatabase /></ProtectedRoute>} />
-        <Route path="/victims" element={<ProtectedRoute><VictimDatabase /></ProtectedRoute>} />
-        <Route path="/socioeconomic" element={<ProtectedRoute><SocioEconomicInsights /></ProtectedRoute>} />
-        <Route path="/alerts" element={<ProtectedRoute><AlertsPage /></ProtectedRoute>} />
-        <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
-        <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <Suspense fallback={<div className="h-screen w-screen flex items-center justify-center bg-slate-900"><LoadingSpinner size="lg" text="Loading module..." /></div>}>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/map" element={<ProtectedRoute><CrimeMapPage /></ProtectedRoute>} />
+          <Route path="/crimes" element={<ProtectedRoute><CrimeDatabase /></ProtectedRoute>} />
+          <Route path="/hotspots" element={<ProtectedRoute><HotspotAnalysis /></ProtectedRoute>} />
+          <Route path="/network" element={<ProtectedRoute><CriminalNetwork /></ProtectedRoute>} />
+          <Route path="/anomalies" element={<ProtectedRoute><AnomalyDetection /></ProtectedRoute>} />
+          <Route path="/predictions" element={<ProtectedRoute><PredictiveAnalytics /></ProtectedRoute>} />
+          <Route path="/offenders" element={<ProtectedRoute><OffenderDatabase /></ProtectedRoute>} />
+          <Route path="/victims" element={<ProtectedRoute><VictimDatabase /></ProtectedRoute>} />
+          <Route path="/socioeconomic" element={<ProtectedRoute><SocioEconomicInsights /></ProtectedRoute>} />
+          <Route path="/alerts" element={<ProtectedRoute><AlertsPage /></ProtectedRoute>} />
+          <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
     </Router>
   );
 }

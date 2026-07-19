@@ -1,9 +1,8 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { useNavigate, Link } from "react-router-dom";
 import { RootState } from "../store/store";
 import {
-  Shield,
   MapPin,
   Building,
   Clock,

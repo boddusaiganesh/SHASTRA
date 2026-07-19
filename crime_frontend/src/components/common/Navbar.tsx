@@ -5,7 +5,7 @@ import { logout } from "../../store/authSlice";
 import { authService } from "../../services/authService";
 import { clearUnreadCount } from "../../store/alertsSlice";
 import { useNavigate } from "react-router-dom";
-import { Bell, LogOut, Shield, User, Clock, AlertTriangle, Search, Languages } from "lucide-react";
+import { Bell, LogOut, User, Clock, Search, Languages } from "lucide-react";
 import dayjs from "dayjs";
 import { useTranslation } from "react-i18next";
 
