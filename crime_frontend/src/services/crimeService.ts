@@ -10,6 +10,16 @@ const normalizeHotspot = (h: any) => {
   const rawTrend = h.trend || "Stable";
   const trend = rawTrend.charAt(0).toUpperCase() + rawTrend.slice(1).toLowerCase();
 
+  const missingFields = [];
+  if (!h.hotspot_name && !h.location) missingFields.push("location");
+  if (!h.district && !h.district_id) missingFields.push("district");
+  if (!h.dominant_crime_type && !h.most_common_crime) missingFields.push("most_common_crime");
+  if (h.risk_score == null && h.intensity == null) missingFields.push("intensity");
+
+  if (missingFields.length > 0) {
+    console.warn(`[Hotspot Normalizer] Missing backend fields, using fallbacks for: ${missingFields.join(", ")}`, h);
+  }
+
   return {
     ...h,
     hotspot_id: h.hotspot_id,

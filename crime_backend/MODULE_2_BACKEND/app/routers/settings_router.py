@@ -79,6 +79,17 @@ class CreateUserRequest(BaseModel):
     district_id: Optional[str] = None
     email: Optional[str] = None
 
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, v):
+        if len(v) < 8:
+            raise ValueError("password must be at least 8 characters long")
+        if not any(char.isdigit() for char in v):
+            raise ValueError("password must contain at least one digit")
+        if not any(char.isalpha() for char in v):
+            raise ValueError("password must contain at least one letter")
+        return v
+
     @field_validator("role")
     @classmethod
     def validate_role(cls, v):

@@ -97,7 +97,7 @@ async def get_network_graph_data(
     )
     
     # NEW: fall back to Postgres instead of just reporting "offline"
-    if graph_data.get("status") == "offline":
+    if graph_data.get("status") == "offline" or not graph_data.get("nodes"):
         graph_data = await build_network_from_postgres(
             db, search_query=search_query, district_id=district_id, node_limit=node_limit, crime_type=crime_type, node_type=node_type
         )

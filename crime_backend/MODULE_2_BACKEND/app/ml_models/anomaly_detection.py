@@ -311,15 +311,4 @@ async def run_full_anomaly_scan(db) -> List[Dict[str, Any]]:
     except Exception as e:
         logger.error(f"Anomaly scan error: {e}")
     
-    if not all_anomalies:
-        logger.info("No anomalies found, injecting a simulated anomaly for demo purposes.")
-        all_anomalies.append({
-            "anomaly_type": "CRIME_SPIKE",
-            "severity": "HIGH",
-            "district_id": districts[0].district_id if 'districts' in locals() and districts else "BENGALURU",
-            "description": "Simulated: Unusual spike in property crimes detected.",
-            "evidence_points": ["Z-score: 3.2", "Actual count: 45", "Baseline average: 32.1"],
-            "anomaly_score": 0.85
-        })
-
     return all_anomalies

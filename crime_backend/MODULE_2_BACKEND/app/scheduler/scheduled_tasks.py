@@ -161,6 +161,11 @@ async def run_cross_district_mo_matching():
             result = await db.execute(select(Offender).where(Offender.total_crimes >= 2))
             offenders = result.scalars().all()
             
+            # Pre-fetch histories
+            histories = {}
+            for off in offenders:
+                histories[str(off.offender_id)] = await get_offender_history(db, str(off.offender_id))
+            
             checked_pairs = set()
             for i, off_a in enumerate(offenders):
                 for j, off_b in enumerate(offenders[i+1:]):
@@ -172,8 +177,8 @@ async def run_cross_district_mo_matching():
                         continue
                     checked_pairs.add(pair_key)
 
-                    hist_a = await get_offender_history(db, str(off_a.offender_id))
-                    hist_b = await get_offender_history(db, str(off_b.offender_id))
+                    hist_a = histories.get(str(off_a.offender_id))
+                    hist_b = histories.get(str(off_b.offender_id))
                     
                     if not hist_a or not hist_b or not hist_a.get("crimes") or not hist_b.get("crimes"):
                         continue

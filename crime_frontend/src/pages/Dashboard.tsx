@@ -89,7 +89,7 @@ const Dashboard: React.FC = () => {
     { title: "Active Hotspots", value: summary.active_hotspots_count as number, icon: Flame, trend: summary.hotspots_trend as string, positive: true, color: "#F97316", subtitle: "Across Karnataka", isCritical: true },
     { title: "High Risk Areas", value: summary.high_risk_areas_count as number, icon: AlertTriangle, trend: summary.high_risk_trend as string, positive: false, color: "#EF4444", subtitle: "Immediate attention", isCritical: true },
     { title: "Repeat Offenders Tracked", value: summary.repeat_offenders_count as number, icon: Users, trend: summary.offenders_trend as string, positive: false, color: "#8B5CF6", subtitle: "Active monitoring" },
-    { title: "Pending Alerts", value: summary.pending_alerts_count as number, icon: Bell, color: "#F59E0B", subtitle: "Requires action" },
+    { title: "Distinct Crime Types", value: summary.distinct_crime_types as number, icon: Activity, color: "#3B82F6", subtitle: "Variety of crimes" },
     { title: "Cases Solved This Month", value: summary.cases_solved_month as number, icon: CheckCircle, color: "#22C55E", subtitle: "Closed successfully" },
   ] : [];
 

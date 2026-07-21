@@ -26,39 +26,17 @@ async def login(request: Request, response: Response, body: LoginRequest, db: As
     try:
         user = await authenticate_user(db, body.username, body.password)
     except Exception as e:
-        # DB connection or query failed - check if we are using default admin credentials for offline testing
-        if body.username in ["admin", "USR001", "USR002", "USR003"]:
-            user = {
-                "user_id": "USR001",
-                "username": body.username,
-                "role": "SCRB Officer",
-                "full_name": "Suresh Kumar",
-                "district_id": "State Level",
-                "permissions": ["view_all", "edit_cases", "manage_users", "view_reports"]
-            }
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Database connection error, and invalid offline credentials.",
-            )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Database connection error during authentication.",
+        )
 
     if not user:
-        # Allow default credentials for testing if DB is empty or auth fails
-        if body.username in ["admin", "USR001", "USR002", "USR003"] and body.password in ["admin", "securepassword", "password"]:
-            user = {
-                "user_id": "USR001",
-                "username": body.username,
-                "role": "SCRB Officer",
-                "full_name": "Suresh Kumar",
-                "district_id": "State Level",
-                "permissions": ["view_all", "edit_cases", "manage_users", "view_reports"]
-            }
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid username or password",
-            )
-            
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid username or password",
+        )
+        
     token_data = await create_user_token(user)
     
     # Set the HTTPOnly cookie

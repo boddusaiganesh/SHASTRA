@@ -88,11 +88,12 @@ async def get_current_user(
 ) -> Dict[str, Any]:
     """FastAPI dependency to get the current authenticated user"""
     
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+    def create_auth_exception(detail: str):
+        return HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=detail,
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     
     # Try cookie first, then fallback to Bearer token for backward compatibility
     token = request.cookies.get("auth_token")
@@ -100,7 +101,7 @@ async def get_current_user(
         token = credentials.credentials
         
     if not token:
-        raise credentials_exception
+        raise create_auth_exception("Authentication token is missing")
     
     # Check if token is blacklisted
     if await is_token_blacklisted(token):
@@ -112,11 +113,11 @@ async def get_current_user(
     # Decode the token
     payload = decode_access_token(token)
     if not payload:
-        raise credentials_exception
+        raise create_auth_exception("Authentication token is invalid or expired")
     
     user_id = payload.get("user_id")
     if not user_id:
-        raise credentials_exception
+        raise create_auth_exception("Authentication token is missing user_id claim")
     
     return {
         "user_id": payload.get("user_id"),

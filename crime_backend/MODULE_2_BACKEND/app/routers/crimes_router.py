@@ -41,6 +41,8 @@ async def get_map_data(
         resolved_district = await resolve_district_id(db, district_id)
         effective_district = scope_district_param(resolved_district, current_user)
         
+        # NOTE: cache_key depends on effective_district matching scope_district_param output 
+        # so DISTRICT_OFFICERs don't leak map data across districts. Do not change without updating scope_district_param.
         cache_key = f"crimes_map_data:{file_format}:{crime_type}:{effective_district}:{date_from}:{date_to}:{limit}:{min_lat}:{max_lat}:{min_lng}:{max_lng}"
         cached_data = await cache_get(cache_key)
         if cached_data:
@@ -289,6 +291,9 @@ async def log_crime(
         if involved_ids:
             await check_watchlist_hits_for_crime(db, str(new_crime["crime_id"]), involved_ids)
             
+        from app.core.redis_connection import cache_delete_pattern
+        await cache_delete_pattern("crimes_map_data:*")
+            
         return {"success": True, "data": new_crime}
     except Exception as e:
         logger.error(f"Error creating crime: {e}")
@@ -313,6 +318,8 @@ async def update_crime(
         raise HTTPException(status_code=404, detail="Crime not found")
         
     await log_action(db, current_user["user_id"], "UPDATE", "CRIME", crime_id, payload)
+    from app.core.redis_connection import cache_delete_pattern
+    await cache_delete_pattern("crimes_map_data:*")
     return {"success": True, "data": updated}
 
 class StatusUpdateReq(BaseModel):
@@ -343,6 +350,8 @@ async def update_crime_status(
         raise HTTPException(status_code=404, detail="Crime not found")
         
     await log_action(db, current_user["user_id"], "UPDATE_STATUS", "CRIME", crime_id, {"status": status_value})
+    from app.core.redis_connection import cache_delete_pattern
+    await cache_delete_pattern("crimes_map_data:*")
     return {"success": True, "data": updated}
 
 @router.delete("/{crime_id}")
@@ -361,4 +370,6 @@ async def delete_crime(
         raise HTTPException(status_code=404, detail="Crime not found")
         
     await log_action(db, current_user["user_id"], "DELETE", "CRIME", crime_id)
+    from app.core.redis_connection import cache_delete_pattern
+    await cache_delete_pattern("crimes_map_data:*")
     return {"success": True}

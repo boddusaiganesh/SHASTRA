@@ -22,7 +22,12 @@ async def bulk_import(
     if model_type not in ["crimes", "offenders", "victims"]:
         raise HTTPException(status_code=400, detail="Invalid model_type. Must be crimes, offenders, or victims")
 
-    content = await file.read()
+    MAX_FILE_SIZE = 5 * 1024 * 1024 # 5MB
+    content = b""
+    while chunk := await file.read(1024 * 1024):
+        content += chunk
+        if len(content) > MAX_FILE_SIZE:
+            raise HTTPException(status_code=413, detail="File too large. Maximum size is 5MB.")
     
     if file.filename.endswith(".csv"):
         result = await parse_and_import_csv(db, content, model_type, current_user["user_id"])

@@ -224,12 +224,13 @@ async def detect_and_generate_alerts(db: AsyncSession):
     generated = []
     
     for district in districts:
-        # Count crimes in last 24 hours
+        # Count crimes occurring in the last 1 day (or 24h approximation)
+        last_day = today - timedelta(days=1)
         recent_result = await db.execute(
             select(func.count(Crime.crime_id)).where(
                 and_(
                     Crime.district_id == district.district_id,
-                    Crime.created_at >= last_24h,
+                    Crime.date_of_occurrence >= last_day,
                 )
             )
         )
@@ -281,11 +282,19 @@ async def detect_and_generate_alerts(db: AsyncSession):
     # Broadcast alerts
     from app.core.websocket import manager
     from app.services.notification_service import notify_high_priority_alert
+    from app.models.database_models.user_model import User
     
     for alert in generated:
         await manager.broadcast({"type": "NEW_ALERT", "data": alert.to_dict()}, target_district=alert.district_id)
         if alert.severity in ["HIGH", "CRITICAL"]:
-            await notify_high_priority_alert(alert.to_dict(), ["district_officer@ksp.gov.in"])
+            # Lookup actual district users
+            recipients = []
+            if alert.district_id:
+                user_result = await db.execute(select(User.email).where(User.district_id == alert.district_id, User.email.is_not(None)))
+                recipients = [email for email in user_result.scalars().all() if email]
+            if not recipients:
+                recipients = ["scrb_admin@ksp.gov.in"]
+            await notify_high_priority_alert(alert.to_dict(), recipients)
             
     logger.info(f"Generated {len(generated)} automated alerts.")
 

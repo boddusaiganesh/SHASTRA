@@ -75,17 +75,31 @@ async def trigger_anomaly_scan(
 ):
     from app.core.security import require_role
     # Only SCRB officers can trigger manual state-wide scans
-    if current_user["role"] not in ["SCRB_OFFICER", "ADMIN"]:
+    if current_user["role"] not in ["SCRB_OFFICER"]:
         from fastapi import status
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied. Only SCRB officers can trigger manual scans.")
         
     from app.ml_models.anomaly_detection import run_full_anomaly_scan
     from app.models.database_models.anomaly_model import Anomaly
+    from sqlalchemy import select, func
+    from datetime import datetime, timezone, timedelta
     
     anomalies = await run_full_anomaly_scan(db)
     generated = 0
     if anomalies:
+        window_start = datetime.now(timezone.utc) - timedelta(hours=1)
         for anomaly_data in anomalies:
+            # Check for existing duplicate anomaly
+            existing = await db.execute(
+                select(Anomaly.anomaly_id).where(
+                    Anomaly.district_id == anomaly_data["district_id"],
+                    Anomaly.anomaly_type == anomaly_data["anomaly_type"],
+                    Anomaly.created_at >= window_start
+                )
+            )
+            if existing.scalar_one_or_none():
+                continue
+                
             anomaly = Anomaly(
                 anomaly_type=anomaly_data["anomaly_type"],
                 severity=anomaly_data["severity"],
@@ -96,7 +110,7 @@ async def trigger_anomaly_scan(
                 ai_explanation="Detected via ML Isolation Forest algorithm.",
             )
             db.add(anomaly)
-        await db.commit()
-        generated = len(anomalies)
-        
+            generated += 1
+        if generated > 0:
+            await db.commit()
     return {"success": True, "message": f"Scan complete. Found {generated} anomalies.", "count": generated}

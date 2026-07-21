@@ -52,9 +52,20 @@ async def upload_evidence(
     current_user=Depends(require_role(["SCRB_OFFICER", "DISTRICT_OFFICER", "INVESTIGATOR"]))
 ):
     try:
-        uuid.UUID(crime_id)
+        cid = uuid.UUID(crime_id)
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid crime_id")
+        
+    from sqlalchemy import select
+    from app.models.database_models.crime_model import Crime
+    result = await db.execute(select(Crime.district_id).where(Crime.crime_id == cid))
+    crime_district = result.scalar_one_or_none()
+    
+    if crime_district is None:
+        raise HTTPException(status_code=404, detail="Crime not found")
+        
+    if current_user["role"] == "DISTRICT_OFFICER" and crime_district != current_user.get("district_id"):
+        raise HTTPException(status_code=403, detail="Access denied")
         
     ext = (file.filename.rsplit(".", 1)[-1] if "." in file.filename else "").lower()
     if ext not in ALLOWED_EXTENSIONS:

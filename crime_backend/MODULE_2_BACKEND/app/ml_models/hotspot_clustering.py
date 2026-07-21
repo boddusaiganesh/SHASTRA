@@ -36,11 +36,11 @@ def run_hotspot_clustering(
         from sklearn.cluster import DBSCAN
         from sklearn.preprocessing import StandardScaler
         
-        # Extract coordinates
+        # Filter valid crimes and extract coordinates
+        valid_crimes = [c for c in crime_data if c.get("latitude") and c.get("longitude")]
         coords = np.array([
             [c["latitude"], c["longitude"]]
-            for c in crime_data
-            if c.get("latitude") and c.get("longitude")
+            for c in valid_crimes
         ])
         
         if len(coords) < min_samples:
@@ -68,7 +68,7 @@ def run_hotspot_clustering(
         
         for cluster_id in unique_labels:
             cluster_mask = labels == cluster_id
-            cluster_crimes = [crime_data[i] for i, m in enumerate(cluster_mask) if m and i < len(crime_data)]
+            cluster_crimes = [valid_crimes[i] for i, m in enumerate(cluster_mask) if m and i < len(valid_crimes)]
             cluster_coords = coords[cluster_mask]
             
             if len(cluster_crimes) == 0:

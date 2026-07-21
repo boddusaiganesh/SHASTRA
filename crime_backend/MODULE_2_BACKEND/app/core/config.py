@@ -79,7 +79,15 @@ class Settings(BaseSettings):
     def get_gemini_api_keys(self) -> list[str]:
         keys = []
         if self.GEMINI_API_KEYS:
-            keys.extend([k.strip() for k in self.GEMINI_API_KEYS.split(",") if k.strip()])
+            import json
+            try:
+                # Try parsing as JSON array first for safe comma escaping
+                parsed = json.loads(self.GEMINI_API_KEYS)
+                if isinstance(parsed, list):
+                    keys.extend([str(k).strip() for k in parsed if str(k).strip()])
+            except json.JSONDecodeError:
+                # Fallback to simple comma split if not JSON
+                keys.extend([k.strip() for k in self.GEMINI_API_KEYS.split(",") if k.strip()])
         elif self.GEMINI_API_KEY:
             keys.append(self.GEMINI_API_KEY)
         return keys
@@ -89,7 +97,7 @@ class Settings(BaseSettings):
     @field_validator("JWT_SECRET_KEY")
     @classmethod
     def validate_jwt(cls, v):
-        if v == "CHANGE_THIS_IN_PRODUCTION_64_CHARS_MIN":
+        if v == "change_this_to_a_very_long_random_secret_in_production_64chars" or v == "CHANGE_THIS_IN_PRODUCTION_64_CHARS_MIN":
             env = os.environ.get("ENVIRONMENT", "development")
             if env == "production":
                 raise ValueError(

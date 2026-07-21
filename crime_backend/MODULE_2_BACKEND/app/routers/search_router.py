@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import get_current_user
-from sqlalchemy import select, or_
+from app.core.security import get_current_user, scope_district_param
+from sqlalchemy import select, or_, and_
 
 from app.models.database_models.crime_model import Crime
 from app.models.database_models.offender_model import Offender
@@ -18,40 +18,41 @@ async def global_search(
     current_user=Depends(get_current_user)
 ):
     like_q = f"%{q}%"
+    effective_district = scope_district_param(None, current_user)
     
     # Search crimes
-    crimes_result = await db.execute(
-        select(Crime).where(
-            or_(
-                Crime.crime_reference_no.ilike(like_q),
-                Crime.description.ilike(like_q),
-                Crime.address.ilike(like_q)
-            )
-        ).limit(5)
+    crime_filter = or_(
+        Crime.crime_reference_no.ilike(like_q),
+        Crime.description.ilike(like_q),
+        Crime.address.ilike(like_q)
     )
+    if effective_district:
+        crime_filter = and_(crime_filter, Crime.district_id == effective_district)
+
+    crimes_result = await db.execute(select(Crime).where(crime_filter).limit(5))
     crimes = crimes_result.scalars().all()
     
     # Search offenders
-    offenders_result = await db.execute(
-        select(Offender).where(
-            or_(
-                Offender.first_name.ilike(like_q),
-                Offender.last_name.ilike(like_q)
-            )
-        ).limit(5)
+    offender_filter = or_(
+        Offender.first_name.ilike(like_q),
+        Offender.last_name.ilike(like_q)
     )
+    if effective_district:
+        offender_filter = and_(offender_filter, Offender.district_id == effective_district)
+
+    offenders_result = await db.execute(select(Offender).where(offender_filter).limit(5))
     offenders = offenders_result.scalars().all()
     
     # Search victims
-    victims_result = await db.execute(
-        select(Victim).where(
-            or_(
-                Victim.first_name.ilike(like_q),
-                Victim.last_name.ilike(like_q),
-                Victim.phone_number.ilike(like_q)
-            )
-        ).limit(5)
+    victim_filter = or_(
+        Victim.first_name.ilike(like_q),
+        Victim.last_name.ilike(like_q),
+        Victim.phone_number.ilike(like_q)
     )
+    if effective_district:
+        victim_filter = and_(victim_filter, Victim.district_id == effective_district)
+
+    victims_result = await db.execute(select(Victim).where(victim_filter).limit(5))
     victims = victims_result.scalars().all()
     
     return {

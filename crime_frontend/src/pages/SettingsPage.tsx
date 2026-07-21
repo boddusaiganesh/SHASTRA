@@ -136,7 +136,7 @@ const SettingsPage: React.FC = () => {
           { id: "thresholds", label: "Alert Thresholds", icon: Bell },
           { id: "datasources", label: "Data Sources", icon: Database },
           ...(isScrbOfficer ? [{ id: "auditlogs", label: "Activity Log", icon: ActivitySquare }] : []),
-          { id: "import", label: "Import Data", icon: UploadCloud },
+          ...(isScrbOfficer ? [{ id: "import", label: "Import Data", icon: UploadCloud }] : []),
         ].map(({ id, label, icon: Icon }) => (
           <button key={id} onClick={() => setActiveTab(id)}
             className={`flex items-center gap-2 px-4 py-2 text-sm border-b-2 transition-colors -mb-px ${
@@ -177,7 +177,9 @@ const SettingsPage: React.FC = () => {
                 ))}
               </tr></thead>
               <tbody>
-                {(Array.isArray(users) ? users : []).map((u) => (
+                {(Array.isArray(users) ? users : [])
+                  .filter(u => u.username !== 'SYSTEM' && (u as any).role !== 'SYSTEM')
+                  .map((u) => (
                   <tr key={u.user_id} className="border-b border-slate-800/50 hover:bg-slate-800/30">
                     <td className="py-3 px-4 text-white font-medium">{u.full_name || (u as any).user_name}</td>
                     <td className="py-3 px-4 text-slate-400 font-mono text-xs">{u.username || (u as any).email}</td>
@@ -259,7 +261,7 @@ const SettingsPage: React.FC = () => {
                   <span className={`text-xs px-2 py-0.5 rounded-full ${ds.status === "Active" || ds.status === "Connected" ? "bg-green-900/40 text-green-400" : "bg-red-900/40 text-red-400"}`}>
                     {ds.status}
                   </span>
-                  {ds.source_id && !['postgres', 'neo4j', 'redis', 'gemini'].includes(ds.source_id) && (
+                  {ds.source_id && ['postgres', 'neo4j'].includes(ds.source_id) && (
                     <button
                       onClick={async () => {
                         try {

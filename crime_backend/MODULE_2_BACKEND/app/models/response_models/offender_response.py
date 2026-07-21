@@ -18,3 +18,21 @@ class UpdateOffenderRequest(BaseModel):
     known_associates: Optional[List[str]] = None
     preferred_locations: Optional[List[str]] = None
     typical_targets: Optional[str] = None
+
+class CreateOffenderRequest(BaseModel):
+    first_name: str
+    last_name: str
+    gender: Optional[str] = None
+    date_of_birth: Optional[date] = None
+    age: Optional[int] = None
+    aliases: Optional[List[str]] = None
+    contact_number: Optional[str] = None
+    address: Optional[str] = None
+    occupation: Optional[str] = None
+    status: str = "Active"
+    gang_affiliation: Optional[str] = None
+    modus_operandi_summary: Optional[str] = None
+    known_associates: Optional[List[str]] = None
+    preferred_locations: Optional[List[str]] = None
+    typical_targets: Optional[str] = None
+    district_id: str

@@ -145,6 +145,13 @@ async def get_dashboard_summary(
         )
         most_affected_district = d_result.scalar_one_or_none() or district_id
     
+    # Distinct crime types
+    distinct_types_result = await db.execute(
+        select(func.count(func.distinct(Crime.crime_type)))
+        .where(and_(*conditions_current))
+    )
+    distinct_crime_types = distinct_types_result.scalar() or 0
+
     response = {
         "total_crimes_month": total_crimes_month,
         "crimes_change_percentage": change_pct,
@@ -160,6 +167,7 @@ async def get_dashboard_summary(
         "solve_rate_percentage": solve_rate,
         "most_common_crime_type": most_common_crime,
         "most_affected_district": most_affected_district,
+        "distinct_crime_types": distinct_crime_types,
         "data_last_updated": now.isoformat(),
     }
     

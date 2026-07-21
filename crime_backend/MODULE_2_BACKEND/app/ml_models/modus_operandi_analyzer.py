@@ -202,14 +202,16 @@ def _analyze_victim_patterns(crimes: List[Dict[str, Any]]) -> Dict[str, Any]:
     age_groups = {"minor": 0, "young_adult": 0, "adult": 0, "elderly": 0}
     
     for v in all_victims:
-        age = v.get("age", 0)
-        if age and age < 18:
+        age = v.get("age")
+        if age is None or age <= 0:
+            continue
+        if age < 18:
             age_groups["minor"] += 1
         elif age < 30:
             age_groups["young_adult"] += 1
         elif age < 60:
             age_groups["adult"] += 1
-        elif age >= 60:
+        else:
             age_groups["elderly"] += 1
     
     # Dominant gender

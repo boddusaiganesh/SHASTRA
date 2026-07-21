@@ -174,7 +174,7 @@ async def call_gemini(prompt: str, use_cache: bool = True, category: str = "repo
             api_key, model_name = await get_next_key_and_model()
             if not api_key:
                 logger.error("No API key available for Gemini request.")
-                return {"text": generate_fallback_response(category), "is_fallback": True}
+                return {"text": generate_fallback_response(category, "No API key available"), "is_fallback": True, "reason": "No API key available"}
                 
             # Configure with the selected key
             genai.configure(api_key=api_key)
@@ -202,14 +202,14 @@ async def call_gemini(prompt: str, use_cache: bool = True, category: str = "repo
         except Exception as e:
             logger.error(f"Gemini API error on attempt {attempt + 1} with model {model_name}: {e}")
             if attempt == max_retries - 1:
-                return {"text": generate_fallback_response(category), "is_fallback": True}
+                return {"text": generate_fallback_response(category, str(e)), "is_fallback": True, "reason": str(e)}
             continue # Try next key/model
             
     logger.error("All Gemini API attempts failed. Using fallback.")
-    return {"text": generate_fallback_response(category), "is_fallback": True}
+    return {"text": generate_fallback_response(category, "Max retries exceeded"), "is_fallback": True, "reason": "Max retries exceeded"}
 
 
-def generate_fallback_response(category: str) -> str:
+def generate_fallback_response(category: str, reason: str = None) -> str:
     """Generate a fallback response when Gemini is unavailable"""
     templates = {
         "network": ("Based on the available data, the criminal network analysis shows interconnected "
@@ -233,4 +233,9 @@ def generate_fallback_response(category: str) -> str:
                 "of incidents and temporal patterns aligned with historical trends. "
                 "Recommend resource optimization based on identified hotspots."),
     }
-    return templates.get(category, templates["report"])
+    
+    text = templates.get(category, templates["report"])
+    if reason:
+        text += f"\n\n(AI Fallback triggered: {reason})"
+        
+    return text

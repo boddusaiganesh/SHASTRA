@@ -63,11 +63,20 @@ async def network(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user)
 ):
-    data = await get_offender_network(db, offender_id)
-    # The network is tied to the offender, we verify via the offender profile
-    profile_data = await get_offender_profile(db, offender_id)
-    if profile_data and current_user["role"] == "DISTRICT_OFFICER" and profile_data.get("district_id") != current_user.get("district_id"):
+    from sqlalchemy import select
+    from app.models.database_models.offender_model import Offender
+    import uuid
+    try:
+        oid = uuid.UUID(offender_id)
+        result = await db.execute(select(Offender.district_id).where(Offender.offender_id == oid))
+        district_id = result.scalar_one_or_none()
+    except ValueError:
+        district_id = None
+        
+    if district_id and current_user["role"] == "DISTRICT_OFFICER" and district_id != current_user.get("district_id"):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+        
+    data = await get_offender_network(db, offender_id)
     return {"success": True, "data": data}
 
 @router.get("/{offender_id}/risk")
@@ -76,10 +85,20 @@ async def risk(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user)
 ):
-    data = await get_recidivism_risk(db, offender_id)
-    profile_data = await get_offender_profile(db, offender_id)
-    if profile_data and current_user["role"] == "DISTRICT_OFFICER" and profile_data.get("district_id") != current_user.get("district_id"):
+    from sqlalchemy import select
+    from app.models.database_models.offender_model import Offender
+    import uuid
+    try:
+        oid = uuid.UUID(offender_id)
+        result = await db.execute(select(Offender.district_id).where(Offender.offender_id == oid))
+        district_id = result.scalar_one_or_none()
+    except ValueError:
+        district_id = None
+        
+    if district_id and current_user["role"] == "DISTRICT_OFFICER" and district_id != current_user.get("district_id"):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+        
+    data = await get_recidivism_risk(db, offender_id)
     return {"success": True, "data": data}
 
 @router.get("/{offender_id}/modus-operandi")
@@ -88,22 +107,35 @@ async def modus_operandi(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user)
 ):
+    from sqlalchemy import select
+    from app.models.database_models.offender_model import Offender
+    import uuid
+    try:
+        oid = uuid.UUID(offender_id)
+        result = await db.execute(select(Offender.district_id).where(Offender.offender_id == oid))
+        district_id = result.scalar_one_or_none()
+    except ValueError:
+        district_id = None
+        
+    if district_id and current_user["role"] == "DISTRICT_OFFICER" and district_id != current_user.get("district_id"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+        
     from app.services.offender_service import get_modus_operandi
     data = await get_modus_operandi(db, offender_id)
-    profile_data = await get_offender_profile(db, offender_id)
-    if profile_data and current_user["role"] == "DISTRICT_OFFICER" and profile_data.get("district_id") != current_user.get("district_id"):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     return {"success": True, "data": data}
+
+from app.models.response_models.offender_response import UpdateOffenderRequest, CreateOffenderRequest
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def add_offender(
-    payload: dict = Body(...),
+    payload_obj: CreateOffenderRequest = Body(...),
     db: AsyncSession = Depends(get_db),
     current_user=Depends(require_role(["SCRB_OFFICER", "DISTRICT_OFFICER", "INVESTIGATOR"])),
 ):
     from app.services.offender_service import create_offender
     from app.utils.audit import log_action
     
+    payload = payload_obj.dict(exclude_unset=True)
     if current_user["role"] == "DISTRICT_OFFICER":
         payload["district_id"] = current_user.get("district_id")
     data = await create_offender(db, payload)

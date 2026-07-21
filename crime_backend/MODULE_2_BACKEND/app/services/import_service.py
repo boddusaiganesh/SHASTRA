@@ -39,14 +39,15 @@ async def bulk_import_records(db: AsyncSession, records: List[Dict[str, Any]], m
     
     for i, record in enumerate(records):
         try:
-            if model_type == "crimes":
-                await _import_crime(db, record, user_id)
-            elif model_type == "offenders":
-                await _import_offender(db, record)
-            elif model_type == "victims":
-                await _import_victim(db, record)
-            else:
-                raise ValueError(f"Unknown model_type: {model_type}")
+            async with db.begin_nested():
+                if model_type == "crimes":
+                    await _import_crime(db, record, user_id)
+                elif model_type == "offenders":
+                    await _import_offender(db, record)
+                elif model_type == "victims":
+                    await _import_victim(db, record)
+                else:
+                    raise ValueError(f"Unknown model_type: {model_type}")
             success_count += 1
         except Exception as e:
             errors.append({"row": i + 1, "error": str(e)})
@@ -95,6 +96,7 @@ async def _import_crime(db: AsyncSession, data: dict, user_id: str):
     
     from app.models.database_models.crime_model import CrimeOffenderLink, CrimeVictimLink
     
+    offenders_list = []
     offender_ids_str = data.get("offender_ids") or data.get("offender_id")
     if offender_ids_str:
         for oid in str(offender_ids_str).split(','):
@@ -102,9 +104,11 @@ async def _import_crime(db: AsyncSession, data: dict, user_id: str):
             if oid:
                 try:
                     db.add(CrimeOffenderLink(link_id=uuid.uuid4(), crime_id=crime.crime_id, offender_id=uuid.UUID(oid)))
+                    offenders_list.append({"offender_id": oid})
                 except Exception as e:
                     logger.warning(f"Failed to add offender link: {e}")
 
+    victims_list = []
     victim_ids_str = data.get("victim_ids") or data.get("victim_id")
     if victim_ids_str:
         for vid in str(victim_ids_str).split(','):
@@ -112,8 +116,18 @@ async def _import_crime(db: AsyncSession, data: dict, user_id: str):
             if vid:
                 try:
                     db.add(CrimeVictimLink(link_id=uuid.uuid4(), crime_id=crime.crime_id, victim_id=uuid.UUID(vid)))
+                    victims_list.append({"victim_id": vid})
                 except Exception as e:
                     logger.warning(f"Failed to add victim link: {e}")
+                    
+    from app.core.neo4j_connection import sync_crime_to_neo4j
+    try:
+        crime_dict = crime.to_dict()
+        crime_dict["offenders"] = offenders_list
+        crime_dict["victims"] = victims_list
+        await sync_crime_to_neo4j(crime_dict)
+    except Exception as e:
+        logger.error(f"Neo4j sync error for crime {crime.crime_id}: {e}")
 
 async def _import_offender(db: AsyncSession, data: dict):
     try:

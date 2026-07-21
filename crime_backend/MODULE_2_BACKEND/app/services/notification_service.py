@@ -27,10 +27,16 @@ async def notify_high_priority_alert(alert: Dict[str, Any], recipients: List[str
         return
         
     try:
-        with smtplib.SMTP(settings.SMTP_HOST, getattr(settings, 'SMTP_PORT', 587)) as s:
-            s.starttls()
-            s.login(settings.SMTP_USER, settings.SMTP_PASS)
-            s.send_message(msg)
+        import asyncio
+        
+        def _send_email():
+            with smtplib.SMTP(settings.SMTP_HOST, getattr(settings, 'SMTP_PORT', 587), timeout=10) as s:
+                s.starttls()
+                s.login(settings.SMTP_USER, settings.SMTP_PASS)
+                s.send_message(msg)
+                
+        # Run the blocking SMTP call in a separate thread so it doesn't block the asyncio event loop
+        await asyncio.wait_for(asyncio.to_thread(_send_email), timeout=15)
         logger.info(f"Alert email sent to {recipients}")
     except Exception as e:
         logger.error(f"Failed to send alert email: {e}")

@@ -99,13 +99,6 @@ async def init_db():
         logger.warning(f"Optional PostgreSQL extensions not available: {ext_e}")
 
     try:
-        async with AsyncSessionLocal() as session:
-            await session.execute(text("SELECT 1 FROM users LIMIT 1"))
-    except Exception:
-        logger.critical("Required tables not found. Run `alembic upgrade head` before starting the app.")
-        return False
-
-    try:
         # Run in separate connections/transactions or execute them and catch errors,
         # since CREATE EXTENSION cannot run in a nested subtransaction easily in some environments.
         # But engine.begin() starts a transaction, so we can try creating them in separate connections.
@@ -163,7 +156,7 @@ async def seed_initial_data():
             
             # Now sync to Neo4j
             try:
-                from scripts.sync_postgres_to_neo4j import sync as sync_neo4j_graph
+                from scripts.sync_postgres_to_neo4j import sync_data as sync_neo4j_graph
                 await sync_neo4j_graph()
                 logger.info("Initial Neo4j graph synced successfully")
             except Exception as e:
