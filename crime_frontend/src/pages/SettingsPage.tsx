@@ -99,8 +99,11 @@ const SettingsPage: React.FC = () => {
     };
     try {
       const result = await settingsService.addUser(payload as any);
-      setUsers((prev) => [...prev, ((result as any).data || (result as any).user) as User]);
-      setUsersTotalCount((prev) => prev + 1);
+      const newUserData = (result as any)?.data || (result as any)?.user || result;
+      if (newUserData && typeof newUserData === 'object' && 'user_id' in newUserData) {
+        setUsers((prev) => [...prev, newUserData as User]);
+        setUsersTotalCount((prev) => prev + 1);
+      }
       setNewUser({ username: "", full_name: "", role: "INVESTIGATOR", password: "", district: "" });
     } catch (e: any) {
       console.error(e);

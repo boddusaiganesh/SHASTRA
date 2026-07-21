@@ -9,6 +9,7 @@ import { alertService } from "./services/alertService";
 
 import Navbar from "./components/common/Navbar";
 import Sidebar from "./components/common/Sidebar";
+import ErrorBoundary from "./components/common/ErrorBoundary";
 
 import LoadingSpinner from "./components/common/LoadingSpinner";
 
@@ -151,7 +152,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <h4 className="text-sm font-bold text-white mb-1 truncate">{t.title}</h4>
-                    <div className="text-xs text-slate-400 line-clamp-2"><AIMarkdown text={t.description} /></div>
+                    <div className="text-xs text-slate-400 line-clamp-2"><AIMarkdown text={typeof t.description === 'string' ? t.description : (t.description ? JSON.stringify(t.description) : '')} /></div>
                   </div>
                   <button onClick={() => setToasts(prev => prev.filter(x => x._id !== t._id))} className="text-slate-500 hover:text-white">
                     <X className="h-4 w-4" />
@@ -173,19 +174,19 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/" element={<LandingPage />} />
-          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          <Route path="/map" element={<ProtectedRoute><CrimeMapPage /></ProtectedRoute>} />
-          <Route path="/crimes" element={<ProtectedRoute><CrimeDatabase /></ProtectedRoute>} />
-          <Route path="/hotspots" element={<ProtectedRoute><HotspotAnalysis /></ProtectedRoute>} />
-          <Route path="/network" element={<ProtectedRoute><CriminalNetwork /></ProtectedRoute>} />
-          <Route path="/anomalies" element={<ProtectedRoute><AnomalyDetection /></ProtectedRoute>} />
-          <Route path="/predictions" element={<ProtectedRoute><PredictiveAnalytics /></ProtectedRoute>} />
-          <Route path="/offenders" element={<ProtectedRoute><OffenderDatabase /></ProtectedRoute>} />
-          <Route path="/victims" element={<ProtectedRoute><VictimDatabase /></ProtectedRoute>} />
-          <Route path="/socioeconomic" element={<ProtectedRoute><SocioEconomicInsights /></ProtectedRoute>} />
-          <Route path="/alerts" element={<ProtectedRoute><AlertsPage /></ProtectedRoute>} />
-          <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
-          <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+          <Route path="/dashboard" element={<ProtectedRoute><ErrorBoundary><Dashboard /></ErrorBoundary></ProtectedRoute>} />
+          <Route path="/map" element={<ProtectedRoute><ErrorBoundary><CrimeMapPage /></ErrorBoundary></ProtectedRoute>} />
+          <Route path="/crimes" element={<ProtectedRoute><ErrorBoundary><CrimeDatabase /></ErrorBoundary></ProtectedRoute>} />
+          <Route path="/hotspots" element={<ProtectedRoute><ErrorBoundary><HotspotAnalysis /></ErrorBoundary></ProtectedRoute>} />
+          <Route path="/network" element={<ProtectedRoute><ErrorBoundary><CriminalNetwork /></ErrorBoundary></ProtectedRoute>} />
+          <Route path="/anomalies" element={<ProtectedRoute><ErrorBoundary><AnomalyDetection /></ErrorBoundary></ProtectedRoute>} />
+          <Route path="/predictions" element={<ProtectedRoute><ErrorBoundary><PredictiveAnalytics /></ErrorBoundary></ProtectedRoute>} />
+          <Route path="/offenders" element={<ProtectedRoute><ErrorBoundary><OffenderDatabase /></ErrorBoundary></ProtectedRoute>} />
+          <Route path="/victims" element={<ProtectedRoute><ErrorBoundary><VictimDatabase /></ErrorBoundary></ProtectedRoute>} />
+          <Route path="/socioeconomic" element={<ProtectedRoute><ErrorBoundary><SocioEconomicInsights /></ErrorBoundary></ProtectedRoute>} />
+          <Route path="/alerts" element={<ProtectedRoute><ErrorBoundary><AlertsPage /></ErrorBoundary></ProtectedRoute>} />
+          <Route path="/reports" element={<ProtectedRoute><ErrorBoundary><ReportsPage /></ErrorBoundary></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><ErrorBoundary><SettingsPage /></ErrorBoundary></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>

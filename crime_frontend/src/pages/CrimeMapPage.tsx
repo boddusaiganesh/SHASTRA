@@ -359,7 +359,7 @@ const CrimeMapPage: React.FC = () => {
                     {evidenceList.map(ev => (
                       <div key={ev.evidence_id} className="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50 flex flex-col gap-2">
                         <div className="flex justify-between items-center">
-                          <span className="text-xs font-medium text-slate-300 truncate">{ev.file_path.split('/').pop()}</span>
+                          <span className="text-xs font-medium text-slate-300 truncate">{(ev.file_path || ev.file_name || 'Attachment').split('/').pop()}</span>
                           <span className="text-[10px] text-slate-500">{formatDateTime(ev.uploaded_at)}</span>
                         </div>
                         <button
