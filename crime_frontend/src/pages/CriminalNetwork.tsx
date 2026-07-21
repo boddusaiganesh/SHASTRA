@@ -297,9 +297,50 @@ const CriminalNetwork: React.FC = () => {
     
     if (node.node_type === "criminal") {
       networkService.getNodeAiAnalysis(node.node_id).then(aiRes => {
-         if (aiRes) {
-            setSelectedNode(prev => prev && prev.node_id === node.node_id ? { ...prev, ai_analysis: aiRes.ai_analysis, is_fallback: aiRes.is_fallback } : prev);
-         }
+        if (aiRes) {
+          const analysisText = typeof aiRes.ai_analysis === "string" ? aiRes.ai_analysis : JSON.stringify(aiRes.ai_analysis ?? "");
+          setSelectedNode(prev => prev && prev.node_id === node.node_id ? { ...prev, ai_analysis: analysisText, is_fallback: !!aiRes.is_fallback } : prev);
+        }
+      });
+    }
+  };
+
+  // Map-specific node select: stays in Map view, shows details + expands connections
+  const handleMapNodeSelect = async (node: NetworkNode) => {
+    // Clear if clicking the already-selected node
+    if (node.node_id === "" || node.node_id === selectedNode?.node_id) {
+      setSelectedNode(null);
+      setSelectedEdge(null);
+      setEdgeInsight(null);
+      return;
+    }
+
+    setSelectedNode(node);
+    setSelectedEdge(null);
+    setEdgeInsight(null);
+    setNodeDetailLoading(true);
+
+    // Run detail fetch + node expansion in parallel so connections appear fast
+    const alreadyExpanded = edges.some(
+      e => (e.source_node_id || e.source) === node.node_id || (e.target_node_id || e.target) === node.node_id
+    );
+
+    const [detail] = await Promise.all([
+      networkService.getNodeDetail(node.node_id).catch(() => null),
+      alreadyExpanded ? Promise.resolve() : handleNodeExpand(node).catch(() => null),
+    ]);
+
+    if (detail) {
+      setSelectedNode(prev => prev && prev.node_id === node.node_id ? { ...prev, ...detail } : prev);
+    }
+    setNodeDetailLoading(false);
+
+    if (node.node_type === "criminal") {
+      networkService.getNodeAiAnalysis(node.node_id).then(aiRes => {
+        if (aiRes) {
+          const analysisText = typeof aiRes.ai_analysis === "string" ? aiRes.ai_analysis : JSON.stringify(aiRes.ai_analysis ?? "");
+          setSelectedNode(prev => prev && prev.node_id === node.node_id ? { ...prev, ai_analysis: analysisText, is_fallback: !!aiRes.is_fallback } : prev);
+        }
       });
     }
   };
@@ -350,8 +391,13 @@ const CriminalNetwork: React.FC = () => {
     if (!nodeA || !nodeB) return;
     
     setEdgeInsight({ text: "", loading: true });
-    const insight = await networkService.getEdgeInsight(nodeA, nodeB, edgeData);
-    setEdgeInsight({ text: insight || "No insight available.", loading: false });
+    const insightResult = await networkService.getEdgeInsight(nodeA, nodeB, edgeData);
+    // API returns { insight: string, is_fallback: bool } — extract the string safely
+    const insightText =
+      typeof insightResult === "string"
+        ? insightResult
+        : insightResult?.insight ?? insightResult?.text ?? "No insight available.";
+    setEdgeInsight({ text: String(insightText), loading: false });
   };
 
   const handleNodeCompare = async (node: NetworkNode) => {
@@ -737,7 +783,7 @@ const CriminalNetwork: React.FC = () => {
                 <NetworkMap 
                   nodes={filteredNodes}
                   edges={edges}
-                  onNodeSelect={navigateToNode}
+                  onNodeSelect={handleMapNodeSelect}
                   selectedNodeId={selectedNode?.node_id}
                   watchedNodeIds={watchedNodeIds}
                   isFallbackMode={isFallbackMode}
@@ -780,7 +826,7 @@ const CriminalNetwork: React.FC = () => {
                         Analyzing connection…
                       </span>
                     ) : (
-                      edgeInsight.text
+                      typeof edgeInsight.text === "string" ? edgeInsight.text : JSON.stringify(edgeInsight.text)
                     )}
                   </p>
                 </div>

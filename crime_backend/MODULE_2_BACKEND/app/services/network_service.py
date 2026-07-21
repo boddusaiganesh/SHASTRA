@@ -148,6 +148,79 @@ async def get_network_graph_data(
             }
         graph_data["cluster_summary"] = summaries
         
+        # --- Enrich location nodes with district coordinates from PostgreSQL ---
+        # Neo4j location nodes (districts) don't store lat/lng, so we look them up
+        location_node_ids = [
+            n["node_id"] for n in graph_data["nodes"]
+            if n.get("node_type") == "location"
+            and not n.get("profile_data", {}).get("latitude")
+        ]
+        if location_node_ids:
+            from app.models.database_models.location_model import Location as LocationModel
+            from app.models.database_models.crime_model import Crime as CrimeModel
+            from sqlalchemy import text as sql_text
+            try:
+                # Try districts table first (Neo4j location nodes are districts with KA-XX ids)
+                district_rows = (await db.execute(
+                    sql_text("SELECT district_id, latitude, longitude FROM districts WHERE district_id = ANY(:ids)"),
+                    {"ids": location_node_ids}
+                )).fetchall()
+                district_coords = {row[0]: (row[1], row[2]) for row in district_rows if row[1] is not None}
+                
+                # Enrich location nodes
+                for n in graph_data["nodes"]:
+                    if n.get("node_type") == "location":
+                        nid = n["node_id"]
+                        if nid in district_coords:
+                            lat, lng = district_coords[nid]
+                            n["profile_data"]["latitude"] = lat
+                            n["profile_data"]["longitude"] = lng
+                        elif not n.get("profile_data", {}).get("latitude"):
+                            # Fall back to crime coordinates for this district
+                            crime_row = (await db.execute(
+                                sql_text("SELECT latitude, longitude FROM crimes WHERE district_id = :did AND latitude IS NOT NULL LIMIT 1"),
+                                {"did": nid}
+                            )).fetchone()
+                            if crime_row:
+                                n["profile_data"]["latitude"] = float(crime_row[0])
+                                n["profile_data"]["longitude"] = float(crime_row[1])
+            except Exception as e:
+                logger.warning(f"Failed to enrich location nodes with coordinates: {e}")
+        
+        # --- Enrich criminal nodes with coordinates from crimes table as fallback ---
+        criminal_node_ids = [
+            n["node_id"] for n in graph_data["nodes"]
+            if n.get("node_type") == "criminal"
+            and not n.get("profile_data", {}).get("latitude")
+        ]
+        if criminal_node_ids:
+            try:
+                from sqlalchemy import text as sql_text
+                crime_coords_rows = (await db.execute(
+                    sql_text("""
+                        SELECT o.offender_id::text, c.latitude, c.longitude
+                        FROM offenders o
+                        JOIN crime_offender_links col ON col.offender_id = o.offender_id
+                        JOIN crimes c ON c.crime_id = col.crime_id
+                        WHERE o.offender_id::text = ANY(:ids) AND c.latitude IS NOT NULL
+                        GROUP BY o.offender_id, c.latitude, c.longitude
+                        LIMIT 200
+                    """),
+                    {"ids": criminal_node_ids}
+                )).fetchall()
+                criminal_coords = {}
+                for row in crime_coords_rows:
+                    if row[0] not in criminal_coords:
+                        criminal_coords[row[0]] = (float(row[1]), float(row[2]))
+                
+                for n in graph_data["nodes"]:
+                    if n.get("node_type") == "criminal" and n["node_id"] in criminal_coords:
+                        lat, lng = criminal_coords[n["node_id"]]
+                        n["profile_data"]["latitude"] = lat
+                        n["profile_data"]["longitude"] = lng
+            except Exception as e:
+                logger.warning(f"Failed to enrich criminal nodes with crime coordinates: {e}")
+
     expiry = 60 if graph_data.get("source") == "postgres_fallback" else 600
     await cache_set(cache_key, graph_data, expiry=expiry)
     return graph_data
@@ -236,6 +309,8 @@ async def build_network_from_postgres(
                     "risk_level": offender.risk_level,
                     "district_id": offender.district_id,
                     "known_associates": offender.known_associates or [],
+                    "latitude": offender.latitude_home,
+                    "longitude": offender.longitude_home,
                 },
             })
             offender_node_ids.add(node_id)
@@ -368,6 +443,7 @@ async def build_network_from_postgres(
         else:
             l_result = await db.execute(lq)
             locations = l_result.scalars().all()
+
         location_ids_in_graph = set()
         for l in locations:
             nodes.append({
@@ -385,6 +461,73 @@ async def build_network_from_postgres(
                 },
             })
             location_ids_in_graph.add(str(l.location_id))
+
+        # --- Fallback: if locations table is empty, derive location nodes from crimes ---
+        if not locations:
+            logger.info("[NetworkMap fallback] locations table is empty — building location nodes from crimes with lat/lng")
+            cq = select(Crime).where(Crime.latitude.isnot(None), Crime.longitude.isnot(None)).limit(per_type_limit)
+            if district_id:
+                cq = cq.where(Crime.district_id == district_id)
+            if search_query:
+                cq = cq.where(Crime.crime_type.ilike(f"%{search_query}%"))
+            if matching_crime_ids is not None:
+                if not matching_crime_ids:
+                    cq = cq.where(False)
+                else:
+                    cq = cq.where(Crime.crime_id.in_(matching_crime_ids))
+            crime_geo_rows = (await db.execute(cq)).scalars().all()
+
+            # Group crimes by rounded coordinate (2 decimal places ≈ 1.1km grid)
+            geo_buckets: dict = {}
+            for c in crime_geo_rows:
+                lat_r = round(float(c.latitude), 2)
+                lng_r = round(float(c.longitude), 2)
+                key = f"{lat_r}_{lng_r}"
+                if key not in geo_buckets:
+                    geo_buckets[key] = {"lat": lat_r, "lng": lng_r, "crimes": [], "district_id": c.district_id, "crime_type": c.crime_type}
+                geo_buckets[key]["crimes"].append(c)
+
+            existing_offender_ids_for_loc = {n["node_id"] for n in nodes if n["node_type"] == "criminal"}
+            for key, bucket in geo_buckets.items():
+                loc_node_id = f"loc_{key}"
+                crime_count = len(bucket["crimes"])
+                dominant_type = bucket["crimes"][0].crime_type if bucket["crimes"] else "Unknown"
+                nodes.append({
+                    "node_id": loc_node_id,
+                    "node_type": "location",
+                    "label": f"{dominant_type} site ({crime_count} crimes)",
+                    "risk_score": min(100, crime_count * 10),
+                    "crime_count": crime_count,
+                    "size": 25,
+                    "color": "#22c55e",
+                    "profile_data": {
+                        "district_id": bucket["district_id"],
+                        "latitude": bucket["lat"],
+                        "longitude": bucket["lng"],
+                    },
+                })
+                location_ids_in_graph.add(loc_node_id)
+
+                # Draw edges from this crime-location to any offenders already in the graph
+                for c in bucket["crimes"]:
+                    for ol in (await db.execute(
+                        select(CrimeOffenderLink).where(CrimeOffenderLink.crime_id == c.crime_id)
+                    )).scalars().all():
+                        offender_id = str(ol.offender_id)
+                        if node_type == "location" or offender_id in existing_offender_ids_for_loc:
+                            if node_type != "location":
+                                edges.append({
+                                    "edge_id": f"{offender_id}_{loc_node_id}",
+                                    "source_node_id": offender_id,
+                                    "target_node_id": loc_node_id,
+                                    "relationship_type": "COMMITTED_AT",
+                                    "strength_score": 70,
+                                    "confidence_level": "CONFIRMED",
+                                    "crime_types": [c.crime_type],
+                                    "crime_id": str(c.crime_id),
+                                })
+
+
 
         if location_ids_in_graph:
             try:

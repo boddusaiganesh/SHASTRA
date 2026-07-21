@@ -38,10 +38,25 @@ const InvalidateOnResize = () => {
 const NetworkMap: React.FC<Props> = ({ nodes, edges, onNodeSelect, selectedNodeId, watchedNodeIds, isFallbackMode }) => {
   // Find nodes with lat/lng in their profile_data
   const mappableNodes = useMemo(() => {
-    return nodes.filter(n => n.profile_data && n.profile_data.latitude && n.profile_data.longitude);
+    const result = nodes.filter(n => n.profile_data && n.profile_data.latitude != null && n.profile_data.longitude != null);
+    console.log(`[NetworkMap] ${nodes.length} nodes received, ${result.length} mappable (with lat/lng)`);
+    return result;
   }, [nodes]);
 
-  // Find edges where BOTH source and target have lat/lng
+  // Compute neighbor node IDs for the selected node
+  const neighborIds = useMemo(() => {
+    if (!selectedNodeId) return new Set<string>();
+    const neighbors = new Set<string>();
+    edges.forEach(e => {
+      const src = e.source || e.source_node_id;
+      const tgt = e.target || e.target_node_id;
+      if (src === selectedNodeId && tgt) neighbors.add(tgt);
+      if (tgt === selectedNodeId && src) neighbors.add(src);
+    });
+    return neighbors;
+  }, [selectedNodeId, edges]);
+
+  // Find edges where BOTH endpoints have lat/lng
   const mappableEdges = useMemo(() => {
     return edges.map(e => {
       const srcId = e.source || e.source_node_id;
@@ -51,6 +66,8 @@ const NetworkMap: React.FC<Props> = ({ nodes, edges, onNodeSelect, selectedNodeI
       if (srcNode && tgtNode) {
         return {
           edge: e,
+          srcId,
+          tgtId,
           positions: [
             [Number(srcNode.profile_data.latitude), Number(srcNode.profile_data.longitude)] as [number, number],
             [Number(tgtNode.profile_data.latitude), Number(tgtNode.profile_data.longitude)] as [number, number]
@@ -58,8 +75,10 @@ const NetworkMap: React.FC<Props> = ({ nodes, edges, onNodeSelect, selectedNodeI
         };
       }
       return null;
-    }).filter(Boolean) as { edge: NetworkEdge, positions: [number, number][] }[];
+    }).filter(Boolean) as { edge: NetworkEdge; srcId: string; tgtId: string; positions: [number, number][] }[];
   }, [edges, mappableNodes]);
+
+  const hasSelection = !!selectedNodeId;
 
   return (
     <div className="w-full h-full relative" style={{ background: "#0f172a" }}>
@@ -71,19 +90,35 @@ const NetworkMap: React.FC<Props> = ({ nodes, edges, onNodeSelect, selectedNodeI
           </div>
         </div>
       )}
-      
-      {isFallbackMode && (
-        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-[500] bg-amber-500/10 border border-amber-500/50 text-amber-500 px-4 py-2 rounded-md shadow-lg flex items-center gap-2 backdrop-blur-md">
-          <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
-          <div>
-            <p className="text-sm font-medium">Degraded Graph Mode</p>
-            <p className="text-xs opacity-80">Geospatial accuracy may be reduced. Showing PostgreSQL fallback data.</p>
-          </div>
+
+      {/* Selection legend — shown when a node is selected */}
+      {hasSelection && (
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-[500] bg-slate-900/95 border border-slate-700 text-slate-300 px-4 py-2 rounded-lg shadow-lg flex items-center gap-3 backdrop-blur-md text-xs">
+          <span className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-full bg-blue-400 inline-block ring-2 ring-white"></span> Selected
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block ring-2 ring-amber-300"></span>
+            Connected ({neighborIds.size})
+          </span>
+          <button
+            onClick={() => onNodeSelect?.({ node_id: "", node_type: "", label: "", risk_score: 0, crime_count: 0, profile_data: {} } as any)}
+            className="ml-2 text-slate-500 hover:text-slate-200 transition-colors font-medium"
+          >
+            ✕ Clear
+          </button>
         </div>
       )}
-      
+
+      {isFallbackMode && (
+        <div className="absolute bottom-10 left-1/2 transform -translate-x-1/2 z-[500] bg-amber-500/10 border border-amber-500/50 text-amber-500 px-4 py-2 rounded-md shadow-lg flex items-center gap-2 backdrop-blur-md">
+          <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <p className="text-xs">Degraded Graph Mode — PostgreSQL fallback data</p>
+        </div>
+      )}
+
       <MapContainer
         center={karnatakaCenter}
         zoom={7}
@@ -94,53 +129,66 @@ const NetworkMap: React.FC<Props> = ({ nodes, edges, onNodeSelect, selectedNodeI
         <TileLayer
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-          className="map-tiles grayscale"
         />
         <FitBounds />
         <InvalidateOnResize />
 
-        {mappableEdges.map((e, i) => (
-          <Polyline
-            key={i}
-            positions={e.positions}
-            color="#475569"
-            weight={1 + (e.edge.strength_score || 50) / 40}
-            opacity={0.4}
-            dashArray={e.edge.relationship_type.includes("SUSPECTED") ? "5, 5" : undefined}
-          />
-        ))}
+        {/* Edges: highlight connected ones, dim all others when selection active */}
+        {mappableEdges.map((e, i) => {
+          const isConnected = hasSelection && (e.srcId === selectedNodeId || e.tgtId === selectedNodeId);
+          return (
+            <Polyline
+              key={i}
+              positions={e.positions}
+              color={isConnected ? "#3b82f6" : "#475569"}
+              weight={isConnected ? 3 : 1 + (e.edge.strength_score || 50) / 40}
+              opacity={hasSelection ? (isConnected ? 0.9 : 0.08) : 0.35}
+              dashArray={e.edge.relationship_type?.includes("SUSPECTED") ? "5, 5" : undefined}
+              bubblingMouseEvents={false}
+              eventHandlers={{ click: (ev) => { ev.originalEvent?.stopPropagation(); } }}
+            />
+          );
+        })}
 
+        {/* Nodes: blue = selected, amber = neighbors, dim = unrelated */}
         {mappableNodes.map((node) => {
           const lat = Number(node.profile_data.latitude);
           const lng = Number(node.profile_data.longitude);
           const isSelected = selectedNodeId === node.node_id;
+          const isNeighbor = neighborIds.has(node.node_id);
           const isWatched = watchedNodeIds?.has(node.node_id);
-          const color = (NODE_COLORS as any)[node.node_type] || "#94a3b8";
+          const baseColor = (NODE_COLORS as any)[node.node_type] || "#94a3b8";
+
+          const fillColor = isSelected ? "#3b82f6" : isNeighbor ? "#f59e0b" : baseColor;
+          const strokeColor = isSelected ? "#bfdbfe" : isNeighbor ? "#fde68a" : isWatched ? "#eab308" : "#1e293b";
+          const radius = isSelected ? 12 : isNeighbor ? 9 : isWatched ? 8 : 6;
+          const fillOpacity = hasSelection ? (isSelected || isNeighbor ? 1 : 0.15) : 0.8;
+          const weight = isSelected ? 3 : isNeighbor ? 2 : 1;
 
           return (
             <CircleMarker
               key={node.node_id}
               center={[lat, lng]}
-              radius={isSelected ? 10 : isWatched ? 8 : 6}
-              fillColor={color}
-              color={isSelected ? "#3b82f6" : isWatched ? "#eab308" : "#1e293b"}
-              weight={isSelected || isWatched ? 3 : 1}
+              radius={radius}
+              fillColor={fillColor}
+              color={strokeColor}
+              weight={weight}
               opacity={1}
-              fillOpacity={isSelected ? 1 : 0.8}
-              eventHandlers={{
-                click: () => onNodeSelect?.(node),
-              }}
+              fillOpacity={fillOpacity}
+              eventHandlers={{ click: () => onNodeSelect?.(node) }}
             >
               <Popup className="custom-popup">
                 <div className="p-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs px-2 py-0.5 rounded-full capitalize" style={{ backgroundColor: color + "40", color: color }}>
+                    <span className="text-xs px-2 py-0.5 rounded-full capitalize" style={{ backgroundColor: baseColor + "40", color: baseColor }}>
                       {node.node_type}
                     </span>
+                    {isNeighbor && <span className="text-[10px] bg-amber-900/40 text-amber-400 px-1.5 rounded">Connected</span>}
                     {isWatched && <span className="text-[10px] bg-yellow-900/40 text-yellow-400 px-1.5 rounded">Watched</span>}
                   </div>
                   <h3 className="font-bold text-sm text-slate-800">{node.label}</h3>
                   {node.crime_count > 0 && <p className="text-xs text-slate-600 mt-1">Crimes: {node.crime_count}</p>}
+                  {isNeighbor && <p className="text-xs text-amber-700 mt-1 font-medium">↳ Connected to selected node</p>}
                 </div>
               </Popup>
             </CircleMarker>

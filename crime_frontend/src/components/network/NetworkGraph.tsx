@@ -159,13 +159,13 @@ const getStyleSheet = (colorBy: "type" | "cluster" = "type"): any[] => [
       "text-halign": "center",
       "text-margin-y": 5,
       "width": (ele: cytoscape.NodeSingular) => {
-        if (ele.isParent() || ele.data("isCluster")) return "auto";
+        if (ele.isParent() || ele.data("isCluster")) return 50;
         const crimes = Number(ele.data("crimes")) || 0;
         const btw = Number(ele.data("betweenness")) || 0;
         return Math.max(38, Math.min(100, 28 + crimes * 3 + btw * 120));
       },
       "height": (ele: cytoscape.NodeSingular) => {
-        if (ele.isParent() || ele.data("isCluster")) return "auto";
+        if (ele.isParent() || ele.data("isCluster")) return 50;
         const crimes = Number(ele.data("crimes")) || 0;
         const btw = Number(ele.data("betweenness")) || 0;
         return Math.max(38, Math.min(100, 28 + crimes * 3 + btw * 120));
@@ -342,7 +342,7 @@ const NetworkGraph = forwardRef<NetworkGraphHandle, Props>(({ nodes, edges, onNo
         layout: getDynamicLayoutOptions(nodes.length, edges.length),
         minZoom: 0.05,
         maxZoom: 4,
-        wheelSensitivity: 0.3,
+        // wheelSensitivity: 0.3,  // removed — caused Cytoscape warning about non-standard zoom
       });
       // Fit graph to viewport with padding once layout settles
       cy.one("layoutstop", () => { cy.fit(undefined, 60); });

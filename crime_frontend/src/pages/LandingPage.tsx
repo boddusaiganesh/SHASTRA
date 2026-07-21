@@ -94,14 +94,8 @@ export default function LandingPage() {
       {/* Header */}
       <header className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between z-20 relative">
         <div className="flex items-center gap-3">
-          <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-[#1E293B] to-[#0F172A] p-0.5 shadow-md flex items-center justify-center">
-            {/* Elegant Karnataka Police Badge SVG Representation */}
-            <svg viewBox="0 0 100 100" className="w-full h-full text-amber-500 fill-current">
-              <path d="M50 5 L85 25 L85 55 C85 75 50 95 50 95 C50 95 15 75 15 55 L15 25 Z" className="text-slate-900" />
-              <path d="M50 12 L78 28 L78 52 C78 68 50 84 50 84 C50 84 22 68 22 52 L22 28 Z" fill="#b45309" />
-              <circle cx="50" cy="45" r="16" fill="#f59e0b" />
-              <path d="M42 45 L58 45 M50 37 L50 53" stroke="#b45309" strokeWidth="3" strokeLinecap="round" />
-            </svg>
+          <div className="h-11 w-11 rounded-xl flex items-center justify-center overflow-hidden">
+            <img src="/shastra_logo.png" alt="SHASTRA Logo" className="w-full h-full object-contain" />
           </div>
           <div>
             <h2 className="text-xs font-bold tracking-widest text-[#1C1917] uppercase">KARNATAKA STATE POLICE</h2>
