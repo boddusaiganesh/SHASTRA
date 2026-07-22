@@ -95,7 +95,7 @@ export default function LandingPage() {
       <header className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between z-20 relative">
         <div className="flex items-center gap-3">
           <div className="h-11 w-11 rounded-xl flex items-center justify-center overflow-hidden">
-            <img src="/shastra_logo.png" alt="SHASTRA Logo" className="w-full h-full object-contain" />
+            <img src={`${import.meta.env.BASE_URL}shastra_logo.png`} alt="SHASTRA Logo" className="w-full h-full object-contain" />
           </div>
           <div>
             <h2 className="text-xs font-bold tracking-widest text-[#1C1917] uppercase">KARNATAKA STATE POLICE</h2>

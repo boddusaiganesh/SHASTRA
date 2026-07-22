@@ -24,7 +24,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !isLoginRequest) {
       localStorage.removeItem("user_data");
       localStorage.removeItem("is_logged_in");
-      window.location.href = "/login";
+      window.location.href = import.meta.env.BASE_URL + "#/login";
     }
     // No mock-data fallback. Let the caller show a real error/toast.
     return Promise.reject(error);

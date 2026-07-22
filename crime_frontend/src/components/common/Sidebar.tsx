@@ -41,7 +41,7 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle, alertCount = 0 }) => {
       {/* Logo */}
       <div className="flex items-center gap-3 px-4 py-4 border-b border-slate-700/50">
         <div className="flex-shrink-0 h-10 w-10 flex items-center justify-center overflow-hidden rounded-full">
-          <img src="/shastra_logo.png" alt="SHASTRA Logo" className="h-full w-full object-cover" />
+          <img src={`${import.meta.env.BASE_URL}shastra_logo.png`} alt="SHASTRA Logo" className="h-full w-full object-cover" />
         </div>
         {!collapsed && (
           <div className="overflow-hidden">

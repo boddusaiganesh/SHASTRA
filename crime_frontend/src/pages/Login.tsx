@@ -62,7 +62,7 @@ export default function Login() {
 
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center h-20 w-20 rounded-2xl bg-slate-900 border border-indigo-500/30 mb-4 shadow-[0_0_20px_rgba(79,70,229,0.4)] overflow-hidden">
-              <img src="/shastra_logo.png" alt="SHASTRA Logo" className="h-full w-full object-cover scale-110" />
+              <img src={`${import.meta.env.BASE_URL}shastra_logo.png`} alt="SHASTRA Logo" className="h-full w-full object-cover scale-110" />
             </div>
             <h1 className="text-2xl font-bold text-white tracking-tight">Karnataka State Police</h1>
             <p className="text-blue-400 text-sm font-semibold tracking-wide mt-1">SHASTRA Platform</p>

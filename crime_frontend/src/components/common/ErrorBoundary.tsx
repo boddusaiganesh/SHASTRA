@@ -29,9 +29,9 @@ export default class ErrorBoundary extends React.Component<{ children: React.Rea
               >
                 Try Again
               </button>
-              <button
-                onClick={() => { window.location.href = "/dashboard"; }}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm transition-colors"
+              <button 
+                onClick={() => { window.location.href = import.meta.env.BASE_URL + "#/dashboard"; }}
+                className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-all"
               >
                 Go to Dashboard
               </button>

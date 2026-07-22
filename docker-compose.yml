@@ -19,23 +19,15 @@ services:
     build: ./crime_backend/MODULE_2_BACKEND
     restart: unless-stopped
     env_file:
-      - .env
+      - ./crime_backend/.env
     environment:
-      DATABASE_HOST: postgres
-      DATABASE_URL: postgresql+asyncpg://${DATABASE_USER}:${DATABASE_PASSWORD}@postgres:5432/${DATABASE_NAME}
-      DATABASE_URL_SYNC: postgresql://${DATABASE_USER}:${DATABASE_PASSWORD}@postgres:5432/${DATABASE_NAME}
-      NEO4J_URL: bolt://neo4j:7687
       REDIS_URL: redis://redis:6379
     ports:
       - "8000:8000"
     volumes:
       - ./crime_backend/MODULE_2_BACKEND/local_data/uploads:/app/uploads
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
-        condition: service_healthy
-      neo4j:
         condition: service_healthy
     networks:
       - crime_intelligence_network
@@ -45,70 +37,24 @@ services:
     restart: unless-stopped
     command: ["python", "-m", "app.scheduler.run_standalone"]
     env_file:
-      - .env
+      - ./crime_backend/.env
     environment:
-      DATABASE_HOST: postgres
-      DATABASE_URL: postgresql+asyncpg://${DATABASE_USER}:${DATABASE_PASSWORD}@postgres:5432/${DATABASE_NAME}
-      DATABASE_URL_SYNC: postgresql://${DATABASE_USER}:${DATABASE_PASSWORD}@postgres:5432/${DATABASE_NAME}
-      NEO4J_URL: bolt://neo4j:7687
       REDIS_URL: redis://redis:6379
     depends_on:
       backend:
         condition: service_started
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
-      neo4j:
-        condition: service_healthy
     networks:
       - crime_intelligence_network
 
-  postgres:
-    image: postgis/postgis:15-3.4
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${DATABASE_USER}
-      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
-      POSTGRES_DB: ${DATABASE_NAME}
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER} -d ${DATABASE_NAME}"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-    ports:
-      - "127.0.0.1:5432:5432"
-    volumes:
-      - ./crime_backend/MODULE_2_BACKEND/local_data/postgres:/var/lib/postgresql/data
-    networks:
-      - crime_intelligence_network
-
-  neo4j:
-    image: neo4j:5.18-community
-    restart: unless-stopped
-    environment:
-      NEO4J_AUTH: ${NEO4J_USER}/${NEO4J_PASSWORD}
-      NEO4J_PLUGINS: '["apoc"]'
-      NEO4J_dbms_security_procedures_unrestricted: apoc.*
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:7474 || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-    ports:
-      - "127.0.0.1:7474:7474"
-      - "127.0.0.1:7687:7687"
-    volumes:
-      - ./crime_backend/MODULE_2_BACKEND/local_data/neo4j:/data
-    networks:
-      - crime_intelligence_network
 
   redis:
     image: redis:7.2-alpine
     restart: unless-stopped
     command: /bin/sh -c 'redis-server --requirepass "$$REDIS_PASSWORD"'
     env_file:
-      - .env
+      - ./crime_backend/.env
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "$$REDIS_PASSWORD", "ping"]
       interval: 5s

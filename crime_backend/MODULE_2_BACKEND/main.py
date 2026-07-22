@@ -164,6 +164,7 @@ else:
         "http://127.0.0.1:5173",
         "http://localhost",
         "http://127.0.0.1",
+        "https://shastra-60076818156.development.catalystserverless.in",
     ]
 
 @app.exception_handler(Exception)
@@ -258,11 +259,15 @@ async def health_check():
 
 if __name__ == "__main__":
     import multiprocessing
+    import os
+    
+    port = int(os.getenv("X_ZOHO_CATALYST_LISTEN_PORT", settings.BACKEND_PORT))
+    
     workers = int(os.getenv("WORKERS", multiprocessing.cpu_count() * 2 + 1)) if settings.ENVIRONMENT != "development" else 1
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=settings.BACKEND_PORT,
+        port=port,
         reload=settings.ENVIRONMENT == "development",
         workers=workers,
         log_level="info",

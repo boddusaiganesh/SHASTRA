@@ -151,10 +151,21 @@ async def seed_all_data(session: AsyncSession):
                 lat_offset = random.uniform(-0.15, 0.15)
                 lon_offset = random.uniform(-0.15, 0.15)
             
+            hour = int(random.choices(
+                population=[*range(0,24)],
+                weights=[3, 4, 3, 2, 1, 1, 1, 2, 3, 4, 5, 5, 4, 4, 5, 6, 7, 8, 9, 10, 10, 8, 6, 4],
+                k=1
+            )[0])
+            minute = random.choice([0, 15, 30, 45, random.randint(0,59)])
+
             c = Crime(
                 crime_reference_no=f"CR-{base_date.year}-{i+1000}",
                 crime_type=random.choice(CRIME_TYPES),
                 date_of_occurrence=base_date,
+                time_of_occurrence=f"{hour:02d}:{minute:02d}",
+                day_of_week=base_date.strftime('%A'),
+                month=base_date.month,
+                year=base_date.year,
                 district_id=d_choice,
                 police_station_id=s_choice,
                 latitude=d_obj.latitude + lat_offset,
@@ -209,6 +220,11 @@ async def seed_all_data(session: AsyncSession):
         gang_of = {}
         for o in offenders_list:
             gang_of[o.offender_id] = random.randint(0, NUM_GANGS - 1)
+
+        for o in offenders_list:
+            gang = gang_of[o.offender_id]
+            associates = [str(other.offender_id) for other in offenders_list if gang_of[other.offender_id] == gang and other.offender_id != o.offender_id]
+            o.known_associates = random.sample(associates, k=min(len(associates), random.randint(1, 4)))
 
         gang_shared_crime = {g: random.sample(crimes_list, k=15) for g in range(NUM_GANGS)}
 

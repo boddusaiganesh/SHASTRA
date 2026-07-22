@@ -1,0 +1,17 @@
+{
+  "client": {
+    "source": "crime_frontend/dist"
+  },
+  "app_sail": [
+    {
+      "name": "shastra_backend",
+      "source": "crime_backend/MODULE_2_BACKEND",
+      "type": "custom_runtime"
+    },
+    {
+      "name": "shastra_scheduler",
+      "source": "crime_backend/MODULE_2_BACKEND",
+      "type": "custom_runtime"
+    }
+  ]
+}
