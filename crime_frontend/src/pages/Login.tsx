@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Shield, Lock, User, Eye, EyeOff, AlertCircle } from "lucide-react";
+import { Lock, User, Eye, EyeOff, AlertCircle } from "lucide-react";
 import { loginStart, loginSuccess, loginFailure } from '../store/authSlice';
 import { authService } from '../services/authService';
 import { RootState } from '../store/store';
@@ -93,9 +93,12 @@ export default function Login() {
               </button>
             </div>
 
-            <div className="flex items-center gap-2 text-xs text-slate-500">
-              <Shield className="h-4 w-4" />
-              <span>Your role and permissions are assigned by the SCRB Administrator</span>
+            <div className="flex flex-col gap-1 p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg">
+              <span className="text-xs font-semibold text-blue-400">Demo Credentials</span>
+              <div className="flex justify-between text-xs text-slate-300">
+                <span>Username: <strong className="text-white">admin</strong></span>
+                <span>Password: <strong className="text-white">admin</strong></span>
+              </div>
             </div>
 
             {/* Error */}
