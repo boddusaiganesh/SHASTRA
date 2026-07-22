@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Lock, User, Eye, EyeOff, AlertCircle } from "lucide-react";
+import { Lock, User, Eye, EyeOff, AlertCircle, Home } from "lucide-react";
 import { loginStart, loginSuccess, loginFailure } from '../store/authSlice';
 import { authService } from '../services/authService';
 import { RootState } from '../store/store';
@@ -49,6 +49,16 @@ export default function Login() {
       >
         <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-8 shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-indigo-600" />
+
+          {/* Home Button */}
+          <button 
+            onClick={() => navigate("/")}
+            className="absolute top-4 left-4 p-2 text-slate-500 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors flex items-center gap-2 group"
+            title="Back to Welcome Page"
+          >
+            <Home className="h-4 w-4" />
+            <span className="text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">Welcome Page</span>
+          </button>
 
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center h-20 w-20 rounded-2xl bg-slate-900 border border-indigo-500/30 mb-4 shadow-[0_0_20px_rgba(79,70,229,0.4)] overflow-hidden">
