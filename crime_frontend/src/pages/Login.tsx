@@ -107,7 +107,7 @@ export default function Login() {
               <span className="text-xs font-semibold text-blue-400">Demo Credentials</span>
               <div className="flex justify-between text-xs text-slate-300">
                 <span>Username: <strong className="text-white">admin</strong></span>
-                <span>Password: <strong className="text-white">admin</strong></span>
+                <span>Password: <strong className="text-white">Admin@1234</strong></span>
               </div>
             </div>
 
