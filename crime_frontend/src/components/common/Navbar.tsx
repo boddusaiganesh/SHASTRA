@@ -35,7 +35,7 @@ const Navbar: React.FC<Props> = ({ alertCount = 0 }) => {
       console.error("Logout request failed, clearing local session anyway", e);
     } finally {
       dispatch(logout());
-      navigate("/login");
+      navigate("/");
     }
   };
 
