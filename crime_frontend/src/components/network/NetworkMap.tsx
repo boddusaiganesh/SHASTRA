@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useCallback } from "react";
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap, Polyline } from "react-leaflet";
 import { karnatakaCenter } from "../../utils/mapHelpers";
 import { NODE_COLORS } from "../../constants/colorCodes";
@@ -18,12 +18,14 @@ interface Props {
   isFallbackMode?: boolean;
 }
 
+/** Forces map to re-center to Karnataka on mount */
 const FitBounds = () => {
   const map = useMap();
   useEffect(() => { map.setView(karnatakaCenter, 7); }, [map]);
   return null;
 };
 
+/** Keeps map rendering correct on panel resize */
 const InvalidateOnResize = () => {
   const map = useMap();
   useEffect(() => {
@@ -43,24 +45,25 @@ const NetworkMap: React.FC<Props> = ({ nodes, edges, onNodeSelect, selectedNodeI
     return result;
   }, [nodes]);
 
-  // Compute neighbor node IDs for the selected node
+  // Compute neighbor node IDs for the selected node — recomputes immediately when edges or selectedNodeId changes
   const neighborIds = useMemo(() => {
     if (!selectedNodeId) return new Set<string>();
     const neighbors = new Set<string>();
     edges.forEach(e => {
-      const src = e.source || e.source_node_id;
-      const tgt = e.target || e.target_node_id;
+      const src = e.source_node_id || e.source;
+      const tgt = e.target_node_id || e.target;
       if (src === selectedNodeId && tgt) neighbors.add(tgt);
       if (tgt === selectedNodeId && src) neighbors.add(src);
     });
+    console.log(`[NetworkMap] selectedNodeId=${selectedNodeId}, neighborIds found:`, neighbors.size, [...neighbors].slice(0, 5));
     return neighbors;
   }, [selectedNodeId, edges]);
 
   // Find edges where BOTH endpoints have lat/lng
   const mappableEdges = useMemo(() => {
     return edges.map(e => {
-      const srcId = e.source || e.source_node_id;
-      const tgtId = e.target || e.target_node_id;
+      const srcId = e.source_node_id || e.source;
+      const tgtId = e.target_node_id || e.target;
       const srcNode = mappableNodes.find(n => n.node_id === srcId);
       const tgtNode = mappableNodes.find(n => n.node_id === tgtId);
       if (srcNode && tgtNode) {
@@ -79,6 +82,10 @@ const NetworkMap: React.FC<Props> = ({ nodes, edges, onNodeSelect, selectedNodeI
   }, [edges, mappableNodes]);
 
   const hasSelection = !!selectedNodeId;
+
+  const handleClear = useCallback(() => {
+    onNodeSelect?.({ node_id: "", node_type: "", label: "", risk_score: 0, crime_count: 0, profile_data: {} } as any);
+  }, [onNodeSelect]);
 
   return (
     <div className="w-full h-full relative" style={{ background: "#0f172a" }}>
@@ -102,8 +109,8 @@ const NetworkMap: React.FC<Props> = ({ nodes, edges, onNodeSelect, selectedNodeI
             Connected ({neighborIds.size})
           </span>
           <button
-            onClick={() => onNodeSelect?.({ node_id: "", node_type: "", label: "", risk_score: 0, crime_count: 0, profile_data: {} } as any)}
-            className="ml-2 text-slate-500 hover:text-slate-200 transition-colors font-medium"
+            onClick={handleClear}
+            className="ml-2 text-slate-500 hover:text-red-400 transition-colors font-medium"
           >
             ✕ Clear
           </button>
@@ -138,7 +145,7 @@ const NetworkMap: React.FC<Props> = ({ nodes, edges, onNodeSelect, selectedNodeI
           const isConnected = hasSelection && (e.srcId === selectedNodeId || e.tgtId === selectedNodeId);
           return (
             <Polyline
-              key={i}
+              key={`${e.srcId}-${e.tgtId}-${i}`}
               positions={e.positions}
               color={isConnected ? "#3b82f6" : "#475569"}
               weight={isConnected ? 3 : 1 + (e.edge.strength_score || 50) / 40}
@@ -156,12 +163,12 @@ const NetworkMap: React.FC<Props> = ({ nodes, edges, onNodeSelect, selectedNodeI
           const lng = Number(node.profile_data.longitude);
           const isSelected = selectedNodeId === node.node_id;
           const isNeighbor = neighborIds.has(node.node_id);
-          const isWatched = watchedNodeIds?.has(node.node_id);
+          const isWatchedNode = watchedNodeIds?.has(node.node_id);
           const baseColor = (NODE_COLORS as any)[node.node_type] || "#94a3b8";
 
           const fillColor = isSelected ? "#3b82f6" : isNeighbor ? "#f59e0b" : baseColor;
-          const strokeColor = isSelected ? "#bfdbfe" : isNeighbor ? "#fde68a" : isWatched ? "#eab308" : "#1e293b";
-          const radius = isSelected ? 12 : isNeighbor ? 9 : isWatched ? 8 : 6;
+          const strokeColor = isSelected ? "#bfdbfe" : isNeighbor ? "#fde68a" : isWatchedNode ? "#eab308" : "#1e293b";
+          const radius = isSelected ? 12 : isNeighbor ? 9 : isWatchedNode ? 8 : 6;
           const fillOpacity = hasSelection ? (isSelected || isNeighbor ? 1 : 0.15) : 0.8;
           const weight = isSelected ? 3 : isNeighbor ? 2 : 1;
 
@@ -184,7 +191,7 @@ const NetworkMap: React.FC<Props> = ({ nodes, edges, onNodeSelect, selectedNodeI
                       {node.node_type}
                     </span>
                     {isNeighbor && <span className="text-[10px] bg-amber-900/40 text-amber-400 px-1.5 rounded">Connected</span>}
-                    {isWatched && <span className="text-[10px] bg-yellow-900/40 text-yellow-400 px-1.5 rounded">Watched</span>}
+                    {isWatchedNode && <span className="text-[10px] bg-yellow-900/40 text-yellow-400 px-1.5 rounded">Watched</span>}
                   </div>
                   <h3 className="font-bold text-sm text-slate-800">{node.label}</h3>
                   {node.crime_count > 0 && <p className="text-xs text-slate-600 mt-1">Crimes: {node.crime_count}</p>}

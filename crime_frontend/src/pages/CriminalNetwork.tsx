@@ -307,33 +307,40 @@ const CriminalNetwork: React.FC = () => {
 
   // Map-specific node select: stays in Map view, shows details + expands connections
   const handleMapNodeSelect = async (node: NetworkNode) => {
-    // Clear if clicking the already-selected node
-    if (node.node_id === "" || node.node_id === selectedNode?.node_id) {
+    // Clear if clicking an empty sentinel or already-selected node
+    if (!node.node_id || node.node_id === selectedNode?.node_id) {
+      console.log('[MapSelect] Clearing selection');
       setSelectedNode(null);
       setSelectedEdge(null);
       setEdgeInsight(null);
       return;
     }
 
+    console.log('[MapSelect] Node selected:', node.node_id, node.label);
     setSelectedNode(node);
     setSelectedEdge(null);
     setEdgeInsight(null);
     setNodeDetailLoading(true);
 
-    // Run detail fetch + node expansion in parallel so connections appear fast
+    // Check if this node already has edges using BOTH possible field name formats
     const alreadyExpanded = edges.some(
-      e => (e.source_node_id || e.source) === node.node_id || (e.target_node_id || e.target) === node.node_id
+      e => (e.source_node_id === node.node_id || e.source === node.node_id ||
+             e.target_node_id === node.node_id || e.target === node.node_id)
     );
+    console.log('[MapSelect] alreadyExpanded:', alreadyExpanded, ', total edges:', edges.length);
 
+    // Always try to expand to fetch NEW neighbors not in current edge set
+    // Run detail fetch + expansion in parallel for maximum speed
     const [detail] = await Promise.all([
       networkService.getNodeDetail(node.node_id).catch(() => null),
-      alreadyExpanded ? Promise.resolve() : handleNodeExpand(node).catch(() => null),
+      handleNodeExpand(node).catch((err) => { console.warn('[MapSelect] Expansion failed:', err); }),
     ]);
 
     if (detail) {
       setSelectedNode(prev => prev && prev.node_id === node.node_id ? { ...prev, ...detail } : prev);
     }
     setNodeDetailLoading(false);
+    console.log('[MapSelect] Done. Edges after expansion:', edges.length);
 
     if (node.node_type === "criminal") {
       networkService.getNodeAiAnalysis(node.node_id).then(aiRes => {
