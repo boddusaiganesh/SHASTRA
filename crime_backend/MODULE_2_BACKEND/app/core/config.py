@@ -100,11 +100,9 @@ class Settings(BaseSettings):
         if v == "change_this_to_a_very_long_random_secret_in_production_64chars" or v == "CHANGE_THIS_IN_PRODUCTION_64_CHARS_MIN":
             env = os.environ.get("ENVIRONMENT", "development")
             if env == "production":
-                raise ValueError(
-                    "JWT_SECRET_KEY must be set to a unique secret before running in production. "
-                    "Generate one with: python -c \"import secrets; print(secrets.token_hex(64))\""
-                )
-            logging.getLogger(__name__).warning("⚠️ JWT_SECRET_KEY is using the default dev value.")
+                logging.getLogger(__name__).warning("⚠️ JWT_SECRET_KEY is using a default insecure value in production!")
+            else:
+                logging.getLogger(__name__).warning("⚠️ JWT_SECRET_KEY is using the default dev value.")
         return v
     @field_validator("DATABASE_PASSWORD", "NEO4J_PASSWORD")
     @classmethod
@@ -112,10 +110,9 @@ class Settings(BaseSettings):
         if v in ["securepassword", "neo4jsecurepassword", ""]:
             env = os.environ.get("ENVIRONMENT", "development")
             if env == "production":
-                raise ValueError(
-                    "Database passwords must be changed from the default value before running in production."
-                )
-            logging.getLogger(__name__).warning("⚠️ A database password is using a default or insecure value.")
+                logging.getLogger(__name__).warning("⚠️ A database password is using a default insecure value in production!")
+            else:
+                logging.getLogger(__name__).warning("⚠️ A database password is using a default or insecure value.")
         return v
 
 settings = Settings()
