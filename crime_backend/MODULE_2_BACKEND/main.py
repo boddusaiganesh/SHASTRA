@@ -110,9 +110,10 @@ async def lifespan(app: FastAPI):
         print(f"⚠️  Neo4j unavailable: {e} — continuing in degraded mode")
     
     if _db_ready:
-        print("✅ Database ready (scheduler runs as a separate service — see scheduler container)")
+        print("✅ Database ready, starting background ML scheduler within main process...")
+        init_scheduler()
     else:
-        print("⚠️  Database not available for scheduler")
+        print("⚠️  Database not available, skipping scheduler initialization")
     
     if _db_ready and _redis_ready and _neo4j_ready:
         print("✅ All systems operational. Backend ready on port", settings.BACKEND_PORT)
@@ -127,8 +128,7 @@ async def lifespan(app: FastAPI):
     
     alert_task.cancel()
     print("🔄 Shutting down SHASTRA Intelligence Platform Backend...")
-    if _db_ready:
-        pass
+    shutdown_scheduler()
     await close_redis()
     await close_neo4j()
 

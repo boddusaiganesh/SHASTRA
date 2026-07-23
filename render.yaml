@@ -12,11 +12,4 @@ services:
       - key: COOKIE_SAMESITE
         value: none
 
-  - type: worker
-    name: shastra-scheduler
-    env: docker
-    dockerContext: crime_backend/MODULE_2_BACKEND
-    dockerfilePath: crime_backend/MODULE_2_BACKEND/Dockerfile.scheduler
-    envVars:
-      - key: ENVIRONMENT
-        value: production
+
