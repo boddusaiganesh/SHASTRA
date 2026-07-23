@@ -1,6 +1,7 @@
 services:
   - type: web
     name: shastra-backend
+    plan: free
     env: docker
     dockerContext: crime_backend/MODULE_2_BACKEND
     dockerfilePath: crime_backend/MODULE_2_BACKEND/Dockerfile
