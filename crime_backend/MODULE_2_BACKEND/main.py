@@ -258,9 +258,9 @@ if __name__ == "__main__":
     import multiprocessing
     import os
     
-    port = int(os.getenv("X_ZOHO_CATALYST_LISTEN_PORT", settings.BACKEND_PORT))
+    port = int(os.getenv("PORT", os.getenv("X_ZOHO_CATALYST_LISTEN_PORT", settings.BACKEND_PORT)))
     
-    workers = int(os.getenv("WORKERS", multiprocessing.cpu_count() * 2 + 1)) if settings.ENVIRONMENT != "development" else 1
+    workers = int(os.getenv("WORKERS", 1))
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
