@@ -120,15 +120,11 @@ async def lifespan(app: FastAPI):
     else:
         print("⚠️  Backend ready on port", settings.BACKEND_PORT, "— running in DEGRADED mode (see warnings above)")
     
-    import asyncio
-    from app.core.websocket import start_alert_subscriber
-    alert_task = asyncio.create_task(start_alert_subscriber())
-    
     yield
     
-    alert_task.cancel()
     print("🔄 Shutting down SHASTRA Intelligence Platform Backend...")
-    shutdown_scheduler()
+    if _db_ready:
+        shutdown_scheduler()
     await close_redis()
     await close_neo4j()
 
@@ -155,6 +151,7 @@ from fastapi.responses import JSONResponse
 # CORS Middleware
 allowed_origins = []
 if settings.ENVIRONMENT == "production":
+    # Support comma-separated list of allowed origins in FRONTEND_URL
     allowed_origins = [o.strip() for o in settings.FRONTEND_URL.split(",") if o.strip()]
 else:
     allowed_origins = [

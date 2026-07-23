@@ -7,9 +7,13 @@ services:
     envVars:
       - key: PORT
         value: 8000
+      - key: BACKEND_PORT
+        value: 8000
       - key: ENVIRONMENT
         value: production
       - key: COOKIE_SAMESITE
         value: none
+      - key: FRONTEND_URL
+        value: https://shastra-60076818156.development.catalystserverless.in
 
 
